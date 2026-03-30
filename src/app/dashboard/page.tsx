@@ -864,7 +864,7 @@ export default function DashboardPage() {
         {/* Team Members */}
         <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column', maxHeight: 340 }}>
           <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-            <div style={panelHeaderStyle}>Team Members</div>
+            <div style={panelHeaderStyle}>Team Members <span style={{ fontSize: 12, fontWeight: 500, color: '#8e8e93' }}>({teamMembers.length}/5 seats)</span></div>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
             {teamMembers.length === 0 ? (
@@ -1354,6 +1354,98 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 720 }}>
+          {/* Billing & Plan */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Billing &amp; Plan</div>
+
+            {/* Plan Info */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e' }}>Current Plan</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
+                  padding: '3px 10px', borderRadius: 20, letterSpacing: '0.04em', textTransform: 'uppercase' as const,
+                }}>STARTER</span>
+              </div>
+              <button style={{
+                background: 'linear-gradient(135deg, #2563EB, #3B82F6)', color: '#fff', border: 'none',
+                borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
+              }}>
+                Upgrade to Pro
+              </button>
+            </div>
+            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>Free plan with basic features</div>
+
+            {/* Team Seats */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Team Seats</span>
+                <span style={{ fontSize: 13, color: '#8e8e93' }}>$29/seat/month</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{teamMembers.length} / 5 seats</span>
+                <button style={{
+                  background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                  padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#2563EB', cursor: 'pointer',
+                }}>Add Seat</button>
+              </div>
+              <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)' }}>
+                <div style={{ width: `${Math.min((teamMembers.length / 5) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+
+            {/* Phone Numbers */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Phone Numbers</span>
+                <span style={{ fontSize: 13, color: '#8e8e93' }}>$49/number/month</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{stations.length} / 1 number</span>
+                <button style={{
+                  background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                  padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#2563EB', cursor: 'pointer',
+                }}>Add Number</button>
+              </div>
+              <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)' }}>
+                <div style={{ width: `${Math.min((stations.length / 1) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+
+            {/* Plan Comparison Table */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>Plan Comparison</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
+                    {['Feature', 'Starter', 'Pro', 'Enterprise'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Feature' ? 'left' : 'center', fontWeight: 600, color: '#1c1c1e', fontSize: 12 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['Team Seats', '5', '25', 'Unlimited'],
+                    ['Phone Numbers', '1', '5', 'Unlimited'],
+                    ['AI Drafts/day', '200', '2,000', 'Unlimited'],
+                    ['Messages/day', '500', '5,000', 'Unlimited'],
+                    ['Campaigns', '\u2014', '\u2713', '\u2713'],
+                    ['Analytics', 'Basic', 'Advanced', 'Custom'],
+                    ['Price', 'Free', '$99/mo', 'Contact Us'],
+                  ].map((row, i) => (
+                    <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280' }}>{row[1]}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#2563EB', fontWeight: 600 }}>{row[2]}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#7C3AED', fontWeight: 600 }}>{row[3]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* Company */}
           <div style={sectionStyle}>
             <div style={sectionTitleStyle}>Company</div>
@@ -1691,10 +1783,10 @@ export default function DashboardPage() {
               >
                 {/* Notion logo */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: 10, background: '#000', display: 'flex',
+                  width: 48, height: 48, borderRadius: 10, background: '#000', display: 'flex',
                   alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
-                  <span style={{ color: '#fff', fontSize: 22, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>N</span>
+                  <span style={{ color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>N</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1815,10 +1907,13 @@ export default function DashboardPage() {
               >
                 {/* Slack logo */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: 10, background: '#7C3AED', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  width: 48, height: 48, borderRadius: 10, background: '#4A154B', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', gap: 3, flexWrap: 'wrap' as const, padding: 10, flexShrink: 0,
                 }}>
-                  <span style={{ color: '#fff', fontSize: 24, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>#</span>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#E01E5A' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#36C5F0' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#2EB67D' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#ECB22E' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
