@@ -51,6 +51,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
+      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.workEmail,
         password: form.password,
@@ -59,16 +60,19 @@ export default function SignupPage() {
       if (authError) throw new Error(authError.message);
       if (!authData.user) throw new Error('Signup failed');
 
-      const slug = form.companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const { data: org, error: orgError } = await supabase
-        .from('organizations').insert({ name: form.companyName, slug, plan: 'starter' }).select().single();
-      if (orgError) throw new Error('Failed to create organization: ' + orgError.message);
-
-      const { error: userError } = await supabase
-        .from('users').insert({ auth_id: authData.user.id, organization_id: org.id, email: form.workEmail, full_name: form.fullName, role: 'owner' });
-      if (userError) throw new Error('Failed to create user: ' + userError.message);
-
-      await supabase.from('org_settings').insert({ organization_id: org.id, company_name: form.companyName, ai_auto_draft: true, ai_model: 'claude-sonnet-4-20250514' });
+      // 2. Create org, user record, and settings via server API (uses service role)
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authData.user.id,
+          companyName: form.companyName,
+          email: form.workEmail,
+          fullName: form.fullName,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to create workspace');
 
       setStep('verify');
     } catch (err: unknown) {
