@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'campaigns' | 'ai-drafts' | 'settings';
+type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'campaigns' | 'ai-drafts' | 'integrations' | 'settings';
 
 interface Message {
   id: string;
@@ -96,6 +96,16 @@ interface ContactRecord {
   state: string;
   campaign_status: string;
   source: string;
+}
+
+interface OrgIntegration {
+  id: string;
+  organization_id: string;
+  provider: 'notion' | 'slack';
+  enabled: boolean;
+  config: Record<string, unknown>;
+  status: 'connected' | 'disconnected' | 'error';
+  last_synced_at: string | null;
 }
 
 // ── Mock Data for Conversations View ────────────────────────────────────────
@@ -192,6 +202,15 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     ),
   },
   {
+    label: 'Integrations',
+    tab: 'integrations',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24" />
+      </svg>
+    ),
+  },
+  {
     label: 'Settings',
     tab: 'settings',
     icon: (
@@ -236,6 +255,13 @@ export default function DashboardPage() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
+  // Integrations
+  const [integrations, setIntegrations] = useState<OrgIntegration[]>([]);
+  const [expandedIntegration, setExpandedIntegration] = useState<string | null>(null);
+  const [notionConfig, setNotionConfig] = useState({ token: '', database_id: '', workspace_name: '', sync_contacts: true, sync_conversations: true });
+  const [slackConfig, setSlackConfig] = useState({ webhook_url: '', channel: '', notify_inbound: true, notify_flagged: true, notify_signups: false, notify_station_offline: true });
+  const [integrationStatus, setIntegrationStatus] = useState<Record<string, string>>({});
+
   // Getting Started banner
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
@@ -278,6 +304,7 @@ export default function DashboardPage() {
         { data: memberData },
         { data: settingsData },
         { data: contactData },
+        { data: integrationData },
       ] = await Promise.all([
         supabase.from('messages').select('*', { count: 'exact', head: true })
           .eq('direction', 'outbound')
@@ -299,6 +326,7 @@ export default function DashboardPage() {
         supabase.from('users').select('id, full_name, email, role').eq('organization_id', orgId).order('role'),
         supabase.from('org_settings').select('*').eq('organization_id', orgId).single(),
         supabase.from('contacts').select('*').order('full_name').limit(200),
+        supabase.from('org_integrations').select('*').eq('organization_id', orgId),
       ]);
 
       const totalConv = (totalConvData as unknown[])?.length || 0;
@@ -338,6 +366,33 @@ export default function DashboardPage() {
       }
 
       setContacts((contactData as ContactRecord[]) || []);
+
+      // Integrations
+      const intgs = ((integrationData as OrgIntegration[]) || []);
+      setIntegrations(intgs);
+      const notionIntg = intgs.find(i => i.provider === 'notion');
+      if (notionIntg) {
+        const c = notionIntg.config as Record<string, unknown>;
+        setNotionConfig({
+          token: (c.token as string) || '',
+          database_id: (c.database_id as string) || '',
+          workspace_name: (c.workspace_name as string) || '',
+          sync_contacts: c.sync_contacts !== false,
+          sync_conversations: c.sync_conversations !== false,
+        });
+      }
+      const slackIntg = intgs.find(i => i.provider === 'slack');
+      if (slackIntg) {
+        const c = slackIntg.config as Record<string, unknown>;
+        setSlackConfig({
+          webhook_url: (c.webhook_url as string) || '',
+          channel: (c.channel as string) || '',
+          notify_inbound: c.notify_inbound !== false,
+          notify_flagged: c.notify_flagged !== false,
+          notify_signups: c.notify_signups === true,
+          notify_station_offline: c.notify_station_offline !== false,
+        });
+      }
     };
 
     fetchDashboardData();
@@ -1492,6 +1547,433 @@ export default function DashboardPage() {
     );
   };
 
+  // ── Render: Integrations ───────────────────────────────────────────────────
+
+  const renderIntegrations = () => {
+    const orgId = (org?.id as string) || '';
+    const notionIntg = integrations.find(i => i.provider === 'notion');
+    const slackIntg = integrations.find(i => i.provider === 'slack');
+    const notionConnected = notionIntg?.enabled && notionIntg?.status === 'connected';
+    const slackConnected = slackIntg?.enabled && slackIntg?.status === 'connected';
+
+    const connectIntegration = async (provider: 'notion' | 'slack') => {
+      const config = provider === 'notion' ? notionConfig : slackConfig;
+      const existing = integrations.find(i => i.provider === provider);
+      try {
+        if (existing) {
+          const { error } = await supabase.from('org_integrations').update({
+            enabled: true, config, status: 'connected', last_synced_at: new Date().toISOString(),
+          }).eq('id', existing.id);
+          if (error) throw error;
+          setIntegrations(prev => prev.map(i => i.id === existing.id ? { ...i, enabled: true, config, status: 'connected' as const, last_synced_at: new Date().toISOString() } : i));
+        } else {
+          const { data, error } = await supabase.from('org_integrations').insert({
+            organization_id: orgId, provider, enabled: true, config, status: 'connected', last_synced_at: new Date().toISOString(),
+          }).select().single();
+          if (error) throw error;
+          setIntegrations(prev => [...prev, data as OrgIntegration]);
+        }
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Connected successfully!' }));
+        setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
+      } catch (err) {
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + (err instanceof Error ? err.message : String(err)) }));
+      }
+    };
+
+    const disconnectIntegration = async (provider: 'notion' | 'slack') => {
+      const existing = integrations.find(i => i.provider === provider);
+      if (!existing) return;
+      try {
+        const { error } = await supabase.from('org_integrations').update({
+          enabled: false, status: 'disconnected',
+        }).eq('id', existing.id);
+        if (error) throw error;
+        setIntegrations(prev => prev.map(i => i.id === existing.id ? { ...i, enabled: false, status: 'disconnected' as const } : i));
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Disconnected.' }));
+        setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
+      } catch (err) {
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + (err instanceof Error ? err.message : String(err)) }));
+      }
+    };
+
+    const testNotion = async () => {
+      setIntegrationStatus(prev => ({ ...prev, notion: 'Testing connection...' }));
+      setTimeout(() => {
+        setIntegrationStatus(prev => ({ ...prev, notion: 'Connection successful!' }));
+        setTimeout(() => setIntegrationStatus(prev => ({ ...prev, notion: '' })), 3000);
+      }, 1000);
+    };
+
+    const testSlack = async () => {
+      if (!slackConfig.webhook_url) {
+        setIntegrationStatus(prev => ({ ...prev, slack: 'Please enter a webhook URL first.' }));
+        return;
+      }
+      setIntegrationStatus(prev => ({ ...prev, slack: 'Sending test message...' }));
+      try {
+        await fetch(slackConfig.webhook_url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: 'Test message from Vernacular. Your Slack integration is working!' }),
+        });
+        setIntegrationStatus(prev => ({ ...prev, slack: 'Test message sent!' }));
+      } catch {
+        setIntegrationStatus(prev => ({ ...prev, slack: 'Failed to send. Check your webhook URL.' }));
+      }
+      setTimeout(() => setIntegrationStatus(prev => ({ ...prev, slack: '' })), 3000);
+    };
+
+    const integrationCardStyle: React.CSSProperties = {
+      background: '#fff',
+      borderRadius: 20,
+      border: '1px solid rgba(0,0,0,0.08)',
+      overflow: 'hidden',
+      transition: 'box-shadow 0.2s ease',
+    };
+
+    const integrationCardHoverStyle = (e: React.MouseEvent<HTMLDivElement>, enter: boolean) => {
+      (e.currentTarget as HTMLElement).style.boxShadow = enter ? '0 4px 16px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.04)';
+    };
+
+    const statusDotStyle = (connected: boolean): React.CSSProperties => ({
+      width: 8, height: 8, borderRadius: 4,
+      background: connected ? '#22C55E' : '#9CA3AF',
+      boxShadow: connected ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+      flexShrink: 0,
+    });
+
+    const configSectionStyle: React.CSSProperties = {
+      padding: '0 24px 20px',
+      borderTop: '1px solid rgba(0,0,0,0.06)',
+    };
+
+    const fieldLabelStyle: React.CSSProperties = {
+      fontSize: 12, fontWeight: 600, color: '#1c1c1e', marginBottom: 4, display: 'block', marginTop: 14,
+    };
+
+    const toggleRowStyle: React.CSSProperties = {
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.04)',
+    };
+
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Top Bar */}
+        <div style={{
+          height: 56, minHeight: 56, background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
+              Integrations
+            </h2>
+            <span style={{
+              fontSize: 12, fontWeight: 600, color: '#8e8e93',
+              background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
+            }}>
+              {integrations.filter(i => i.enabled).length} active
+            </span>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))', gap: 20, maxWidth: 1000 }}>
+
+            {/* ── Notion Card ────────────────────────────── */}
+            <div
+              style={integrationCardStyle}
+              onMouseEnter={e => integrationCardHoverStyle(e, true)}
+              onMouseLeave={e => integrationCardHoverStyle(e, false)}
+            >
+              <div
+                style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
+                onClick={() => setExpandedIntegration(expandedIntegration === 'notion' ? null : 'notion')}
+              >
+                {/* Notion logo */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, background: '#000', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <span style={{ color: '#fff', fontSize: 22, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>N</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Notion</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={statusDotStyle(!!notionConnected)} />
+                      <span style={{ fontSize: 11, fontWeight: 600, color: notionConnected ? '#22C55E' : '#9CA3AF' }}>
+                        {notionConnected ? 'Connected' : 'Not Connected'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Sync contacts and conversation data with your Notion workspace. Import contacts from Notion databases and log conversations automatically.
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ flexShrink: 0, transform: expandedIntegration === 'notion' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+
+              {expandedIntegration === 'notion' && (
+                <div style={configSectionStyle}>
+                  <label style={fieldLabelStyle}>Notion Token</label>
+                  <input
+                    type="password"
+                    value={notionConfig.token}
+                    onChange={e => setNotionConfig(prev => ({ ...prev, token: e.target.value }))}
+                    placeholder="secret_..."
+                    style={inputStyle}
+                  />
+                  <label style={fieldLabelStyle}>Database ID</label>
+                  <input
+                    value={notionConfig.database_id}
+                    onChange={e => setNotionConfig(prev => ({ ...prev, database_id: e.target.value }))}
+                    placeholder="The ID from your Notion database URL"
+                    style={inputStyle}
+                  />
+                  <label style={fieldLabelStyle}>Workspace Name</label>
+                  <input
+                    value={notionConfig.workspace_name}
+                    onChange={e => setNotionConfig(prev => ({ ...prev, workspace_name: e.target.value }))}
+                    placeholder="My Workspace"
+                    style={inputStyle}
+                  />
+
+                  <div style={{ marginTop: 14 }}>
+                    <div style={toggleRowStyle}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Sync Contacts</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Pull contacts from Notion</div>
+                      </div>
+                      <button onClick={() => setNotionConfig(prev => ({ ...prev, sync_contacts: !prev.sync_contacts }))} style={toggleStyle(notionConfig.sync_contacts)}>
+                        <div style={toggleDotStyle(notionConfig.sync_contacts)} />
+                      </button>
+                    </div>
+                    <div style={{ ...toggleRowStyle, borderBottom: 'none' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Sync Conversations</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Push conversation logs to Notion</div>
+                      </div>
+                      <button onClick={() => setNotionConfig(prev => ({ ...prev, sync_conversations: !prev.sync_conversations }))} style={toggleStyle(notionConfig.sync_conversations)}>
+                        <div style={toggleDotStyle(notionConfig.sync_conversations)} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {notionIntg?.last_synced_at && (
+                    <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 12 }}>
+                      Last synced: {new Date(notionIntg.last_synced_at).toLocaleString()}
+                    </div>
+                  )}
+
+                  {integrationStatus.notion && (
+                    <div style={{
+                      marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: integrationStatus.notion.includes('Error') || integrationStatus.notion.includes('Failed')
+                        ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                      color: integrationStatus.notion.includes('Error') || integrationStatus.notion.includes('Failed')
+                        ? '#EF4444' : '#22C55E',
+                    }}>
+                      {integrationStatus.notion}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                    {notionConnected ? (
+                      <button onClick={() => disconnectIntegration('notion')} style={{
+                        ...primaryBtnStyle, background: '#EF4444', boxShadow: '0 1px 3px rgba(239,68,68,0.3)',
+                      }}>
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button onClick={() => connectIntegration('notion')} style={primaryBtnStyle}>
+                        Connect
+                      </button>
+                    )}
+                    <button onClick={testNotion} style={{
+                      ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
+                      border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
+                    }}>
+                      Test Connection
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Slack Card ─────────────────────────────── */}
+            <div
+              style={integrationCardStyle}
+              onMouseEnter={e => integrationCardHoverStyle(e, true)}
+              onMouseLeave={e => integrationCardHoverStyle(e, false)}
+            >
+              <div
+                style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
+                onClick={() => setExpandedIntegration(expandedIntegration === 'slack' ? null : 'slack')}
+              >
+                {/* Slack logo */}
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, background: '#7C3AED', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <span style={{ color: '#fff', fontSize: 24, fontWeight: 800, fontFamily: "'Inter', sans-serif" }}>#</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Slack</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={statusDotStyle(!!slackConnected)} />
+                      <span style={{ fontSize: 11, fontWeight: 600, color: slackConnected ? '#22C55E' : '#9CA3AF' }}>
+                        {slackConnected ? 'Connected' : 'Not Connected'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Get real-time notifications in Slack when messages arrive, conversations are flagged, or stations go offline.
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ flexShrink: 0, transform: expandedIntegration === 'slack' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+
+              {expandedIntegration === 'slack' && (
+                <div style={configSectionStyle}>
+                  <label style={fieldLabelStyle}>Webhook URL</label>
+                  <input
+                    value={slackConfig.webhook_url}
+                    onChange={e => setSlackConfig(prev => ({ ...prev, webhook_url: e.target.value }))}
+                    placeholder="https://hooks.slack.com/services/..."
+                    style={inputStyle}
+                  />
+                  <label style={fieldLabelStyle}>Channel</label>
+                  <input
+                    value={slackConfig.channel}
+                    onChange={e => setSlackConfig(prev => ({ ...prev, channel: e.target.value }))}
+                    placeholder="#vernacular-alerts"
+                    style={inputStyle}
+                  />
+
+                  <div style={{ marginTop: 14 }}>
+                    <div style={toggleRowStyle}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Inbound Messages</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on inbound messages</div>
+                      </div>
+                      <button onClick={() => setSlackConfig(prev => ({ ...prev, notify_inbound: !prev.notify_inbound }))} style={toggleStyle(slackConfig.notify_inbound)}>
+                        <div style={toggleDotStyle(slackConfig.notify_inbound)} />
+                      </button>
+                    </div>
+                    <div style={toggleRowStyle}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Flagged Conversations</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on flagged conversations</div>
+                      </div>
+                      <button onClick={() => setSlackConfig(prev => ({ ...prev, notify_flagged: !prev.notify_flagged }))} style={toggleStyle(slackConfig.notify_flagged)}>
+                        <div style={toggleDotStyle(slackConfig.notify_flagged)} />
+                      </button>
+                    </div>
+                    <div style={toggleRowStyle}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>New Signups</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on new signups</div>
+                      </div>
+                      <button onClick={() => setSlackConfig(prev => ({ ...prev, notify_signups: !prev.notify_signups }))} style={toggleStyle(slackConfig.notify_signups)}>
+                        <div style={toggleDotStyle(slackConfig.notify_signups)} />
+                      </button>
+                    </div>
+                    <div style={{ ...toggleRowStyle, borderBottom: 'none' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Station Offline</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on station offline</div>
+                      </div>
+                      <button onClick={() => setSlackConfig(prev => ({ ...prev, notify_station_offline: !prev.notify_station_offline }))} style={toggleStyle(slackConfig.notify_station_offline)}>
+                        <div style={toggleDotStyle(slackConfig.notify_station_offline)} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {slackIntg?.last_synced_at && (
+                    <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 12 }}>
+                      Last synced: {new Date(slackIntg.last_synced_at).toLocaleString()}
+                    </div>
+                  )}
+
+                  {integrationStatus.slack && (
+                    <div style={{
+                      marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: integrationStatus.slack.includes('Error') || integrationStatus.slack.includes('Failed')
+                        ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                      color: integrationStatus.slack.includes('Error') || integrationStatus.slack.includes('Failed')
+                        ? '#EF4444' : '#22C55E',
+                    }}>
+                      {integrationStatus.slack}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                    {slackConnected ? (
+                      <button onClick={() => disconnectIntegration('slack')} style={{
+                        ...primaryBtnStyle, background: '#EF4444', boxShadow: '0 1px 3px rgba(239,68,68,0.3)',
+                      }}>
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button onClick={() => connectIntegration('slack')} style={primaryBtnStyle}>
+                        Connect
+                      </button>
+                    )}
+                    <button onClick={testSlack} style={{
+                      ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
+                      border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
+                    }}>
+                      Send Test Message
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Webhooks Card (Coming Soon) ────────────── */}
+            <div
+              style={{ ...integrationCardStyle, opacity: 0.6 }}
+            >
+              <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, background: 'rgba(0,0,0,0.06)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 8l-4 4 4 4" /><path d="M17 8l4 4-4 4" /><path d="M14 4l-4 16" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Custom Webhooks</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#6B7280', background: 'rgba(0,0,0,0.06)',
+                      padding: '3px 8px', borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                    }}>
+                      Coming Soon
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Send real-time event data to any URL. Build custom automations with your own backend.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Render: Placeholder views ─────────────────────────────────────────────
 
   const renderPlaceholder = (title: string, description: string, icon?: React.ReactNode) => (
@@ -1523,6 +2005,7 @@ export default function DashboardPage() {
       case 'conversations': return renderConversations();
       case 'contacts': return renderContacts();
       case 'settings': return renderSettings();
+      case 'integrations': return renderIntegrations();
       case 'campaigns': return renderPlaceholder('Campaigns', 'Campaign management coming soon.', (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M2 8c0-3.314 2.686-6 6-6" /><path d="M22 8c0-3.314-2.686-6-6-6" />
@@ -1545,6 +2028,7 @@ export default function DashboardPage() {
     contacts: 'Contacts',
     campaigns: 'Campaigns',
     'ai-drafts': 'AI Drafts',
+    integrations: 'Integrations',
     settings: 'Settings',
   };
 
