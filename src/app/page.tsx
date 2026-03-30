@@ -46,132 +46,63 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#000', fontFamily: "'Inter', -apple-system, sans-serif", overflow: 'hidden' }}>
 
-      {/* ===== iMessage Window Phase ===== */}
+      {/* ===== Loading Phase — iMessage Typing Dots ===== */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: phase === 'reveal' ? 0 : 50,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 24,
         background: '#000',
         opacity: phase === 'reveal' ? 0 : 1,
         transition: 'opacity 0.8s ease',
         pointerEvents: phase === 'reveal' ? 'none' : 'auto',
       }}>
+        {/* Vernacular logo */}
         <div style={{
-          width: 380, maxWidth: '90vw',
-          background: '#fff', borderRadius: 28,
-          overflow: 'hidden',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-          transform: phase === 'reveal' ? 'scale(0.95)' : 'scale(1)',
-          transition: 'transform 0.8s ease',
+          display: 'flex', alignItems: 'center', gap: 10,
+          opacity: phase === 'imessage' ? 1 : 0.5,
+          transition: 'opacity 0.3s',
         }}>
-          {/* iPhone status bar */}
           <div style={{
-            height: 54, background: '#f6f6f6',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            paddingBottom: 8, position: 'relative',
-          }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#1c1c1e', letterSpacing: '-0.01em' }}>9:41</span>
-          </div>
-
-          {/* iMessage header */}
-          <div style={{
-            padding: '8px 16px 12px', background: '#f6f6f6',
-            borderBottom: '1px solid #e5e5e5',
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <div style={{ color: '#378ADD', fontSize: 13, fontWeight: 500 }}>{'<'}</div>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
-                margin: '0 auto 4px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 14, fontWeight: 700,
-              }}>V</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Vernacular</div>
-            </div>
-            <div style={{ width: 20 }} />
-          </div>
-
-          {/* Chat area */}
-          <div style={{
-            minHeight: 320, padding: '20px 16px', background: '#fff',
-            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-            gap: 8,
-          }}>
-            {/* Incoming bubble (always visible) */}
-            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-              <div style={{
-                background: '#e5e5ea', color: '#1c1c1e',
-                padding: '9px 14px', borderRadius: '18px 18px 18px 4px',
-                fontSize: 15, lineHeight: 1.4, maxWidth: '75%',
-              }}>
-                Hey, how do you manage all your outreach?
-              </div>
-            </div>
-
-            {/* Typing indicator */}
-            {(phase === 'typing') && (
-              <div style={{
-                display: 'flex', justifyContent: 'flex-end',
-                animation: 'fadeIn 0.3s ease',
-              }}>
-                <div style={{
-                  background: '#378ADD', borderRadius: '18px 18px 4px 18px',
-                  padding: '12px 18px',
-                  display: 'flex', gap: 4, alignItems: 'center',
-                }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out infinite' }} />
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
-                </div>
-              </div>
-            )}
-
-            {/* Sent message */}
-            {(phase === 'message' || phase === 'reveal') && (
-              <div style={{
-                display: 'flex', justifyContent: 'flex-end',
-                animation: 'bubblePop 0.3s ease',
-              }}>
-                <div style={{
-                  background: '#378ADD', color: '#fff',
-                  padding: '9px 14px', borderRadius: '18px 18px 4px 18px',
-                  fontSize: 15, lineHeight: 1.4, maxWidth: '75%',
-                }}>
-                  Vernacular. One dashboard for everything.
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* iMessage compose bar */}
-          <div style={{
-            padding: '8px 12px 28px', background: '#fff',
-            borderTop: '1px solid #e5e5e5',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: '#e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#8e8e93', fontSize: 18, fontWeight: 300,
-            }}>+</div>
-            <div style={{
-              flex: 1, height: 34, borderRadius: 17,
-              border: '1px solid #c7c7cc', background: '#fff',
-              display: 'flex', alignItems: 'center', paddingLeft: 12,
-              fontSize: 15, color: '#8e8e93',
-            }}>iMessage</div>
-            <div style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </div>
-          </div>
+            width: 40, height: 40, borderRadius: 10,
+            background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 800, fontSize: 18,
+          }}>V</div>
+          <span style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>Vernacular</span>
         </div>
+
+        {/* iMessage typing dots in a gray bubble */}
+        {(phase === 'typing' || phase === 'imessage') && (
+          <div style={{
+            display: 'inline-flex',
+            background: phase === 'typing' ? '#e5e5ea' : 'transparent',
+            borderRadius: '20px 20px 20px 6px',
+            padding: phase === 'typing' ? '14px 22px' : '14px 22px',
+            gap: 5, alignItems: 'center',
+            transition: 'background 0.3s',
+            opacity: phase === 'typing' ? 1 : 0,
+            animation: phase === 'typing' ? 'fadeIn 0.3s ease' : 'none',
+          }}>
+            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out infinite' }} />
+            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
+            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
+          </div>
+        )}
+
+        {/* Message bubble pops in */}
+        {(phase === 'message') && (
+          <div style={{ animation: 'bubblePop 0.35s ease' }}>
+            <div style={{
+              background: '#378ADD', color: '#fff',
+              padding: '12px 22px',
+              borderRadius: '22px 22px 6px 22px',
+              fontSize: 17, fontWeight: 500, lineHeight: 1.4,
+              boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+            }}>
+              One dashboard for every conversation.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ===== Full Landing Page (revealed after animation) ===== */}
@@ -240,15 +171,25 @@ export default function LandingPage() {
             Message managing for
             <br />
             <span style={{
-              background: 'linear-gradient(90deg, #378ADD, #5AC8FA)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              opacity: wordFade ? 1 : 0,
-              transition: 'opacity 0.4s ease',
               display: 'inline-block',
-              minWidth: 300,
+              marginTop: 12,
+              opacity: wordFade ? 1 : 0,
+              transform: wordFade ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
+              transition: 'opacity 0.35s ease, transform 0.35s ease',
             }}>
-              {ROTATING_WORDS[wordIndex]}
+              <span style={{
+                display: 'inline-block',
+                background: '#378ADD',
+                color: '#fff',
+                padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
+                borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
+                fontSize: 'clamp(28px, 5vw, 64px)',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+              }}>
+                {ROTATING_WORDS[wordIndex]}
+              </span>
             </span>
           </h1>
 
