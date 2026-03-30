@@ -424,67 +424,40 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* "Message management" iMessage bubble + subtitle */}
+          {/* "Message management for ___" with rotating words */}
           <div style={{ textAlign: 'center', marginTop: 48, marginBottom: 24 }}>
-            <div style={{ display: 'inline-block' }}>
-              <div style={{
-                background: '#378ADD', color: '#fff',
-                padding: '14px 28px',
-                borderRadius: '22px 22px 6px 22px',
-                fontSize: 'clamp(24px, 4vw, 40px)',
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
-                lineHeight: 1.2,
-              }}>
-                Message management
-              </div>
-            </div>
-            <p style={{
-              fontSize: 17, color: t.textSecondary,
-              maxWidth: 480, margin: '20px auto 32px', lineHeight: 1.6,
+            <h2 style={{
+              fontSize: 'clamp(32px, 5vw, 56px)',
+              fontWeight: 800,
+              color: t.text,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.2,
             }}>
-              Every iMessage conversation in one dashboard. AI drafts your replies. You approve and send.
-            </p>
-          </div>
-        </section>
-
-        {/* Rotating word section */}
-        <section style={{
-          padding: '80px 24px 100px', textAlign: 'center',
-          borderTop: `1px solid ${t.surfaceBorder}`,
-        }}>
-          <h2 style={{
-            fontSize: 'clamp(32px, 5vw, 56px)',
-            fontWeight: 800,
-            color: t.text,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.2,
-          }}>
-            Message management for
-            <br />
-            <span style={{
-              display: 'inline-block',
-              marginTop: 12,
-              opacity: wordFade ? 1 : 0,
-              transform: wordFade ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
-              transition: 'opacity 0.35s ease, transform 0.35s ease',
-            }}>
+              Message management for
+              <br />
               <span style={{
                 display: 'inline-block',
-                background: '#378ADD',
-                color: '#fff',
-                padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
-                borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
-                fontSize: 'clamp(26px, 4.5vw, 52px)',
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+                marginTop: 12,
+                opacity: wordFade ? 1 : 0,
+                transform: wordFade ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
+                transition: 'opacity 0.35s ease, transform 0.35s ease',
               }}>
-                {ROTATING_WORDS[wordIndex]}
+                <span style={{
+                  display: 'inline-block',
+                  background: '#378ADD',
+                  color: '#fff',
+                  padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
+                  borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
+                  fontSize: 'clamp(26px, 4.5vw, 52px)',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+                }}>
+                  {ROTATING_WORDS[wordIndex]}
+                </span>
               </span>
-            </span>
-          </h2>
+            </h2>
+          </div>
         </section>
 
         {/* ===== Outreach Board Visual Section ===== */}
