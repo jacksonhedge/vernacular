@@ -1,176 +1,452 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+
+const ROTATING_WORDS = ['CRM', 'Customer Communication', 'Customer Support', 'Sales Outreach', 'Team Messaging'];
+
 export default function LandingPage() {
+  const [phase, setPhase] = useState<'imessage' | 'typing' | 'message' | 'reveal'>('imessage');
+  const [wordIndex, setWordIndex] = useState(0);
+  const [wordFade, setWordFade] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Phase timeline
+  useEffect(() => {
+    // Phase 1: Show iMessage window (immediate)
+    const t1 = setTimeout(() => setPhase('typing'), 800);
+    // Phase 2: Show typing indicator
+    const t2 = setTimeout(() => {
+      setPhase('message');
+      // Play iMessage sound
+      try {
+        audioRef.current = new Audio('/imessage-sound.mp3');
+        audioRef.current.volume = 0.4;
+        audioRef.current.play().catch(() => {});
+      } catch {}
+    }, 2200);
+    // Phase 3: Reveal full page
+    const t3 = setTimeout(() => setPhase('reveal'), 3500);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  // Rotating words
+  useEffect(() => {
+    if (phase !== 'reveal') return;
+    const interval = setInterval(() => {
+      setWordFade(false);
+      setTimeout(() => {
+        setWordIndex(i => (i + 1) % ROTATING_WORDS.length);
+        setWordFade(true);
+      }, 400);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [phase]);
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white font-['Inter']">
-      {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">V</div>
-            <span className="font-semibold text-lg tracking-tight">Vernacular</span>
+    <div style={{ minHeight: '100vh', background: '#000', fontFamily: "'Inter', -apple-system, sans-serif", overflow: 'hidden' }}>
+
+      {/* ===== iMessage Window Phase ===== */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: phase === 'reveal' ? 0 : 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#000',
+        opacity: phase === 'reveal' ? 0 : 1,
+        transition: 'opacity 0.8s ease',
+        pointerEvents: phase === 'reveal' ? 'none' : 'auto',
+      }}>
+        <div style={{
+          width: 380, maxWidth: '90vw',
+          background: '#fff', borderRadius: 28,
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          transform: phase === 'reveal' ? 'scale(0.95)' : 'scale(1)',
+          transition: 'transform 0.8s ease',
+        }}>
+          {/* iPhone status bar */}
+          <div style={{
+            height: 54, background: '#f6f6f6',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            paddingBottom: 8, position: 'relative',
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#1c1c1e', letterSpacing: '-0.01em' }}>9:41</span>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="#features" className="text-sm text-white/50 hover:text-white/80 transition">Features</a>
-            <a href="#how-it-works" className="text-sm text-white/50 hover:text-white/80 transition">How It Works</a>
-            <a href="/login" className="text-sm text-white/50 hover:text-white/80 transition">Log In</a>
-            <a href="/signup" className="text-sm font-medium px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition">Get Started</a>
+
+          {/* iMessage header */}
+          <div style={{
+            padding: '8px 16px 12px', background: '#f6f6f6',
+            borderBottom: '1px solid #e5e5e5',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{ color: '#378ADD', fontSize: 13, fontWeight: 500 }}>{'<'}</div>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
+                margin: '0 auto 4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 14, fontWeight: 700,
+              }}>V</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Vernacular</div>
+            </div>
+            <div style={{ width: 20 }} />
+          </div>
+
+          {/* Chat area */}
+          <div style={{
+            minHeight: 320, padding: '20px 16px', background: '#fff',
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+            gap: 8,
+          }}>
+            {/* Incoming bubble (always visible) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{
+                background: '#e5e5ea', color: '#1c1c1e',
+                padding: '9px 14px', borderRadius: '18px 18px 18px 4px',
+                fontSize: 15, lineHeight: 1.4, maxWidth: '75%',
+              }}>
+                Hey, how do you manage all your outreach?
+              </div>
+            </div>
+
+            {/* Typing indicator */}
+            {(phase === 'typing') && (
+              <div style={{
+                display: 'flex', justifyContent: 'flex-end',
+                animation: 'fadeIn 0.3s ease',
+              }}>
+                <div style={{
+                  background: '#378ADD', borderRadius: '18px 18px 4px 18px',
+                  padding: '12px 18px',
+                  display: 'flex', gap: 4, alignItems: 'center',
+                }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Sent message */}
+            {(phase === 'message' || phase === 'reveal') && (
+              <div style={{
+                display: 'flex', justifyContent: 'flex-end',
+                animation: 'bubblePop 0.3s ease',
+              }}>
+                <div style={{
+                  background: '#378ADD', color: '#fff',
+                  padding: '9px 14px', borderRadius: '18px 18px 4px 18px',
+                  fontSize: 15, lineHeight: 1.4, maxWidth: '75%',
+                }}>
+                  Vernacular. One dashboard for everything.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* iMessage compose bar */}
+          <div style={{
+            padding: '8px 12px 28px', background: '#fff',
+            borderTop: '1px solid #e5e5e5',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: '50%',
+              background: '#e5e5ea', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#8e8e93', fontSize: 18, fontWeight: 300,
+            }}>+</div>
+            <div style={{
+              flex: 1, height: 34, borderRadius: 17,
+              border: '1px solid #c7c7cc', background: '#fff',
+              display: 'flex', alignItems: 'center', paddingLeft: 12,
+              fontSize: 15, color: '#8e8e93',
+            }}>iMessage</div>
+            <div style={{
+              width: 30, height: 30, borderRadius: '50%',
+              background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Hero */}
-      <section className="pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 mb-8">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            <span className="text-xs font-medium text-blue-400 tracking-wide">iMessage CRM for teams</span>
+      {/* ===== Full Landing Page (revealed after animation) ===== */}
+      <div style={{
+        opacity: phase === 'reveal' ? 1 : 0,
+        transform: phase === 'reveal' ? 'translateY(0)' : 'translateY(20px)',
+        transition: 'opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s',
+      }}>
+        {/* Navbar */}
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+          height: 64, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 32px',
+          animation: phase === 'reveal' ? 'slideDown 0.5s ease 0.3s both' : 'none',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 800, fontSize: 14,
+            }}>V</div>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>Vernacular</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            <a href="#features" style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Features</a>
+            <a href="#pricing" style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Pricing</a>
+            <a href="/login" style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Log In</a>
+            <a href="/signup" style={{
+              fontSize: 13, fontWeight: 600, color: '#fff',
+              padding: '8px 20px', borderRadius: 8,
+              background: '#378ADD',
+              textDecoration: 'none',
+            }}>Get Started</a>
+          </div>
+        </nav>
+
+        {/* Hero */}
+        <section style={{
+          minHeight: '100vh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '120px 24px 80px', textAlign: 'center',
+        }}>
+          {/* Badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '6px 14px', borderRadius: 100,
+            background: 'rgba(55,138,221,0.1)', border: '1px solid rgba(55,138,221,0.2)',
+            marginBottom: 32,
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#378ADD', animation: 'pulse 2s ease infinite' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#378ADD', letterSpacing: '0.02em' }}>Built on iMessage</span>
           </div>
 
-          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
-            Every conversation.
+          {/* Main heading with rotating word */}
+          <h1 style={{
+            fontSize: 'clamp(36px, 6vw, 72px)',
+            fontWeight: 800,
+            color: '#fff',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
+            marginBottom: 24,
+          }}>
+            Message managing for
             <br />
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">One dashboard.</span>
+            <span style={{
+              background: 'linear-gradient(90deg, #378ADD, #5AC8FA)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              opacity: wordFade ? 1 : 0,
+              transition: 'opacity 0.4s ease',
+              display: 'inline-block',
+              minWidth: 300,
+            }}>
+              {ROTATING_WORDS[wordIndex]}
+            </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed">
-            See all your iMessage conversations in one place. AI drafts responses.
-            You approve and send. No apps for your contacts to download — just texting.
+          <p style={{
+            fontSize: 18, color: 'rgba(255,255,255,0.45)',
+            maxWidth: 520, lineHeight: 1.7, marginBottom: 40,
+          }}>
+            Every iMessage conversation in one dashboard.
+            AI drafts your replies. You approve and send.
           </p>
 
-          <div className="flex items-center justify-center gap-4">
-            <a href="/signup" className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-semibold text-base transition shadow-lg shadow-blue-600/20">
-              Start Free Trial
-            </a>
-            <a href="#demo" className="px-8 py-3.5 rounded-xl border border-white/10 hover:border-white/20 font-medium text-base text-white/70 hover:text-white transition">
-              Watch Demo
-            </a>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <a href="/signup" style={{
+              padding: '14px 32px', borderRadius: 12,
+              background: '#378ADD', color: '#fff',
+              fontSize: 15, fontWeight: 600, textDecoration: 'none',
+              boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}>Start Free Trial</a>
+            <a href="#demo" style={{
+              padding: '14px 32px', borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
+              fontSize: 15, fontWeight: 500, textDecoration: 'none',
+              transition: 'border-color 0.2s, color 0.2s',
+            }}>See How It Works</a>
           </div>
 
-          {/* Hero visual — iMessage preview */}
-          <div className="mt-16 max-w-3xl mx-auto">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-1 shadow-2xl shadow-black/50">
-              <div className="rounded-xl bg-[#111] overflow-hidden">
-                {/* Top bar mock */}
-                <div className="h-10 bg-[#1a1a1a] border-b border-white/5 flex items-center px-4 gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/70" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/70" />
-                  </div>
-                  <span className="ml-4 text-xs text-white/30 font-mono">vernacular.chat</span>
+          {/* Dashboard preview */}
+          <div style={{
+            marginTop: 64, width: '100%', maxWidth: 900,
+            borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.02)',
+            padding: 4, boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{
+              borderRadius: 12, overflow: 'hidden', background: '#111',
+            }}>
+              {/* Window chrome */}
+              <div style={{
+                height: 36, background: '#1a1a1a', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                display: 'flex', alignItems: 'center', padding: '0 14px', gap: 6,
+              }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57' }} />
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e' }} />
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840' }} />
                 </div>
-                {/* Mock conversations */}
-                <div className="flex h-80">
-                  {/* Sidebar mock */}
-                  <div className="w-48 border-r border-white/5 p-3 space-y-2">
-                    {['Jake T.', 'Colby R.', 'Austin S.', 'Jack R.', 'Grady P.'].map((name, i) => (
-                      <div key={name} className={`flex items-center gap-2 p-2 rounded-lg ${i === 0 ? 'bg-blue-500/10' : 'hover:bg-white/5'} transition cursor-pointer`}>
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${i === 0 ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-white/40'}`}>{name[0]}</div>
-                        <div>
-                          <div className={`text-xs font-medium ${i === 0 ? 'text-white' : 'text-white/50'}`}>{name}</div>
-                          <div className="text-[9px] text-white/25">Sigma Chi · USC</div>
-                        </div>
+                <span style={{ marginLeft: 16, fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>vernacular.chat/dashboard</span>
+              </div>
+              {/* Mock dashboard */}
+              <div style={{ display: 'flex', height: 340 }}>
+                {/* Sidebar */}
+                <div style={{ width: 200, borderRight: '1px solid rgba(255,255,255,0.05)', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4, fontFamily: "'JetBrains Mono', monospace" }}>Conversations</div>
+                  {[
+                    { name: 'Jake Thompson', msg: 'Just got the Venmo!', unread: true },
+                    { name: 'Colby Resh', msg: 'Sounds good', unread: false },
+                    { name: 'Jack Robinson', msg: 'Appreciate it bro', unread: true },
+                    { name: 'Austin Sarvis', msg: "I'm all set up", unread: false },
+                    { name: 'Grady Pierce', msg: "I'll lyk when it comes", unread: false },
+                  ].map((c, i) => (
+                    <div key={c.name} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 10px', borderRadius: 8,
+                      background: i === 0 ? 'rgba(55,138,221,0.12)' : 'transparent',
+                      cursor: 'pointer',
+                    }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: i === 0 ? 'rgba(55,138,221,0.3)' : 'rgba(255,255,255,0.08)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700, color: i === 0 ? '#5AC8FA' : 'rgba(255,255,255,0.3)',
+                        flexShrink: 0,
+                      }}>{c.name.split(' ').map(n => n[0]).join('')}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? '#fff' : 'rgba(255,255,255,0.5)' }}>{c.name}</div>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.msg}</div>
                       </div>
-                    ))}
-                  </div>
-                  {/* Chat mock */}
-                  <div className="flex-1 flex flex-col">
-                    <div className="flex-1 p-4 space-y-3">
-                      <div className="flex justify-end"><div className="bg-blue-500 text-white text-xs px-3 py-2 rounded-2xl rounded-br-sm max-w-[200px]">Yo Jake whats up man, this is Jackson</div></div>
-                      <div className="flex justify-start"><div className="bg-white/10 text-white/80 text-xs px-3 py-2 rounded-2xl rounded-bl-sm max-w-[200px]">Yo what&apos;s good bro!</div></div>
-                      <div className="flex justify-end"><div className="bg-blue-500 text-white text-xs px-3 py-2 rounded-2xl rounded-br-sm max-w-[240px]">What&apos;s your Venmo? I&apos;ll send the deposit</div></div>
-                      {/* AI draft */}
-                      <div className="flex justify-end">
-                        <div className="border border-blue-400/30 border-dashed bg-blue-500/5 text-blue-300 text-xs px-3 py-2 rounded-2xl max-w-[240px] relative">
-                          <span className="absolute -top-2 right-2 text-[8px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-mono">AI Draft</span>
-                          Sending the Venmo now, lmk when you get it!
-                        </div>
+                      {c.unread && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#378ADD', flexShrink: 0 }} />}
+                    </div>
+                  ))}
+                </div>
+                {/* Chat area */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 11, padding: '6px 12px', borderRadius: '14px 14px 4px 14px', maxWidth: 200 }}>What&apos;s your Venmo?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: 11, padding: '6px 12px', borderRadius: '14px 14px 14px 4px', maxWidth: 200 }}>Just got the Venmo! 🙏</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{
+                        border: '1px dashed rgba(55,138,221,0.4)',
+                        background: 'rgba(55,138,221,0.06)',
+                        color: '#5AC8FA', fontSize: 11, padding: '6px 12px',
+                        borderRadius: '14px 14px 4px 14px', maxWidth: 220, position: 'relative',
+                      }}>
+                        <span style={{ position: 'absolute', top: -6, right: 6, fontSize: 7, background: 'rgba(55,138,221,0.2)', color: '#5AC8FA', padding: '1px 4px', borderRadius: 3, fontFamily: "'JetBrains Mono', monospace" }}>AI Draft</span>
+                        Here&apos;s the link to get started!
                       </div>
                     </div>
-                    {/* Compose mock */}
-                    <div className="h-12 border-t border-white/5 flex items-center px-3 gap-2">
-                      <div className="flex-1 h-7 rounded-full bg-white/5 border border-white/10" />
-                      <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                      <div style={{ fontSize: 9, padding: '3px 8px', borderRadius: 4, background: '#378ADD', color: '#fff', fontWeight: 600 }}>Approve</div>
+                      <div style={{ fontSize: 9, padding: '3px 8px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>Edit</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 40, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', padding: '0 12px', gap: 6 }}>
+                    <div style={{ flex: 1, height: 26, borderRadius: 13, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features */}
-      <section id="features" className="py-20 px-6 border-t border-white/5">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-4">Built for outreach at scale</h2>
-          <p className="text-center text-white/40 mb-16 max-w-xl mx-auto">Everything your team needs to manage iMessage conversations, without the complexity of enterprise software.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: '💬', title: 'Multi-conversation view', desc: 'See 4+ conversations at once. HootSuite-style columns with scrollable chat feeds.' },
-              { icon: '🤖', title: 'AI-powered drafts', desc: 'Claude reads the conversation and suggests replies. You approve or edit before sending.' },
-              { icon: '📱', title: 'Pure iMessage', desc: 'No Twilio, no SMS fallback. Messages send and receive through real iMessage.' },
-              { icon: '👤', title: 'Contact profiles', desc: 'Click any name to see their full profile — school, org, status, campaign progress.' },
-              { icon: '📢', title: 'Blast messaging', desc: 'Send the same message to 50 contacts at once. Schedule for later or send now.' },
-              { icon: '📊', title: 'Campaign tracking', desc: 'See who opened, replied, completed actions. Track conversions at a glance.' },
-            ].map(f => (
-              <div key={f.title} className="p-6 rounded-xl border border-white/5 bg-white/[0.02] hover:border-white/10 transition">
-                <div className="text-2xl mb-3">{f.icon}</div>
-                <h3 className="font-semibold mb-1.5">{f.title}</h3>
-                <p className="text-sm text-white/40 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section id="how-it-works" className="py-20 px-6 border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-16">How it works</h2>
-          <div className="space-y-12">
-            {[
-              { step: '01', title: 'Connect your Mac', desc: 'Vernacular runs locally on your Mac, reading and sending iMessages through your existing Apple ID. No phone number porting.' },
-              { step: '02', title: 'Import your contacts', desc: 'Pull contacts from a Google Form, CSV, or CRM. Vernacular enriches them with school, org, and campaign data.' },
-              { step: '03', title: 'Start conversations', desc: 'Send individual messages or blast to a list. AI drafts responses when replies come in. You approve before anything sends.' },
-            ].map(s => (
-              <div key={s.step} className="flex gap-6 items-start">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-blue-400 font-mono">{s.step}</span>
+        {/* Features */}
+        <section id="features" style={{
+          padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+            <h2 style={{ fontSize: 36, fontWeight: 800, color: '#fff', textAlign: 'center', marginBottom: 12, letterSpacing: '-0.02em' }}>Built for outreach at scale</h2>
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.35)', marginBottom: 60, maxWidth: 480, margin: '0 auto 60px', fontSize: 16 }}>Everything your team needs to manage iMessage conversations.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+              {[
+                { icon: '💬', title: 'Multi-conversation view', desc: 'HootSuite-style columns. See 4+ conversations at once.' },
+                { icon: '🤖', title: 'AI-powered drafts', desc: 'Claude reads the thread and suggests a reply. You approve or edit.' },
+                { icon: '📱', title: 'Pure iMessage', desc: 'No Twilio. Messages go through your real Apple ID.' },
+                { icon: '👤', title: 'Contact CRM', desc: 'Full profiles for every contact. School, org, status, notes.' },
+                { icon: '📢', title: 'Blast & schedule', desc: 'Send to 50 people at once. Schedule for the perfect time.' },
+                { icon: '📊', title: 'Campaign tracking', desc: 'See who replied, who converted, who needs a follow-up.' },
+              ].map(f => (
+                <div key={f.title} style={{
+                  padding: 28, borderRadius: 14,
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  background: 'rgba(255,255,255,0.02)',
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{f.title}</h3>
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>{f.desc}</p>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">{s.title}</h3>
-                  <p className="text-white/40 leading-relaxed">{s.desc}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA */}
-      <section className="py-24 px-6 border-t border-white/5">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to scale your outreach?</h2>
-          <p className="text-white/40 mb-8 text-lg">Start your free trial. No credit card required.</p>
-          <a href="/signup" className="inline-block px-10 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 font-semibold text-lg transition shadow-lg shadow-blue-600/20">
-            Get Started Free
-          </a>
-        </div>
-      </section>
+        {/* CTA */}
+        <section style={{
+          padding: '100px 24px', borderTop: '1px solid rgba(255,255,255,0.05)',
+          textAlign: 'center',
+        }}>
+          <h2 style={{ fontSize: 40, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em' }}>Ready to try Vernacular?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.35)', marginBottom: 32, fontSize: 17 }}>Free trial. No credit card.</p>
+          <a href="/signup" style={{
+            display: 'inline-block', padding: '16px 40px', borderRadius: 12,
+            background: '#378ADD', color: '#fff', fontSize: 16, fontWeight: 700,
+            textDecoration: 'none', boxShadow: '0 4px 24px rgba(55,138,221,0.3)',
+          }}>Get Started Free</a>
+        </section>
 
-      {/* Footer */}
-      <footer className="py-8 px-6 border-t border-white/5">
-        <div className="max-w-6xl mx-auto flex items-center justify-between text-sm text-white/25">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-blue-500/30 flex items-center justify-center text-[10px] font-bold text-blue-300">V</div>
-            <span>Vernacular</span>
+        {/* Footer */}
+        <footer style={{
+          padding: '24px 32px', borderTop: '1px solid rgba(255,255,255,0.05)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          color: 'rgba(255,255,255,0.2)', fontSize: 13,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 20, height: 20, borderRadius: 5, background: 'rgba(55,138,221,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#5AC8FA' }}>V</div>
+            Vernacular
           </div>
           <div>vernacular.chat</div>
-        </div>
-      </footer>
+        </footer>
+      </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes typingDot {
+          0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+          30% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bubblePop {
+          0% { opacity: 0; transform: scale(0.8) translateY(8px); }
+          50% { transform: scale(1.02) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        a:hover { opacity: 0.9; }
+      `}</style>
     </div>
   );
 }
