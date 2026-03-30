@@ -383,10 +383,12 @@ export default function LandingPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <a href="/login" style={{ fontSize: 14, color: t.textSecondary, textDecoration: 'none' }}>Log In</a>
             <a href="/signup" style={{
-              fontSize: 13, fontWeight: 600, color: '#fff',
-              padding: '8px 20px', borderRadius: 8,
+              position: 'relative', fontSize: 13, fontWeight: 600, color: '#fff',
+              padding: '8px 20px',
+              borderRadius: '18px 18px 6px 18px',
               background: '#378ADD',
               textDecoration: 'none',
+              boxShadow: '0 2px 10px rgba(55,138,221,0.3)',
             }}>Get Started</a>
           </div>
         </nav>
