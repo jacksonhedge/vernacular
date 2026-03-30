@@ -246,30 +246,27 @@ function ChatColumn({ conv, theme: t, started }: { conv: ConvDef; theme: typeof 
 }
 
 export default function LandingPage() {
-  const [phase, setPhase] = useState<'imessage' | 'typing' | 'message' | 'reveal'>('imessage');
+  const [phase, setPhase] = useState<'logo' | 'incoming' | 'typing' | 'reply' | 'reveal'>('logo');
   const [wordIndex, setWordIndex] = useState(0);
   const [wordFade, setWordFade] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark' | 'sunset'>('light');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Phase timeline
+  // Phase timeline: logo -> incoming msg -> typing dots -> reply -> reveal
   useEffect(() => {
-    // Phase 1: Show iMessage window (immediate)
-    const t1 = setTimeout(() => setPhase('typing'), 800);
-    // Phase 2: Show typing indicator
-    const t2 = setTimeout(() => {
-      setPhase('message');
-      // Play iMessage sound
+    const t1 = setTimeout(() => setPhase('incoming'), 600);       // Show "Hi Vernacular?"
+    const t2 = setTimeout(() => setPhase('typing'), 1800);        // Show typing dots
+    const t3 = setTimeout(() => {
+      setPhase('reply');                                           // Show "Hello there!"
       try {
         audioRef.current = new Audio('/imessage-sound.mp3');
         audioRef.current.volume = 0.4;
         audioRef.current.play().catch(() => {});
       } catch {}
-    }, 2200);
-    // Phase 3: Reveal full page
-    const t3 = setTimeout(() => setPhase('reveal'), 3500);
+    }, 3200);
+    const t4 = setTimeout(() => setPhase('reveal'), 4600);        // Reveal page
 
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, []);
 
   // Rotating words
@@ -290,11 +287,11 @@ export default function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: t.bg, color: t.text, fontFamily: "'Inter', -apple-system, sans-serif", overflow: 'hidden' }}>
 
-      {/* ===== Loading Phase — iMessage Typing Dots ===== */}
+      {/* ===== Loading Phase — iMessage Conversation ===== */}
       <div style={{
         position: 'fixed', inset: 0, zIndex: phase === 'reveal' ? 0 : 50,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexDirection: 'column', gap: 24,
+        flexDirection: 'column', gap: 20,
         background: t.bg,
         opacity: phase === 'reveal' ? 0 : 1,
         transition: 'opacity 0.8s ease',
@@ -303,46 +300,60 @@ export default function LandingPage() {
         {/* Vernacular logo */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          opacity: phase === 'imessage' ? 1 : 0.5,
+          opacity: phase === 'logo' ? 1 : 0.5,
           transition: 'opacity 0.3s',
         }}>
           <img src="/logo.png" alt="Vernacular" style={{ width: 40, height: 40, borderRadius: 10 }} />
           <span style={{ fontSize: 22, fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>Vernacular</span>
         </div>
 
-        {/* iMessage typing dots in a gray bubble */}
-        {(phase === 'typing' || phase === 'imessage') && (
-          <div style={{
-            display: 'inline-flex',
-            background: phase === 'typing' ? '#e5e5ea' : 'transparent',
-            borderRadius: '20px 20px 20px 6px',
-            padding: phase === 'typing' ? '14px 22px' : '14px 22px',
-            gap: 5, alignItems: 'center',
-            transition: 'background 0.3s',
-            opacity: phase === 'typing' ? 1 : 0,
-            animation: phase === 'typing' ? 'fadeIn 0.3s ease' : 'none',
-          }}>
-            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out infinite' }} />
-            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
-            <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
-          </div>
-        )}
-
-        {/* Message bubble pops in */}
-        {(phase === 'message') && (
-          <div style={{ animation: 'bubblePop 0.35s ease', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <div style={{
-              background: '#378ADD', color: '#fff',
-              padding: '12px 22px',
-              borderRadius: '22px 22px 6px 22px',
-              fontSize: 17, fontWeight: 500, lineHeight: 1.4,
-              boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
-            }}>
-              Hello there!
+        {/* Conversation container */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 320 }}>
+          {/* Incoming: "Hi Vernacular?" */}
+          {(phase === 'incoming' || phase === 'typing' || phase === 'reply') && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', animation: 'bubblePop 0.35s ease' }}>
+              <div style={{
+                background: '#e5e5ea', color: '#1c1c1e',
+                padding: '12px 22px',
+                borderRadius: '22px 22px 22px 6px',
+                fontSize: 17, fontWeight: 500, lineHeight: 1.4,
+              }}>
+                Hi Vernacular?
+              </div>
             </div>
-            <span style={{ fontSize: 11, color: t.textTertiary, marginTop: 4, marginRight: 4 }}>Delivered</span>
-          </div>
-        )}
+          )}
+
+          {/* Typing dots (our reply incoming) */}
+          {phase === 'typing' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', animation: 'fadeIn 0.3s ease' }}>
+              <div style={{
+                display: 'inline-flex', background: '#378ADD',
+                borderRadius: '22px 22px 6px 22px',
+                padding: '12px 20px', gap: 5, alignItems: 'center',
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', animation: 'typingDot 1.4s ease-in-out infinite' }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Reply: "Hello there!" + Delivered */}
+          {phase === 'reply' && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', animation: 'bubblePop 0.35s ease' }}>
+              <div style={{
+                background: '#378ADD', color: '#fff',
+                padding: '12px 22px',
+                borderRadius: '22px 22px 6px 22px',
+                fontSize: 17, fontWeight: 500, lineHeight: 1.4,
+                boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+              }}>
+                Hello there!
+              </div>
+              <span style={{ fontSize: 11, color: t.textTertiary, marginTop: 4, marginRight: 4 }}>Delivered</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ===== Full Landing Page (revealed after animation) ===== */}
@@ -705,7 +716,7 @@ export default function LandingPage() {
             <img src="/logo.png" alt="Vernacular" style={{ width: 20, height: 20, borderRadius: 5 }} />
             Vernacular
           </div>
-          <div>vernacular.chat</div>
+          <div>&copy; {new Date().getFullYear()} CoverPay, Inc.</div>
         </footer>
       </div>
 

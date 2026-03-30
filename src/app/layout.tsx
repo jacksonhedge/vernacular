@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Vernacular — iMessage CRM",
-  description: "See all your iMessage conversations in one place. AI helps you reply faster.",
+  description: "Talk to your users at scale via iMessage",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -13,6 +13,27 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
+  openGraph: {
+    title: "Vernacular — iMessage CRM",
+    description: "Talk to your users at scale via iMessage",
+    url: "https://vernacular.chat",
+    siteName: "Vernacular",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Vernacular",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Vernacular — iMessage CRM",
+    description: "Talk to your users at scale via iMessage",
+    images: ["/icon-512.png"],
+  },
 };
 
 export default function RootLayout({
