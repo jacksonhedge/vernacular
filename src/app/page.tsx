@@ -232,6 +232,9 @@ export default function LandingPage() {
         <section style={{
           padding: '88px 24px 0', display: 'flex', flexDirection: 'column',
           alignItems: 'center',
+          background: 'linear-gradient(135deg, #e8f4fd 0%, #d4eaf8 25%, #e0f0ff 50%, #cce5f8 75%, #e8f4fd 100%)',
+          backgroundSize: '400% 400%',
+          animation: 'gradientShift 12s ease infinite',
         }}>
           {/* HootSuite-style multi-column messaging window */}
           <div style={{
@@ -392,6 +395,62 @@ export default function LandingPage() {
                       <span style={{ fontSize: 8, padding: '2px 8px', borderRadius: 3, background: '#378ADD', color: '#fff', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer' }}>Approve</span>
                       <span style={{ fontSize: 8, padding: '2px 8px', borderRadius: 3, background: t.surfaceBorder, color: t.textSecondary, border: `1px solid ${t.surfaceBorder}`, fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer' }}>Edit</span>
                     </div>
+                  </div>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 5 — Lisa Park */}
+                <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Lisa Park <span style={{ fontSize: 9, color: t.textTertiary }}>💬</span></div>
+                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client · Diamond</div>
+                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}18`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>Hey Lisa, your Diamond renewal is coming up next week</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}`, maxWidth: '85%', lineHeight: 1.35 }}>Oh perfect, can I get the same rate?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>
+                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
+                        Absolutely! I&apos;ll lock in the same rate + a bonus perk for loyalty
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Amazing, you guys are the best 🙌</div></div>
+                  </div>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 6 — James Cooper */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>James Cooper <span style={{ fontSize: 9, color: t.textTertiary }}>💬</span></div>
+                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Support · Tier 1</div>
+                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeYellow}18`, color: t.badgeYellow, border: `1px solid ${t.badgeYellow}40`, fontFamily: "'JetBrains Mono', monospace" }}>PENDING</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}`, maxWidth: '85%', lineHeight: 1.35 }}>Hey, I&apos;m having trouble logging in to my account</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>
+                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
+                        Sorry about that James! Can you try resetting your password at vernacular.chat/reset?
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>That worked, thanks!</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Glad to hear it! Let me know if anything else comes up 👍</div></div>
                   </div>
                   <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
@@ -745,6 +804,11 @@ export default function LandingPage() {
 
       {/* CSS Animations */}
       <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
         @keyframes typingDot {
           0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
           30% { opacity: 1; transform: scale(1); }
