@@ -43,11 +43,18 @@ export default function SignupPage() {
 
   const handleSubmit = async () => {
     setError('');
-    if (!form.companyName.trim()) return setError('Company name is required');
-    if (!form.fullName.trim()) return setError('Your name is required');
-    if (!form.workEmail.trim()) return setError('Work email is required');
-    if (!form.password || form.password.length < 8) return setError('Password must be at least 8 characters');
-    if (!form.industry) return setError('Please select an industry');
+
+    if (!form.companyName.trim()) { setError('Company name is required'); return; }
+    if (!form.fullName.trim()) { setError('Your name is required'); return; }
+    if (!form.workEmail.trim()) { setError('Work email is required'); return; }
+    if (!form.password || form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (!form.industry) { setError('Please select an industry'); return; }
+
+    // Check Supabase client
+    if (!supabase || !supabase.auth) {
+      setError('Connection error. Please refresh and try again.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -58,7 +65,7 @@ export default function SignupPage() {
         options: { data: { full_name: form.fullName, company_name: form.companyName } },
       });
       if (authError) throw new Error(authError.message);
-      if (!authData.user) throw new Error('Signup failed');
+      if (!authData.user) throw new Error('Signup failed — please try again');
 
       // 2. Create org, user record, and settings via server API (uses service role)
       const res = await fetch('/api/signup', {

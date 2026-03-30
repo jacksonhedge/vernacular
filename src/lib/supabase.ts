@@ -4,9 +4,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Client-side Supabase (browser)
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null as unknown as ReturnType<typeof createClient>;
+// NEXT_PUBLIC_ vars are embedded at build time by Next.js
+export const supabase = createClient(
+  supabaseUrl || 'https://miuyksnwzkhiyyilchjs.supabase.co',
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdXlrc253emtoaXl5aWxjaGpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODcwNzcsImV4cCI6MjA5MDQ2MzA3N30.D9-XO0-XgxpzwygqbYYutCIWEuBsd80KGCthJOp5OeQ'
+);
 
 // Server-side Supabase with service role (API routes only — never called at build time)
 export function createServiceClient() {
