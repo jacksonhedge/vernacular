@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const ROTATING_WORDS = ['CRM', 'VIPs', 'Customer Support', 'Sales Outreach', 'Team Messaging'];
 
@@ -82,6 +82,169 @@ const THEMES = {
   },
 };
 
+type MsgDef = { from: 'me' | 'them'; text: string; isAI?: boolean; isAIDraft?: boolean };
+type ConvDef = { name: string; initials: string; gradient: string; subtitle: string; badge: string; badgeColor: 'green' | 'yellow'; messages: MsgDef[]; delay: number };
+
+const CONVOS: ConvDef[] = [
+  { name: 'Sarah Chen', initials: 'SC', gradient: 'linear-gradient(135deg, #FF6B6B, #FF8E53)', subtitle: 'VIP Client \u00b7 Platinum', badge: 'ACTIVE', badgeColor: 'green', delay: 0, messages: [
+    { from: 'me', text: 'Hey Sarah, wanted to let you know your exclusive early access is ready' },
+    { from: 'them', text: 'Thanks! When can I get the link?' },
+    { from: 'me', text: "Here's your personal access: vernacular.chat/vip/sarah", isAI: true },
+    { from: 'them', text: 'Amazing, just signed up!' },
+    { from: 'me', text: 'Welcome aboard! Let me know if you need anything' },
+    { from: 'them', text: 'Will do, thanks!' },
+    { from: 'me', text: 'By the way, we just launched a referral program', isAI: true },
+    { from: 'them', text: 'Absolutely, send me the details!' },
+  ]},
+  { name: 'Marcus Williams', initials: 'MW', gradient: 'linear-gradient(135deg, #5B86E5, #36D1DC)', subtitle: 'Enterprise \u00b7 Acme Corp', badge: 'CONFIRMED', badgeColor: 'green', delay: 1200, messages: [
+    { from: 'me', text: "Hi Marcus, your team's onboarding is all set" },
+    { from: 'them', text: 'Great, how many seats do we have?' },
+    { from: 'me', text: "25 seats on the Enterprise plan" },
+    { from: 'them', text: 'Perfect, can you send it to my work email?' },
+    { from: 'me', text: 'Done! Check your inbox' },
+    { from: 'them', text: 'Got it, thanks!' },
+    { from: 'me', text: 'Your team can start using the API today', isAI: true },
+    { from: 'them', text: 'Perfect, sharing with the devs now' },
+  ]},
+  { name: 'Emily Rodriguez', initials: 'ER', gradient: 'linear-gradient(135deg, #A855F7, #EC4899)', subtitle: 'VIP Client \u00b7 Gold', badge: 'ENGAGED', badgeColor: 'green', delay: 2400, messages: [
+    { from: 'me', text: "Hi Emily! We're hosting a VIP launch event next Thursday" },
+    { from: 'them', text: 'Sounds great, what time?' },
+    { from: 'me', text: "7 PM at The Grand. Plus one welcome!", isAI: true },
+    { from: 'them', text: "Perfect, I'll be there!" },
+    { from: 'me', text: "I'll send the calendar invite now", isAI: true },
+    { from: 'them', text: 'Got it, see you there!' },
+    { from: 'me', text: 'Quick reminder \u2014 event is tomorrow at 7 PM!', isAI: true },
+    { from: 'them', text: 'On my way soon!' },
+  ]},
+  { name: 'David Kim', initials: 'DK', gradient: 'linear-gradient(135deg, #F59E0B, #EF4444)', subtitle: 'Lead \u00b7 TechStart Inc', badge: 'NO REPLY', badgeColor: 'yellow', delay: 800, messages: [
+    { from: 'me', text: 'Hey David, saw you checked out our demo last week' },
+    { from: 'me', text: 'Would love to set up a quick call to walk through pricing' },
+    { from: 'me', text: 'Hi David, just circling back \u2014 any interest in a 15-min walkthrough?', isAIDraft: true },
+    { from: 'them', text: 'Hey! Sorry been swamped. Thursday works?' },
+    { from: 'me', text: "Thursday at 2pm? I'll send a Zoom link", isAI: true },
+    { from: 'them', text: 'Locked in' },
+  ]},
+  { name: 'Lisa Park', initials: 'LP', gradient: 'linear-gradient(135deg, #34D399, #059669)', subtitle: 'VIP Client \u00b7 Diamond', badge: 'ACTIVE', badgeColor: 'green', delay: 1800, messages: [
+    { from: 'me', text: 'Hey Lisa, your Diamond renewal is coming up next week' },
+    { from: 'them', text: 'Oh perfect, can I get the same rate?' },
+    { from: 'me', text: "Absolutely! Same rate + a bonus perk for loyalty", isAI: true },
+    { from: 'them', text: 'Amazing, you guys are the best' },
+    { from: 'me', text: 'Renewal confirmed! Your new perks are live now' },
+    { from: 'them', text: 'Love it, thank you!' },
+  ]},
+  { name: 'James Cooper', initials: 'JC', gradient: 'linear-gradient(135deg, #6366F1, #8B5CF6)', subtitle: 'Support \u00b7 Tier 1', badge: 'PENDING', badgeColor: 'yellow', delay: 3000, messages: [
+    { from: 'them', text: "Hey, I'm having trouble logging in" },
+    { from: 'me', text: 'Can you try resetting your password at vernacular.chat/reset?', isAI: true },
+    { from: 'them', text: 'That worked, thanks!' },
+    { from: 'me', text: 'Glad to hear it! Let me know if anything else comes up' },
+    { from: 'them', text: 'Actually one more thing \u2014 how do I enable 2FA?' },
+    { from: 'me', text: 'Go to Settings > Security > Two-Factor', isAI: true },
+    { from: 'them', text: 'Got it, all set now!' },
+  ]},
+];
+
+function ChatColumn({ conv, theme: t, started }: { conv: ConvDef; theme: typeof THEMES.light; started: boolean }) {
+  const [visible, setVisible] = useState(0);
+  const [typing, setTyping] = useState(false);
+  const [typingFrom, setTypingFrom] = useState<'me' | 'them'>('them');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const timeouts = useRef<NodeJS.Timeout[]>([]);
+
+  const scheduleMessages = useCallback(() => {
+    timeouts.current.forEach(clearTimeout);
+    timeouts.current = [];
+    setVisible(0);
+    setTyping(false);
+
+    let accum = conv.delay;
+    conv.messages.forEach((msg, i) => {
+      // Show typing dots
+      const typingTime = accum;
+      accum += 600 + Math.random() * 800;
+      // Show message
+      const msgTime = accum;
+      accum += 800 + Math.random() * 1200;
+
+      timeouts.current.push(setTimeout(() => {
+        setTypingFrom(msg.from);
+        setTyping(true);
+      }, typingTime));
+
+      timeouts.current.push(setTimeout(() => {
+        setTyping(false);
+        setVisible(i + 1);
+      }, msgTime));
+    });
+
+    // Loop after all messages shown
+    timeouts.current.push(setTimeout(() => {
+      scheduleMessages();
+    }, accum + 3000));
+  }, [conv]);
+
+  useEffect(() => {
+    if (!started) return;
+    scheduleMessages();
+    return () => timeouts.current.forEach(clearTimeout);
+  }, [started, scheduleMessages]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [visible, typing]);
+
+  const bc = conv.badgeColor === 'green'
+    ? { bg: `${t.badgeGreen}1f`, color: t.badgeGreen, border: `${t.badgeGreen}40` }
+    : { bg: `${t.badgeYellow}1a`, color: t.badgeYellow, border: `${t.badgeYellow}33` };
+
+  return (
+    <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: conv.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{conv.initials}</div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>{conv.name}</span>
+        </div>
+        <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>{conv.subtitle}</div>
+        <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+          <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: bc.bg, color: bc.color, border: `1px solid ${bc.border}`, fontFamily: "'JetBrains Mono', monospace" }}>{conv.badge}</span>
+        </div>
+      </div>
+      <div ref={scrollRef} style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden', maxHeight: 340 }}>
+        {conv.messages.slice(0, visible).map((msg, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: msg.from === 'me' ? 'flex-end' : 'flex-start', animation: 'bubblePop 0.35s ease' }}>
+            {(msg.isAI || msg.isAIDraft) ? (
+              <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
+                <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{msg.isAIDraft ? 'AI DRAFT' : 'AI'}</span>
+                {msg.text}
+              </div>
+            ) : msg.from === 'me' ? (
+              <div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>{msg.text}</div>
+            ) : (
+              <div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}`, maxWidth: '85%', lineHeight: 1.4 }}>{msg.text}</div>
+            )}
+          </div>
+        ))}
+        {typing && (
+          <div style={{ display: 'flex', justifyContent: typingFrom === 'me' ? 'flex-end' : 'flex-start', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'inline-flex', background: typingFrom === 'me' ? t.bubbleOut : '#e5e5ea', borderRadius: typingFrom === 'me' ? '12px 12px 3px 12px' : '12px 12px 12px 3px', padding: '8px 14px', gap: 4, alignItems: 'center' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: typingFrom === 'me' ? 'rgba(255,255,255,0.6)' : '#8e8e93', animation: 'typingDot 1.4s ease-in-out infinite' }} />
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: typingFrom === 'me' ? 'rgba(255,255,255,0.6)' : '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.2s infinite' }} />
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: typingFrom === 'me' ? 'rgba(255,255,255,0.6)' : '#8e8e93', animation: 'typingDot 1.4s ease-in-out 0.4s infinite' }} />
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+          <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [phase, setPhase] = useState<'imessage' | 'typing' | 'message' | 'reveal'>('imessage');
   const [wordIndex, setWordIndex] = useState(0);
@@ -143,12 +306,7 @@ export default function LandingPage() {
           opacity: phase === 'imessage' ? 1 : 0.5,
           transition: 'opacity 0.3s',
         }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 800, fontSize: 18,
-          }}>V</div>
+          <img src="/logo.png" alt="Vernacular" style={{ width: 40, height: 40, borderRadius: 10 }} />
           <span style={{ fontSize: 22, fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>Vernacular</span>
         </div>
 
@@ -257,220 +415,11 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4-column conversations */}
+              {/* Animated conversations */}
               <div style={{ display: 'flex', minHeight: 420 }}>
-
-                {/* Column 1 — Sarah Chen */}
-                <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #FF6B6B, #FF8E53)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>SC</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Sarah Chen</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client &middot; Platinum</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}1f`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Hey Sarah, wanted to let you know your exclusive early access is ready</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Thanks! When can I get the link?</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Here&apos;s your personal access: vernacular.chat/vip/sarah
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Amazing, just signed up!</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Welcome aboard! Let me know if you need anything</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Will do, thanks!</div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
-                {/* Column 2 — Marcus Williams */}
-                <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #5B86E5, #36D1DC)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>MW</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Marcus Williams</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Enterprise &middot; Acme Corp</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}1f`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>CONFIRMED</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Hi Marcus, your team&apos;s onboarding is all set</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Great, how many seats do we have?</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>25 seats on the Enterprise plan — I&apos;ll send the admin invite</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Perfect, can you send it to my work email?</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Done! Check your inbox</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Got it, thanks!</div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
-                {/* Column 3 — Emily Rodriguez */}
-                <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #A855F7, #EC4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>ER</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Emily Rodriguez</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client &middot; Gold</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}1f`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>ENGAGED</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Hi Emily! We&apos;re hosting a VIP launch event next Thursday</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Sounds great, what time?</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        7 PM at The Grand. I&apos;ll add you to the guest list — plus one welcome!
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Perfect, I&apos;ll be there!</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Amazing! I&apos;ll send the calendar invite now
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Got it, see you there!</div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
-                {/* Column 4 — David Kim */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>DK</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>David Kim</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Lead &middot; TechStart Inc</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeYellow}1a`, color: t.badgeYellow, border: `1px solid ${t.badgeYellow}33`, fontFamily: "'JetBrains Mono', monospace" }}>NO REPLY</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5, justifyContent: 'flex-end', overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Hey David, saw you checked out our demo last week</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Would love to set up a quick call to walk through pricing</div></div>
-                    <div style={{ textAlign: 'center', marginTop: 16 }}>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, fontWeight: 600, color: t.badgeYellow, opacity: 0.6, letterSpacing: '0.03em' }}>FOLLOW-UP NEEDED</span>
-                    </div>
-                    {/* AI draft pending */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI DRAFT</span>
-                        Hi David, just circling back — any interest in a 15-min walkthrough this week?
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginTop: 2 }}>
-                      <span style={{ fontSize: 8, padding: '2px 8px', borderRadius: 3, background: '#378ADD', color: '#fff', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer' }}>Approve</span>
-                      <span style={{ fontSize: 8, padding: '2px 8px', borderRadius: 3, background: t.surfaceBorder, color: t.textSecondary, border: `1px solid ${t.surfaceBorder}`, fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer' }}>Edit</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
-                {/* Column 5 — Lisa Park */}
-                <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #34D399, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LP</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Lisa Park</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client · Diamond</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}18`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>Hey Lisa, your Diamond renewal is coming up next week</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}`, maxWidth: '85%', lineHeight: 1.35 }}>Oh perfect, can I get the same rate?</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Absolutely! I&apos;ll lock in the same rate + a bonus perk for loyalty
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Amazing, you guys are the best 🙌</div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
-                {/* Column 6 — James Cooper */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>JC</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>James Cooper</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Support · Tier 1</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeYellow}18`, color: t.badgeYellow, border: `1px solid ${t.badgeYellow}40`, fontFamily: "'JetBrains Mono', monospace" }}>PENDING</span>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}`, maxWidth: '85%', lineHeight: 1.35 }}>Hey, I&apos;m having trouble logging in to my account</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: t.aiDraftBg, border: `1px dashed ${t.aiDraftBorder}`, color: t.aiDraftText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.35 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: t.aiDraftBorder, color: t.aiDraftText, padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Sorry about that James! Can you try resetting your password at vernacular.chat/reset?
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>That worked, thanks!</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Glad to hear it! Let me know if anything else comes up 👍</div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
-                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                  </div>
-                </div>
-
+                {CONVOS.map((conv) => (
+                  <ChatColumn key={conv.name} conv={conv} theme={t} started={phase === 'reveal'} />
+                ))}
               </div>
             </div>
           </div>
@@ -791,7 +740,7 @@ export default function LandingPage() {
           color: t.textTertiary, fontSize: 13,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 20, height: 20, borderRadius: 5, background: 'rgba(55,138,221,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#5AC8FA' }}>V</div>
+            <img src="/logo.png" alt="Vernacular" style={{ width: 20, height: 20, borderRadius: 5 }} />
             Vernacular
           </div>
           <div>vernacular.chat</div>
