@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",
+  metadataBase: new URL("https://vernacular.chat"),
   openGraph: {
     title: "Vernacular — iMessage CRM",
     description: "Talk to your users at scale via iMessage",
@@ -20,19 +21,20 @@ export const metadata: Metadata = {
     siteName: "Vernacular",
     images: [
       {
-        url: "/icon-512.png",
-        width: 512,
-        height: 512,
-        alt: "Vernacular",
+        url: "https://vernacular.chat/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Vernacular — iMessage CRM",
+        type: "image/png",
       },
     ],
     type: "website",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Vernacular — iMessage CRM",
     description: "Talk to your users at scale via iMessage",
-    images: ["/icon-512.png"],
+    images: ["https://vernacular.chat/og-image.png"],
   },
 };
 
