@@ -439,9 +439,9 @@ export default function LandingPage() {
           </div>
 
           {/* "See every conversation at once... for ___" with rotating words */}
-          <div style={{ textAlign: 'center', marginTop: 48, marginBottom: 24 }}>
+          <div style={{ textAlign: 'center', marginTop: 28, marginBottom: 16 }}>
             <h2 style={{
-              fontSize: 'clamp(32px, 5vw, 56px)',
+              fontSize: 'clamp(24px, 3.5vw, 40px)',
               fontWeight: 800,
               color: '#378ADD',
               letterSpacing: '-0.03em',
@@ -449,20 +449,20 @@ export default function LandingPage() {
             }}>
               See every conversation at once.</h2>
             <h2 style={{
-              fontSize: 'clamp(32px, 5vw, 56px)',
+              fontSize: 'clamp(24px, 3.5vw, 40px)',
               fontWeight: 800,
               color: t.text,
               letterSpacing: '-0.03em',
               lineHeight: 1.2,
-              marginTop: 8,
+              marginTop: 4,
             }}>
               Message management for
               <br />
               <span style={{
                 display: 'inline-block',
                 marginTop: 12,
-                minWidth: 'clamp(200px, 40vw, 500px)',
-                height: 'clamp(50px, 8vw, 90px)',
+                minWidth: 'clamp(180px, 35vw, 420px)',
+                height: 'clamp(44px, 6vw, 70px)',
                 position: 'relative',
               }}>
                 <span style={{
@@ -478,9 +478,9 @@ export default function LandingPage() {
                     display: 'inline-block',
                     background: '#378ADD',
                     color: '#fff',
-                    padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
-                    borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
-                    fontSize: 'clamp(26px, 4.5vw, 52px)',
+                    padding: 'clamp(6px, 1vw, 12px) clamp(14px, 2vw, 28px)',
+                    borderRadius: 'clamp(14px, 2vw, 22px) clamp(14px, 2vw, 22px) 6px clamp(14px, 2vw, 22px)',
+                    fontSize: 'clamp(20px, 3.5vw, 38px)',
                     fontWeight: 800,
                     letterSpacing: '-0.02em',
                     boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
