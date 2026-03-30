@@ -271,7 +271,7 @@ export default function LandingPage() {
                 <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(55,138,221,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#5AC8FA', flexShrink: 0 }}>SC</div>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #FF6B6B, #FF8E53)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>SC</div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Sarah Chen</span>
                     </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client &middot; Platinum</div>
@@ -304,7 +304,7 @@ export default function LandingPage() {
                 <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: t.surfaceBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: t.textTertiary, flexShrink: 0 }}>MW</div>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #5B86E5, #36D1DC)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>MW</div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Marcus Williams</span>
                     </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Enterprise &middot; Acme Corp</div>
@@ -332,7 +332,7 @@ export default function LandingPage() {
                 <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: t.surfaceBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: t.textTertiary, flexShrink: 0 }}>ER</div>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #A855F7, #EC4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>ER</div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Emily Rodriguez</span>
                     </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client &middot; Gold</div>
@@ -370,7 +370,7 @@ export default function LandingPage() {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: t.surfaceBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: t.textTertiary, flexShrink: 0 }}>DK</div>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>DK</div>
                       <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>David Kim</span>
                     </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Lead &middot; TechStart Inc</div>
@@ -407,7 +407,10 @@ export default function LandingPage() {
                 {/* Column 5 — Lisa Park */}
                 <div style={{ flex: 1, borderRight: `1px solid ${t.surfaceBorder}`, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Lisa Park <span style={{ fontSize: 9, color: t.textTertiary }}>💬</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #34D399, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LP</div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>Lisa Park</span>
+                    </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>VIP Client · Diamond</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
                       <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeGreen}18`, color: t.badgeGreen, border: `1px solid ${t.badgeGreen}40`, fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
@@ -435,7 +438,10 @@ export default function LandingPage() {
                 {/* Column 6 — James Cooper */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <div style={{ padding: '10px 10px', borderBottom: `1px solid ${t.surfaceBorder}` }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: t.text }}>James Cooper <span style={{ fontSize: 9, color: t.textTertiary }}>💬</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>JC</div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: t.text }}>James Cooper</span>
+                    </div>
                     <div style={{ fontSize: 9, color: t.textTertiary, marginTop: 2 }}>Support · Tier 1</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
                       <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: `${t.badgeYellow}18`, color: t.badgeYellow, border: `1px solid ${t.badgeYellow}40`, fontFamily: "'JetBrains Mono', monospace" }}>PENDING</span>
