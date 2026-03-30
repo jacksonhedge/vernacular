@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 
+const NOTIFY_EMAIL = 'jackson@hedgepayments.co';
+
 export async function POST(request: Request) {
   try {
-    const { userId, companyName, email, fullName } = await request.json();
+    const { userId, companyName, email, fullName, industry, teamSize, useCase } = await request.json();
 
     if (!userId || !companyName || !email || !fullName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -35,7 +37,6 @@ export async function POST(request: Request) {
       });
 
     if (userError) {
-      // Cleanup: delete the org we just created
       await supabase.from('organizations').delete().eq('id', org.id);
       return NextResponse.json({ error: 'Failed to create user: ' + userError.message }, { status: 500 });
     }
@@ -48,9 +49,65 @@ export async function POST(request: Request) {
       ai_model: 'claude-sonnet-4-20250514',
     });
 
+    // 4. Log signup event
+    await supabase.from('signup_events').insert({
+      company_name: companyName,
+      full_name: fullName,
+      email,
+      industry: industry || null,
+      team_size: teamSize || null,
+      use_case: useCase || null,
+    });
+
+    // 5. Send email notification via Supabase Auth admin (invite as a side-channel notification)
+    // Using edge function or simple approach: send via Supabase's built-in email
+    try {
+      await sendSignupNotification({ companyName, fullName, email, industry, teamSize, useCase });
+    } catch {
+      // Don't fail signup if notification fails
+      console.error('Failed to send signup notification');
+    }
+
     return NextResponse.json({ success: true, orgId: org.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function sendSignupNotification(data: {
+  companyName: string; fullName: string; email: string;
+  industry?: string; teamSize?: string; useCase?: string;
+}) {
+  // Use Supabase Edge Function or a simple webhook
+  // For now, use Supabase's REST API to call a pg_net HTTP request
+  const supabase = createServiceClient();
+
+  // Store notification for retrieval — can be checked via Supabase dashboard
+  // Also attempt to send via Supabase's built-in email if configured
+  const subject = `New Vernacular Signup: ${data.companyName}`;
+  const body = [
+    `New signup on Vernacular!`,
+    ``,
+    `Company: ${data.companyName}`,
+    `Name: ${data.fullName}`,
+    `Email: ${data.email}`,
+    `Industry: ${data.industry || 'Not specified'}`,
+    `Team Size: ${data.teamSize || 'Not specified'}`,
+    `Use Case: ${data.useCase || 'Not specified'}`,
+    ``,
+    `Time: ${new Date().toISOString()}`,
+  ].join('\n');
+
+  // Try pg_net extension for HTTP webhook (if available)
+  try {
+    await supabase.rpc('send_signup_notification', {
+      recipient: NOTIFY_EMAIL,
+      subject,
+      body,
+    });
+  } catch {
+    // pg_net function doesn't exist yet — just log
+    console.log(`SIGNUP NOTIFICATION:\n${body}`);
   }
 }

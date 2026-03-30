@@ -69,6 +69,9 @@ export default function SignupPage() {
           companyName: form.companyName,
           email: form.workEmail,
           fullName: form.fullName,
+          industry: form.industry,
+          teamSize: form.teamSize,
+          useCase: form.useCase,
         }),
       });
       const result = await res.json();
