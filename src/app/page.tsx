@@ -202,23 +202,16 @@ export default function LandingPage() {
           animation: phase === 'reveal' ? 'slideDown 0.5s ease 0.3s both' : 'none',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: 'linear-gradient(135deg, #378ADD, #5AC8FA)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 800, fontSize: 14,
-            }}>V</div>
+            <img src="/logo.png" alt="Vernacular" style={{ width: 32, height: 32, borderRadius: 8 }} />
             <span style={{ fontSize: 18, fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>Vernacular</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            <a href="#features" style={{ fontSize: 14, color: t.textSecondary, textDecoration: 'none' }}>Features</a>
-            <a href="#pricing" style={{ fontSize: 14, color: t.textSecondary, textDecoration: 'none' }}>Pricing</a>
+          <div style={{ display: 'flex', gap: 2, background: 'rgba(128,128,128,0.15)', borderRadius: 6, padding: 2 }}>
+            <button onClick={() => setTheme('light')} style={{ width: 28, height: 24, border: 'none', background: theme === 'light' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>☀️</button>
+            <button onClick={() => setTheme('dark')} style={{ width: 28, height: 24, border: 'none', background: theme === 'dark' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>🌙</button>
+            <button onClick={() => setTheme('sunset')} style={{ width: 28, height: 24, border: 'none', background: theme === 'sunset' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>🌅</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <a href="/login" style={{ fontSize: 14, color: t.textSecondary, textDecoration: 'none' }}>Log In</a>
-            <div style={{ display: 'flex', gap: 2, background: 'rgba(128,128,128,0.15)', borderRadius: 6, padding: 2 }}>
-              <button onClick={() => setTheme('light')} style={{ width: 28, height: 24, border: 'none', background: theme === 'light' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>☀️</button>
-              <button onClick={() => setTheme('dark')} style={{ width: 28, height: 24, border: 'none', background: theme === 'dark' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>🌙</button>
-              <button onClick={() => setTheme('sunset')} style={{ width: 28, height: 24, border: 'none', background: theme === 'sunset' ? 'rgba(128,128,128,0.35)' : 'transparent', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>🌅</button>
-            </div>
             <a href="/signup" style={{
               fontSize: 13, fontWeight: 600, color: '#fff',
               padding: '8px 20px', borderRadius: 8,
@@ -292,11 +285,13 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Welcome aboard! Let me know if you need anything</div></div>
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Will do, thanks!</div></div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -320,11 +315,13 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Done! Check your inbox</div></div>
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Got it, thanks!</div></div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -358,11 +355,13 @@ export default function LandingPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Got it, see you there!</div></div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -396,11 +395,13 @@ export default function LandingPage() {
                       <span style={{ fontSize: 8, padding: '2px 8px', borderRadius: 3, background: t.surfaceBorder, color: t.textSecondary, border: `1px solid ${t.surfaceBorder}`, fontFamily: "'JetBrains Mono', monospace", cursor: 'pointer' }}>Edit</span>
                     </div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -427,11 +428,13 @@ export default function LandingPage() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>Amazing, you guys are the best 🙌</div></div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -458,11 +461,13 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: t.bubbleIn, color: t.bubbleInText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: `1px solid ${t.bubbleInBorder}` }}>That worked, thanks!</div></div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: t.bubbleOut, color: t.bubbleOutText, fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Glad to hear it! Let me know if anything else comes up 👍</div></div>
                   </div>
-                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: t.bubbleIn, border: `1px solid ${t.bubbleInBorder}` }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <div style={{ padding: '6px 8px', borderTop: `1px solid ${t.surfaceBorder}`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <div style={{ flex: 1, height: 26, borderRadius: 18, background: '#e5e5ea', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+                      <span style={{ fontSize: 10, color: '#8e8e93' }}>iMessage</span>
                     </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                   </div>
                 </div>
 
@@ -470,7 +475,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* "Message management" iMessage bubble + subtitle + CTAs */}
+          {/* "Message management" iMessage bubble + subtitle */}
           <div style={{ textAlign: 'center', marginTop: 48, marginBottom: 24 }}>
             <div style={{ display: 'inline-block' }}>
               <div style={{
@@ -492,21 +497,6 @@ export default function LandingPage() {
             }}>
               Every iMessage conversation in one dashboard. AI drafts your replies. You approve and send.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-              <a href="/signup" style={{
-                padding: '14px 32px', borderRadius: 12,
-                background: '#378ADD', color: '#fff',
-                fontSize: 15, fontWeight: 600, textDecoration: 'none',
-                boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-              }}>Start Free Trial</a>
-              <a href="#demo" style={{
-                padding: '14px 32px', borderRadius: 12,
-                border: `1px solid ${t.surfaceBorder}`, color: t.textSecondary,
-                fontSize: 15, fontWeight: 500, textDecoration: 'none',
-                transition: 'border-color 0.2s, color 0.2s',
-              }}>See How It Works</a>
-            </div>
           </div>
         </section>
 
