@@ -12,8 +12,8 @@ export const supabase = createClient(
 
 // Server-side Supabase with service role (API routes only — never called at build time)
 export function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://miuyksnwzkhiyyilchjs.supabase.co';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) throw new Error('Supabase env vars not set');
+  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set — check Vercel env vars');
   return createClient(url, serviceKey);
 }
