@@ -160,10 +160,10 @@ function ChatColumn({ conv, theme: t, started }: { conv: ConvDef; theme: typeof 
     conv.messages.forEach((msg, i) => {
       // Show typing dots
       const typingTime = accum;
-      accum += 600 + Math.random() * 800;
+      accum += 1200 + Math.random() * 1000;
       // Show message
       const msgTime = accum;
-      accum += 800 + Math.random() * 1200;
+      accum += 1400 + Math.random() * 1600;
 
       timeouts.current.push(setTimeout(() => {
         setTypingFrom(msg.from);
@@ -330,7 +330,7 @@ export default function LandingPage() {
 
         {/* Message bubble pops in */}
         {(phase === 'message') && (
-          <div style={{ animation: 'bubblePop 0.35s ease' }}>
+          <div style={{ animation: 'bubblePop 0.35s ease', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <div style={{
               background: '#378ADD', color: '#fff',
               padding: '12px 22px',
@@ -338,8 +338,9 @@ export default function LandingPage() {
               fontSize: 17, fontWeight: 500, lineHeight: 1.4,
               boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
             }}>
-              One dashboard for every conversation.
+              Hello there!
             </div>
+            <span style={{ fontSize: 11, color: t.textTertiary, marginTop: 4, marginRight: 4 }}>Delivered</span>
           </div>
         )}
       </div>
@@ -424,36 +425,55 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* "Message management for ___" with rotating words */}
+          {/* "See every conversation at once... for ___" with rotating words */}
           <div style={{ textAlign: 'center', marginTop: 48, marginBottom: 24 }}>
+            <h2 style={{
+              fontSize: 'clamp(32px, 5vw, 56px)',
+              fontWeight: 800,
+              color: '#378ADD',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.2,
+            }}>
+              See every conversation at once.</h2>
             <h2 style={{
               fontSize: 'clamp(32px, 5vw, 56px)',
               fontWeight: 800,
               color: t.text,
               letterSpacing: '-0.03em',
               lineHeight: 1.2,
+              marginTop: 8,
             }}>
               Message management for
               <br />
               <span style={{
                 display: 'inline-block',
                 marginTop: 12,
-                opacity: wordFade ? 1 : 0,
-                transform: wordFade ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(4px)',
-                transition: 'opacity 0.35s ease, transform 0.35s ease',
+                minWidth: 'clamp(200px, 40vw, 500px)',
+                height: 'clamp(50px, 8vw, 90px)',
+                position: 'relative',
               }}>
                 <span style={{
-                  display: 'inline-block',
-                  background: '#378ADD',
-                  color: '#fff',
-                  padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
-                  borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
-                  fontSize: 'clamp(26px, 4.5vw, 52px)',
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                  boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: wordFade ? 'translate(-50%, -50%) scale(1)' : 'translate(-50%, -50%) scale(0.95)',
+                  opacity: wordFade ? 1 : 0,
+                  transition: 'opacity 0.35s ease, transform 0.35s ease',
+                  whiteSpace: 'nowrap',
                 }}>
-                  {ROTATING_WORDS[wordIndex]}
+                  <span style={{
+                    display: 'inline-block',
+                    background: '#378ADD',
+                    color: '#fff',
+                    padding: 'clamp(8px, 1.2vw, 16px) clamp(16px, 2.5vw, 36px)',
+                    borderRadius: 'clamp(16px, 2.5vw, 28px) clamp(16px, 2.5vw, 28px) 6px clamp(16px, 2.5vw, 28px)',
+                    fontSize: 'clamp(26px, 4.5vw, 52px)',
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                    boxShadow: '0 4px 20px rgba(55,138,221,0.3)',
+                  }}>
+                    {ROTATING_WORDS[wordIndex]}
+                  </span>
                 </span>
               </span>
             </h2>
@@ -662,48 +682,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section id="features" style={{
-          padding: '100px 24px', borderTop: `1px solid ${t.surfaceBorder}`,
-        }}>
-          <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-            <h2 style={{ fontSize: 36, fontWeight: 800, color: t.text, textAlign: 'center', marginBottom: 12, letterSpacing: '-0.02em' }}>Built for outreach at scale</h2>
-            <p style={{ textAlign: 'center', color: t.textSecondary, marginBottom: 60, maxWidth: 480, margin: '0 auto 60px', fontSize: 16 }}>Everything your team needs to manage iMessage conversations.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-              {[
-                { icon: '💬', title: 'Multi-conversation view', desc: 'HootSuite-style columns. See 4+ conversations at once.' },
-                { icon: '🤖', title: 'AI-powered drafts', desc: 'Claude reads the thread and suggests a reply. You approve or edit.' },
-                { icon: '📱', title: 'Pure iMessage', desc: 'No Twilio. Messages go through your real Apple ID.' },
-                { icon: '👤', title: 'Contact CRM', desc: 'Full profiles for every contact. School, org, status, notes.' },
-                { icon: '📢', title: 'Blast & schedule', desc: 'Send to 50 people at once. Schedule for the perfect time.' },
-                { icon: '📊', title: 'Campaign tracking', desc: 'See who replied, who converted, who needs a follow-up.' },
-              ].map(f => (
-                <div key={f.title} style={{
-                  padding: 28, borderRadius: 14,
-                  border: `1px solid ${t.surfaceBorder}`,
-                  background: t.surface,
-                }}>
-                  <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: t.text, marginBottom: 6 }}>{f.title}</h3>
-                  <p style={{ fontSize: 13, color: t.textSecondary, lineHeight: 1.6 }}>{f.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CTA */}
         <section style={{
           padding: '100px 24px', borderTop: `1px solid ${t.surfaceBorder}`,
           textAlign: 'center',
         }}>
-          <h2 style={{ fontSize: 40, fontWeight: 800, color: t.text, marginBottom: 12, letterSpacing: '-0.02em' }}>Ready to try Vernacular?</h2>
-          <p style={{ color: t.textSecondary, marginBottom: 32, fontSize: 17 }}>Free trial. No credit card.</p>
+          <h2 style={{ fontSize: 40, fontWeight: 800, color: t.text, marginBottom: 32, letterSpacing: '-0.02em' }}>Ready to try Vernacular?</h2>
           <a href="/signup" style={{
             display: 'inline-block', padding: '16px 40px', borderRadius: 12,
             background: '#378ADD', color: '#fff', fontSize: 16, fontWeight: 700,
             textDecoration: 'none', boxShadow: '0 4px 24px rgba(55,138,221,0.3)',
-          }}>Get Started Free</a>
+          }}>Get Started Now</a>
         </section>
 
         {/* Footer */}
