@@ -178,7 +178,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     tab: 'campaigns',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 8L12 13 2 8" /><path d="M2 8l10 5 10-5V16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8z" />
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M2 8c0-3.314 2.686-6 6-6" /><path d="M22 8c0-3.314-2.686-6-6-6" />
       </svg>
     ),
   },
@@ -187,7 +187,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     tab: 'ai-drafts',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2L9 9l-7 1 5 5-1.5 7L12 18.5 18.5 22 17 15l5-5-7-1L12 2z" />
+        <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
       </svg>
     ),
   },
@@ -234,6 +234,10 @@ export default function DashboardPage() {
   // Settings form
   const [settingsForm, setSettingsForm] = useState<OrgSettings | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Getting Started banner
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
   // ── Auth Check ────────────────────────────────────────────────────────────
 
@@ -433,25 +437,35 @@ export default function DashboardPage() {
   const saveSettings = async () => {
     if (!settingsForm || !org?.id) return;
     setSettingsSaving(true);
-    await supabase.from('org_settings').update({
-      company_name: settingsForm.company_name,
-      ai_auto_draft: settingsForm.ai_auto_draft,
-      ai_auto_send: settingsForm.ai_auto_send,
-      ai_model: settingsForm.ai_model,
-      default_system_prompt: settingsForm.default_system_prompt,
-      quiet_hours_start: settingsForm.quiet_hours_start,
-      quiet_hours_end: settingsForm.quiet_hours_end,
-      quiet_hours_timezone: settingsForm.quiet_hours_timezone,
-      max_messages_per_day: settingsForm.max_messages_per_day,
-      max_ai_drafts_per_day: settingsForm.max_ai_drafts_per_day,
-      max_blast_recipients: settingsForm.max_blast_recipients,
-      notify_on_inbound: settingsForm.notify_on_inbound,
-      notify_on_flag: settingsForm.notify_on_flag,
-      notify_on_station_offline: settingsForm.notify_on_station_offline,
-      slack_webhook_url: settingsForm.slack_webhook_url,
-    }).eq('organization_id', org.id as string);
-    setOrgSettings(settingsForm);
-    setSettingsSaving(false);
+    setSaveStatus('saving');
+    try {
+      const { error: saveError } = await supabase.from('org_settings').update({
+        company_name: settingsForm.company_name,
+        ai_auto_draft: settingsForm.ai_auto_draft,
+        ai_auto_send: settingsForm.ai_auto_send,
+        ai_model: settingsForm.ai_model,
+        default_system_prompt: settingsForm.default_system_prompt,
+        quiet_hours_start: settingsForm.quiet_hours_start,
+        quiet_hours_end: settingsForm.quiet_hours_end,
+        quiet_hours_timezone: settingsForm.quiet_hours_timezone,
+        max_messages_per_day: settingsForm.max_messages_per_day,
+        max_ai_drafts_per_day: settingsForm.max_ai_drafts_per_day,
+        max_blast_recipients: settingsForm.max_blast_recipients,
+        notify_on_inbound: settingsForm.notify_on_inbound,
+        notify_on_flag: settingsForm.notify_on_flag,
+        notify_on_station_offline: settingsForm.notify_on_station_offline,
+        slack_webhook_url: settingsForm.slack_webhook_url,
+      }).eq('organization_id', org.id as string);
+      if (saveError) throw saveError;
+      setOrgSettings(settingsForm);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      setSaveStatus('idle');
+      window.alert('Failed to save settings: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setSettingsSaving(false);
+    }
   };
 
   // Filtered contacts
@@ -550,8 +564,56 @@ export default function DashboardPage() {
 
   // ── Render: Dashboard Home ────────────────────────────────────────────────
 
+  const allMetricsZero = metrics.messagesToday === 0 && metrics.messagesAllTime === 0
+    && metrics.responseRate === 0 && metrics.activeConversations === 0 && metrics.aiDrafts === 0;
+
   const renderDashboard = () => (
     <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+      {/* Getting Started Banner */}
+      {showWelcomeBanner && allMetricsZero && (
+        <div style={{
+          background: 'linear-gradient(135deg, #378ADD 0%, #2B6CB0 60%, #1E4D8C 100%)',
+          borderRadius: 16, padding: '24px 28px', marginBottom: 24, position: 'relative',
+          color: '#fff', overflow: 'hidden',
+        }}>
+          <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: '100%', background: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Welcome to Vernacular!</h2>
+              <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 16px', opacity: 0.9 }}>Get started in 3 easy steps:</p>
+              <div style={{ display: 'flex', gap: 24 }}>
+                {[
+                  { num: '1', text: 'Connect a station' },
+                  { num: '2', text: 'Import contacts' },
+                  { num: '3', text: 'Send your first message' },
+                ].map(step => (
+                  <div key={step.num} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700, flexShrink: 0,
+                    }}>{step.num}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{step.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWelcomeBanner(false)}
+              style={{
+                background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'Inter', sans-serif", flexShrink: 0,
+                transition: 'background 0.15s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.25)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.15)')}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Messages Sent */}
@@ -1100,7 +1162,7 @@ export default function DashboardPage() {
             {contacts.length} total
           </span>
         </div>
-        <button style={primaryBtnStyle}>
+        <button onClick={() => window.alert('CSV import coming soon. You can add contacts manually via the Supabase dashboard.')} style={primaryBtnStyle}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
           </svg>
@@ -1226,11 +1288,13 @@ export default function DashboardPage() {
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
             Settings
           </h2>
-          <button onClick={saveSettings} disabled={settingsSaving} style={{
+          <button onClick={saveSettings} disabled={settingsSaving || saveStatus === 'saved'} style={{
             ...primaryBtnStyle,
             opacity: settingsSaving ? 0.6 : 1,
+            background: saveStatus === 'saved' ? '#22C55E' : primaryBtnStyle.background,
+            boxShadow: saveStatus === 'saved' ? '0 1px 3px rgba(34,197,94,0.3)' : primaryBtnStyle.boxShadow,
           }}>
-            {settingsSaving ? 'Saving...' : 'Save Changes'}
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
           </button>
         </div>
 
@@ -1430,7 +1494,7 @@ export default function DashboardPage() {
 
   // ── Render: Placeholder views ─────────────────────────────────────────────
 
-  const renderPlaceholder = (title: string, description: string) => (
+  const renderPlaceholder = (title: string, description: string, icon?: React.ReactNode) => (
     <div style={{
       flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
     }}>
@@ -1438,9 +1502,11 @@ export default function DashboardPage() {
         width: 64, height: 64, borderRadius: 16, background: 'rgba(55,138,221,0.1)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
       }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-        </svg>
+        {icon || (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        )}
       </div>
       <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1c1c1e', margin: '0 0 8px', letterSpacing: '-0.01em' }}>
         {title}
@@ -1457,8 +1523,16 @@ export default function DashboardPage() {
       case 'conversations': return renderConversations();
       case 'contacts': return renderContacts();
       case 'settings': return renderSettings();
-      case 'campaigns': return renderPlaceholder('Campaigns', 'Campaign management coming soon.');
-      case 'ai-drafts': return renderPlaceholder('AI Drafts', 'Review and manage AI-generated drafts coming soon.');
+      case 'campaigns': return renderPlaceholder('Campaigns', 'Campaign management coming soon.', (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M2 8c0-3.314 2.686-6 6-6" /><path d="M22 8c0-3.314-2.686-6-6-6" />
+        </svg>
+      ));
+      case 'ai-drafts': return renderPlaceholder('AI Drafts', 'Review and manage AI-generated drafts coming soon.', (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
+        </svg>
+      ));
       default: return renderDashboard();
     }
   };
