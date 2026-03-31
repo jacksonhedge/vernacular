@@ -784,7 +784,7 @@ button:active { transform: scale(0.98); }`}</style>
       id: `notion-${conv.pageId}`,
       name: conv.name,
       initials: conv.initials,
-      tag: 'Notion',
+      tag: 'IMPORTED',
       tagColor: '#000000',
       tagBg: 'rgba(0,0,0,0.06)',
       phone: conv.phone || (notionConversations.find(c => c.pageId === conv.pageId) as Record<string, unknown>)?.phone as string || '',
@@ -810,7 +810,7 @@ button:active { transform: scale(0.98); }`}</style>
             id: `notion-${conv.pageId}`,
             name: conv.name,
             initials: conv.initials,
-            tag: 'Notion',
+            tag: 'IMPORTED',
             tagColor: '#000000',
             tagBg: 'rgba(0,0,0,0.06)',
             phone: conv.phone || '',
@@ -1469,13 +1469,13 @@ button:active { transform: scale(0.98); }`}</style>
               boxShadow: 'none',
             }}>
               {loadingNotion ? (
-                'Loading Notion data...'
+                'Reloading...'
               ) : (
                 <>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" /><path d="M14 14h6v6h-6z" />
                   </svg>
-                  Load from Notion
+                  Reload
                 </>
               )}
             </button>
@@ -1773,14 +1773,14 @@ button:active { transform: scale(0.98); }`}</style>
                   </button>
                 </div>
                 <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
-                {/* Notion Conversations Group */}
+                {/* Imported Conversations Group */}
                 {notionConversations.length > 0 && (
                   <>
                     <div style={{
                       fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
                       letterSpacing: '0.06em', padding: '4px 10px 6px', marginTop: 2,
                     }}>
-                      Notion Conversations
+                      Imported Contacts
                     </div>
                     {notionConversations.map(conv => (
                       <button
