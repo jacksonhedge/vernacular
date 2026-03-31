@@ -356,7 +356,7 @@ export default function SignupPage() {
               marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               <span style={{ fontSize: 12, color: '#8e8e93' }}>Sending from</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>(878) 245-8811</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>(412) 512-8437</span>
               <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(55,138,221,0.1)', color: '#378ADD' }}>WADE</span>
             </div>
 
