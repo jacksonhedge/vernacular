@@ -58,6 +58,29 @@ export default function AdminPage() {
   const [signupFilter, setSignupFilter] = useState('');
   const [msgFilter, setMsgFilter] = useState<{ company: string; direction: string }>({ company: '', direction: '' });
   const [companySortBy, setCompanySortBy] = useState<'mrr' | 'team' | 'stations'>('mrr');
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number; errors?: string[] } | null>(null);
+
+  const syncFromNotion = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSyncResult(data);
+      // Re-fetch all data to update dashboard
+      login();
+    } catch (err) {
+      setSyncResult({ synced: 0, skipped: 0, errors: [err instanceof Error ? err.message : 'Sync failed'] });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const login = async () => {
     setError('');
@@ -255,15 +278,36 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            width: 8, height: 8, borderRadius: '50%',
-            background: onlineStations > 0 ? '#22C55E' : '#EF4444',
-            boxShadow: onlineStations > 0 ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
-          }} />
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'JetBrains Mono', monospace" }}>
-            {onlineStations}/{stations.length} online
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button onClick={syncFromNotion} disabled={syncing} style={{
+            padding: '6px 14px', borderRadius: 7, border: '1px solid rgba(55,138,221,0.25)',
+            background: syncing ? 'rgba(55,138,221,0.08)' : 'rgba(55,138,221,0.12)',
+            color: '#5EA3E8', fontSize: 11, fontWeight: 600, cursor: syncing ? 'default' : 'pointer',
+            fontFamily: "'Inter', sans-serif", display: 'flex', alignItems: 'center', gap: 6,
+            transition: 'all 0.15s',
+          }}>
+            <span style={{ display: 'inline-block', animation: syncing ? 'spin 1s linear infinite' : 'none' }}>↻</span>
+            {syncing ? 'Syncing...' : 'Sync Notion'}
+          </button>
+          {syncResult && (
+            <span style={{
+              fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+              color: syncResult.errors?.length ? '#EF4444' : '#22C55E',
+            }}>
+              {syncResult.synced} synced{syncResult.errors?.length ? `, ${syncResult.errors.length} errors` : ''}
+            </span>
+          )}
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: onlineStations > 0 ? '#22C55E' : '#EF4444',
+              boxShadow: onlineStations > 0 ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
+            }} />
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'JetBrains Mono', monospace" }}>
+              {onlineStations}/{stations.length} online
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1013,6 +1057,10 @@ export default function AdminPage() {
 
       {/* Global animations */}
       <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.85); }
