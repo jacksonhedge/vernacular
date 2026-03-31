@@ -142,42 +142,7 @@ const MOCK_CONTACTS: Contact[] = [
   { id: 'c3', name: 'David Kim', initials: 'DK', tag: 'Lead', tagColor: '#2563EB', tagBg: 'rgba(37,99,235,0.1)' },
 ];
 
-const MOCK_CONVERSATIONS: ConversationColumn[] = [
-  {
-    id: 'col-1',
-    contact: MOCK_CONTACTS[0],
-    messages: [
-      { id: 'm1', text: 'Hey Sarah! Just wanted to follow up on the early access program we discussed last week.', direction: 'outgoing', timestamp: '10:24 AM' },
-      { id: 'm2', text: "Hi! Yes, I've been looking forward to this. Our team is really excited about the platform.", direction: 'incoming', timestamp: '10:26 AM' },
-      { id: 'm3', text: "That's great to hear. I can get you set up with a sandbox environment today. How many seats would you need initially?", direction: 'outgoing', timestamp: '10:28 AM' },
-      { id: 'm4', text: "We'd start with 5 seats for the pilot. Can we also get API access for our dev team?", direction: 'incoming', timestamp: '10:31 AM' },
-      { id: 'm5', text: "Absolutely. I'll send over the credentials and documentation this afternoon. The API supports both REST and webhooks.", direction: 'outgoing', timestamp: '10:33 AM' },
-      { id: 'm6', text: "Perfect. Also, quick question — is there SSO support? That's a requirement for us.", direction: 'incoming', timestamp: '10:35 AM' },
-    ],
-  },
-  {
-    id: 'col-2',
-    contact: MOCK_CONTACTS[1],
-    messages: [
-      { id: 'm7', text: "Marcus, welcome aboard! I'm your dedicated account manager. How's the onboarding going so far?", direction: 'outgoing', timestamp: '9:15 AM' },
-      { id: 'm8', text: 'Thanks! We got the team added but having some trouble with the CRM integration. Getting a 403 on the webhook endpoint.', direction: 'incoming', timestamp: '9:22 AM' },
-      { id: 'm9', text: "That's likely a permissions issue with the API key scope. Can you check if the key has write access enabled? It's under Settings > API Keys > Permissions.", direction: 'outgoing', timestamp: '9:25 AM' },
-      { id: 'm10', text: 'Found it — it was set to read-only. Switching to read-write now.', direction: 'incoming', timestamp: '9:30 AM' },
-      { id: 'm11', text: 'That should fix it. Once connected, your contacts will sync automatically every 15 minutes. Let me know if you run into anything else.', direction: 'outgoing', timestamp: '9:32 AM' },
-    ],
-  },
-  {
-    id: 'col-3',
-    contact: MOCK_CONTACTS[2],
-    messages: [
-      { id: 'm12', text: "Hi David, it was great meeting you at the conference. As discussed, here's a quick overview of our platform.", direction: 'outgoing', timestamp: 'Yesterday' },
-      { id: 'm13', text: 'Thanks for reaching out! I showed the demo to my team and they were impressed. What does pricing look like for a 50-person org?', direction: 'incoming', timestamp: 'Yesterday' },
-      { id: 'm14', text: "For that size, you'd be looking at our Pro tier. I can put together a custom proposal — would Tuesday work for a quick call?", direction: 'outgoing', timestamp: 'Yesterday' },
-      { id: 'm15', text: 'Tuesday works. Can you send a calendar invite? david.kim@techcorp.io', direction: 'incoming', timestamp: 'Yesterday' },
-      { id: 'm16', text: "Hi David, just following up on our conversation. I've put together a custom proposal for your team at the Pro tier — $89/seat/mo with volume pricing. I'll include the details in our Tuesday call. Looking forward to it!", direction: 'outgoing', timestamp: '', isAIDraft: true },
-    ],
-  },
-];
+// MOCK_CONVERSATIONS removed — real conversations loaded from Supabase
 
 // ── Nav Config ──────────────────────────────────────────────────────────────
 
@@ -312,8 +277,8 @@ export default function DashboardPage() {
   const [addFormData, setAddFormData] = useState({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
   const importDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Conversations (mock)
-  const [columns, setColumns] = useState<ConversationColumn[]>(MOCK_CONVERSATIONS);
+  // Conversations (loaded from Supabase)
+  const [columns, setColumns] = useState<ConversationColumn[]>([]);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [newConvPhone, setNewConvPhone] = useState('');
@@ -560,6 +525,37 @@ export default function DashboardPage() {
           lastMessage: (c.lastMessage as string) || '',
         }));
         setNotionConversations(enriched);
+      }
+    }).catch(() => {});
+
+    // Load real conversations from Supabase
+    fetch(`/api/conversations/list?orgId=${orgId}`).then(r => r.json()).then(data => {
+      if (data.conversations && data.conversations.length > 0) {
+        const realColumns: ConversationColumn[] = data.conversations.map((conv: Record<string, unknown>) => {
+          const contact = conv.contact as Record<string, unknown>;
+          const unreadCount = conv.unreadCount as number;
+          const messages = conv.messages as Record<string, unknown>[];
+          return {
+            id: `real-${conv.conversationId}`,
+            contact: {
+              id: (contact.id as string) || '',
+              name: (contact.name as string) || 'Unknown',
+              initials: (contact.initials as string) || '??',
+              tag: unreadCount > 0 ? 'UNREAD' : 'ACTIVE',
+              tagColor: unreadCount > 0 ? '#EF4444' : '#22C55E',
+              tagBg: unreadCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+              phone: (contact.phone as string) || '',
+            },
+            messages: (messages || []).map((m: Record<string, unknown>) => ({
+              id: m.id as string,
+              text: m.text as string,
+              direction: m.direction as 'outgoing' | 'incoming',
+              timestamp: m.timestamp as string,
+              isAIDraft: m.isAIDraft as boolean | undefined,
+            })),
+          };
+        });
+        setColumns(realColumns);
       }
     }).catch(() => {});
   }, [user]);
@@ -1355,15 +1351,23 @@ export default function DashboardPage() {
 
   // ── Render: Conversations ─────────────────────────────────────────────────
 
-  // Mock data for Summary view
-  const MOCK_SUMMARY_DATA = [
-    { name: 'Sarah Chen', phone: '+1 (415) 555-0121', lastMessage: "Perfect. Also, quick question -- is there SSO support? That's a requirement for us.", status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '92%', actionNeeded: true },
-    { name: 'Marcus Williams', phone: '+1 (212) 555-0198', lastMessage: 'Found it -- it was set to read-only. Switching to read-write now.', status: 'active' as const, lastStep: 'Onboarding support', responseRate: '88%', actionNeeded: false },
-    { name: 'David Kim', phone: '+1 (650) 555-0142', lastMessage: 'Tuesday works. Can you send a calendar invite?', status: 'pending' as const, lastStep: 'Proposal sent', responseRate: '75%', actionNeeded: true },
-    { name: 'Emily Rodriguez', phone: '+1 (305) 555-0177', lastMessage: 'Can you send me the pricing sheet?', status: 'active' as const, lastStep: 'Initial outreach', responseRate: '60%', actionNeeded: true },
-    { name: 'James Park', phone: '+1 (408) 555-0133', lastMessage: "Thanks, we'll review internally and get back to you.", status: 'pending' as const, lastStep: 'Awaiting reply', responseRate: '45%', actionNeeded: false },
-    { name: 'Lisa Chang', phone: '+1 (312) 555-0156', lastMessage: 'Looks good, let me loop in our CTO.', status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '80%', actionNeeded: true },
-  ];
+  // Build summary rows from real conversation columns
+  const realSummaryRows = columns.filter(col => col.contact).map(col => {
+    const contact = col.contact!;
+    const lastMsg = col.messages.length > 0 ? col.messages[col.messages.length - 1] : null;
+    const incomingCount = col.messages.filter(m => m.direction === 'incoming').length;
+    const totalCount = col.messages.length;
+    const rate = totalCount > 0 ? Math.round((incomingCount / totalCount) * 100) : 0;
+    return {
+      name: contact.name,
+      phone: contact.phone || '',
+      lastMessage: lastMsg?.text || 'No messages yet',
+      status: (contact.tag === 'UNREAD' ? 'pending' : 'active') as 'active' | 'pending',
+      lastStep: contact.tag === 'UNREAD' ? 'Awaiting reply' : 'Active',
+      responseRate: `${rate}%`,
+      actionNeeded: contact.tag === 'UNREAD',
+    };
+  });
 
   // Merge Notion conversations into summary data
   const notionSummaryRows = notionConversations.map(c => {
@@ -1380,7 +1384,7 @@ export default function DashboardPage() {
       actionNeeded: needsAction,
     };
   });
-  const SUMMARY_DATA = [...MOCK_SUMMARY_DATA, ...notionSummaryRows];
+  const SUMMARY_DATA = [...realSummaryRows, ...notionSummaryRows];
 
   // Mock data for Schedule view
   const SCHEDULED_BLASTS = [
