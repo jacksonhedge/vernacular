@@ -3,10 +3,13 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Step = 'info' | 'verify';
+type Step = 'info' | 'verify' | 'test';
 
 export default function SignupPage() {
   const [step, setStep] = useState<Step>('info');
+  const [testPhone, setTestPhone] = useState('');
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ success?: boolean; stationPhone?: string; message?: string; note?: string; error?: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState('');
@@ -263,38 +266,159 @@ export default function SignupPage() {
               width: 72, height: 72, borderRadius: 20,
               background: 'linear-gradient(135deg, rgba(55,138,221,0.12), rgba(55,138,221,0.06))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 24px', fontSize: 32,
+              margin: '0 auto 24px',
               border: '1px solid rgba(55,138,221,0.15)',
             }}>
               <img src="/logo.png" alt="" style={{ width: 40, height: 40, borderRadius: 10 }} />
             </div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1c1c1e', marginBottom: 8, letterSpacing: '-0.02em' }}>Check your email</h2>
-            <p style={{ fontSize: 15, color: '#8e8e93', lineHeight: 1.6, marginBottom: 28 }}>
-              We sent a verification link to<br />
-              <strong style={{ color: '#1c1c1e' }}>{form.workEmail}</strong>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1c1c1e', marginBottom: 8, letterSpacing: '-0.02em' }}>Workspace created!</h2>
+            <p style={{ fontSize: 15, color: '#8e8e93', lineHeight: 1.6, marginBottom: 20 }}>
+              Verification link sent to <strong style={{ color: '#1c1c1e' }}>{form.workEmail}</strong>
             </p>
 
+            {/* Try it now CTA */}
             <div style={{
-              padding: '16px 20px', borderRadius: 14,
-              background: 'linear-gradient(135deg, #f8fafc, #f0f4ff)',
-              border: '1px solid rgba(55,138,221,0.12)',
-              textAlign: 'left', marginBottom: 28,
+              padding: '24px', borderRadius: 16,
+              background: 'linear-gradient(135deg, #EBF5FF, #E0EDFF)',
+              border: '1px solid rgba(55,138,221,0.15)',
+              textAlign: 'center', marginBottom: 20,
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Verification Status</div>
-              <p style={{ fontSize: 13, color: '#4a5568', lineHeight: 1.6 }}>
-                {isBusinessEmail(form.workEmail)
-                  ? "Your work email domain will be verified automatically. Full access once confirmed."
-                  : "Personal email detected \u2014 our team will review within 24 hours. You can explore the dashboard now."}
+              <div style={{ fontSize: 28, marginBottom: 8 }}>💬</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1c1c1e', marginBottom: 4, letterSpacing: '-0.02em' }}>See the blue bubble magic</h3>
+              <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, lineHeight: 1.5 }}>
+                Send yourself a test iMessage right now. Enter your phone number and we&apos;ll send you a blue bubble from your Vernacular number.
               </p>
+              <button onClick={() => setStep('test')} style={{
+                padding: '12px 28px', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(55,138,221,0.3)',
+              }}>Try It Now</button>
             </div>
 
             <button onClick={() => window.location.href = '/login'} style={{
               width: '100%', padding: '15px', borderRadius: 14,
-              background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-              color: '#fff', border: 'none', cursor: 'pointer',
-              fontSize: 16, fontWeight: 700,
-              boxShadow: '0 4px 16px rgba(55,138,221,0.3)',
-            }}>Go to Login</button>
+              background: '#fff', border: '1.5px solid rgba(0,0,0,0.1)',
+              color: '#666', cursor: 'pointer',
+              fontSize: 15, fontWeight: 600,
+            }}>Skip &mdash; Go to Login</button>
+          </div>
+        )}
+
+        {step === 'test' && (
+          <div style={{
+            background: '#fff', borderRadius: 24,
+            border: '1px solid rgba(0,0,0,0.06)',
+            padding: '40px 36px', textAlign: 'center',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+          }}>
+            {/* iMessage bubble preview */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <div style={{
+                  background: '#378ADD', color: '#fff', padding: '12px 18px',
+                  borderRadius: '20px 20px 6px 20px', fontSize: 15, fontWeight: 500,
+                  maxWidth: 300, textAlign: 'left', lineHeight: 1.4,
+                  boxShadow: '0 2px 12px rgba(55,138,221,0.25)',
+                }}>
+                  Hey! This is a test from Vernacular. Your iMessage CRM is ready to go. 💬
+                </div>
+                <span style={{ fontSize: 11, color: '#8e8e93' }}>Delivered</span>
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', marginBottom: 4, letterSpacing: '-0.02em' }}>Send yourself a blue iMessage</h2>
+            <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24, lineHeight: 1.5 }}>
+              Enter your phone number below. We&apos;ll send you a real iMessage — look for the <strong style={{ color: '#378ADD' }}>blue bubble</strong>.
+            </p>
+
+            {/* Phone input */}
+            <div style={{ marginBottom: 16, textAlign: 'left' }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>Your Phone Number</label>
+              <input
+                type="tel" placeholder="(412) 735-1089"
+                value={testPhone}
+                onChange={e => setTestPhone(e.target.value)}
+                style={{
+                  width: '100%', padding: '14px 18px', borderRadius: 12,
+                  border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff',
+                  fontSize: 18, fontWeight: 600, color: '#1c1c1e', outline: 'none',
+                  fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
+                  textAlign: 'center', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* Sending from badge */}
+            <div style={{
+              padding: '10px 16px', borderRadius: 10,
+              background: '#f8fafc', border: '1px solid rgba(0,0,0,0.06)',
+              marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            }}>
+              <span style={{ fontSize: 12, color: '#8e8e93' }}>Sending from</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>(878) 245-8811</span>
+              <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(55,138,221,0.1)', color: '#378ADD' }}>WADE</span>
+            </div>
+
+            {/* Result */}
+            {testResult && (
+              <div style={{
+                padding: '14px 18px', borderRadius: 12, marginBottom: 16, textAlign: 'left',
+                background: testResult.success ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                border: `1px solid ${testResult.success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: testResult.success ? '#16A34A' : '#DC2626', marginBottom: 4 }}>
+                  {testResult.success ? 'Message queued!' : 'Error'}
+                </div>
+                <div style={{ fontSize: 12, color: testResult.success ? '#4a5568' : '#DC2626', lineHeight: 1.5 }}>
+                  {testResult.success ? testResult.note : testResult.error}
+                </div>
+                {testResult.success && (
+                  <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 6 }}>
+                    Check your phone for a blue iMessage from {testResult.stationPhone}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Send button */}
+            <button
+              onClick={async () => {
+                if (!testPhone) return;
+                setTestSending(true);
+                setTestResult(null);
+                try {
+                  const res = await fetch('/api/send-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber: testPhone }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error);
+                  setTestResult({ success: true, stationPhone: data.stationPhone, message: data.message, note: data.note });
+                } catch (err) {
+                  setTestResult({ error: err instanceof Error ? err.message : 'Failed to send' });
+                } finally {
+                  setTestSending(false);
+                }
+              }}
+              disabled={testSending || !testPhone}
+              style={{
+                width: '100%', padding: '15px', borderRadius: 14, border: 'none',
+                background: testSending || !testPhone ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                color: '#fff', fontSize: 16, fontWeight: 700, cursor: testSending || !testPhone ? 'default' : 'pointer',
+                boxShadow: testSending || !testPhone ? 'none' : '0 4px 16px rgba(55,138,221,0.3)',
+                marginBottom: 12,
+              }}
+            >
+              {testSending ? 'Sending...' : 'Send Test iMessage'}
+            </button>
+
+            <button onClick={() => window.location.href = '/login'} style={{
+              width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+              background: 'transparent', color: '#8e8e93', cursor: 'pointer',
+              fontSize: 14, fontWeight: 500,
+            }}>Continue to Login &rarr;</button>
           </div>
         )}
 
