@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'campaigns' | 'ai-drafts' | 'integrations' | 'settings';
+type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'campaigns' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
 
 interface Message {
   id: string;
@@ -232,6 +232,15 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     ),
   },
   {
+    label: 'Profile',
+    tab: 'profile',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  {
     label: 'Settings',
     tab: 'settings',
     icon: (
@@ -297,6 +306,15 @@ export default function DashboardPage() {
   const [settingsForm, setSettingsForm] = useState<OrgSettings | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Profile form
+  const [profileForm, setProfileForm] = useState<{
+    full_name: string; phone: string; job_title: string; linkedin_url: string;
+    twitter_handle: string; timezone: string; bio: string; location: string;
+  }>({ full_name: '', phone: '', job_title: '', linkedin_url: '', twitter_handle: '', timezone: 'America/New_York', bio: '', location: '' });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaveStatus, setProfileSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Integrations
   const [integrations, setIntegrations] = useState<OrgIntegration[]>([]);
@@ -471,6 +489,23 @@ export default function DashboardPage() {
       ref?.scrollIntoView({ behavior: 'smooth' });
     });
   }, [columns]);
+
+  // Initialize profile form from user data
+  useEffect(() => {
+    if (user && !profileLoaded) {
+      setProfileForm({
+        full_name: (user.full_name as string) || '',
+        phone: (user.phone as string) || '',
+        job_title: (user.job_title as string) || '',
+        linkedin_url: (user.linkedin_url as string) || '',
+        twitter_handle: (user.twitter_handle as string) || '',
+        timezone: (user.timezone as string) || 'America/New_York',
+        bio: (user.bio as string) || '',
+        location: (user.location as string) || '',
+      });
+      setProfileLoaded(true);
+    }
+  }, [user, profileLoaded]);
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -647,6 +682,28 @@ export default function DashboardPage() {
       window.alert('Failed to save settings: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!user?.id) return;
+    setProfileSaving(true);
+    setProfileSaveStatus('saving');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ userId: user.id, ...profileForm }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to save'); }
+      setProfileSaveStatus('saved');
+      setTimeout(() => setProfileSaveStatus('idle'), 3000);
+    } catch (err) {
+      setProfileSaveStatus('idle');
+      window.alert('Failed to save profile: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -3247,6 +3304,405 @@ export default function DashboardPage() {
     </div>
   );
 
+  // ── Render: Profile ───────────────────────────────────────────────────────
+
+  const renderProfile = () => {
+    const userEmail = (user?.email as string) || '';
+    const userRole = (user?.role as string) || 'member';
+    const userCreatedAt = user?.created_at as string;
+    const orgName = (org?.name as string) || '';
+    const orgCreatedAt = org?.created_at as string;
+    const initials = profileForm.full_name
+      ? profileForm.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+      : userEmail.slice(0, 2).toUpperCase();
+
+    const sectionStyle: React.CSSProperties = { ...cardStyle, marginBottom: 20 };
+    const sectionTitleStyle: React.CSSProperties = {
+      fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', marginBottom: 16,
+    };
+    const fieldRowStyle: React.CSSProperties = {
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 0', borderBottom: '1px solid rgba(0,0,0,0.04)',
+    };
+    const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: '#1c1c1e' };
+    const sublabelStyle: React.CSSProperties = { fontSize: 12, color: '#8e8e93', marginTop: 2 };
+    const profileInputStyle: React.CSSProperties = {
+      ...inputStyle, maxWidth: 280,
+    };
+
+    const updateProfileField = (key: keyof typeof profileForm, value: string) => {
+      setProfileForm(prev => ({ ...prev, [key]: value }));
+    };
+
+    const roleBadgeColors: Record<string, { color: string; bg: string }> = {
+      owner: { color: '#9333EA', bg: 'rgba(147,51,234,0.1)' },
+      org_admin: { color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
+      agent: { color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+      platform_admin: { color: '#DC2626', bg: 'rgba(220,38,38,0.1)' },
+    };
+    const roleColors = roleBadgeColors[userRole] || roleBadgeColors.agent;
+
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Top Bar */}
+        <div style={{
+          height: 56, minHeight: 56, background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+        }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
+            Profile
+          </h2>
+          <button onClick={saveProfile} disabled={profileSaving || profileSaveStatus === 'saved'} style={{
+            ...primaryBtnStyle,
+            opacity: profileSaving ? 0.6 : 1,
+            background: profileSaveStatus === 'saved' ? '#22C55E' : primaryBtnStyle.background,
+            boxShadow: profileSaveStatus === 'saved' ? '0 1px 3px rgba(34,197,94,0.3)' : primaryBtnStyle.boxShadow,
+          }}>
+            {profileSaveStatus === 'saving' ? 'Saving...' : profileSaveStatus === 'saved' ? 'Saved!' : 'Save Profile'}
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 720 }}>
+          {/* Section 1: Profile Header */}
+          <div style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: 40, flexShrink: 0,
+              background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 24, fontWeight: 700, letterSpacing: '-0.02em',
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              {initials}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <input
+                value={profileForm.full_name}
+                onChange={e => updateProfileField('full_name', e.target.value)}
+                placeholder="Full Name"
+                style={{ ...inputStyle, fontSize: 20, fontWeight: 700, padding: '6px 10px', border: '1px solid transparent', background: 'transparent', marginBottom: 4 }}
+                onFocus={e => { e.currentTarget.style.border = '1px solid rgba(55,138,221,0.4)'; e.currentTarget.style.background = '#fff'; }}
+                onBlur={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.background = 'transparent'; }}
+              />
+              <input
+                value={profileForm.job_title}
+                onChange={e => updateProfileField('job_title', e.target.value)}
+                placeholder="Job Title"
+                style={{ ...inputStyle, fontSize: 14, color: '#6b7280', padding: '4px 10px', border: '1px solid transparent', background: 'transparent', marginBottom: 8 }}
+                onFocus={e => { e.currentTarget.style.border = '1px solid rgba(55,138,221,0.4)'; e.currentTarget.style.background = '#fff'; }}
+                onBlur={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.background = 'transparent'; }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: 10 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: roleColors.color, background: roleColors.bg,
+                  padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.04em',
+                }}>{userRole.replace('_', ' ')}</span>
+                <span style={{ fontSize: 12, color: '#8e8e93' }}>{userEmail}</span>
+                {userCreatedAt && (
+                  <span style={{ fontSize: 12, color: '#8e8e93' }}>
+                    Member since {new Date(userCreatedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Contact Information */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Contact Information</div>
+            <div style={fieldRowStyle}>
+              <div>
+                <div style={labelStyle}>Phone Number</div>
+                <div style={sublabelStyle}>Used for notifications</div>
+              </div>
+              <input
+                value={profileForm.phone}
+                onChange={e => updateProfileField('phone', e.target.value)}
+                placeholder="+1 (555) 000-0000"
+                type="tel"
+                style={profileInputStyle}
+              />
+            </div>
+            <div style={fieldRowStyle}>
+              <div>
+                <div style={labelStyle}>Email</div>
+                <div style={sublabelStyle}>Linked to your account</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{userEmail}</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
+                  padding: '2px 8px', borderRadius: 10,
+                }}>Verified</span>
+              </div>
+            </div>
+            <div style={fieldRowStyle}>
+              <div>
+                <div style={labelStyle}>Location</div>
+                <div style={sublabelStyle}>City, State</div>
+              </div>
+              <input
+                value={profileForm.location}
+                onChange={e => updateProfileField('location', e.target.value)}
+                placeholder="San Francisco, CA"
+                style={profileInputStyle}
+              />
+            </div>
+            <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+              <div>
+                <div style={labelStyle}>Timezone</div>
+                <div style={sublabelStyle}>For scheduling features</div>
+              </div>
+              <select
+                value={profileForm.timezone}
+                onChange={e => updateProfileField('timezone', e.target.value)}
+                style={{ ...profileInputStyle, cursor: 'pointer' }}
+              >
+                <option value="America/New_York">Eastern (ET)</option>
+                <option value="America/Chicago">Central (CT)</option>
+                <option value="America/Denver">Mountain (MT)</option>
+                <option value="America/Los_Angeles">Pacific (PT)</option>
+                <option value="UTC">UTC</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Section 3: Social & Professional */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Social &amp; Professional</div>
+            <div style={fieldRowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+                <div>
+                  <div style={labelStyle}>LinkedIn</div>
+                </div>
+              </div>
+              <input
+                value={profileForm.linkedin_url}
+                onChange={e => updateProfileField('linkedin_url', e.target.value)}
+                placeholder="https://linkedin.com/in/..."
+                style={profileInputStyle}
+              />
+            </div>
+            <div style={fieldRowStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#1c1c1e">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                <div>
+                  <div style={labelStyle}>X (Twitter)</div>
+                </div>
+              </div>
+              <input
+                value={profileForm.twitter_handle}
+                onChange={e => updateProfileField('twitter_handle', e.target.value)}
+                placeholder="@handle"
+                style={profileInputStyle}
+              />
+            </div>
+            <div style={{ padding: '12px 0' }}>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Bio / About</div>
+              <textarea
+                value={profileForm.bio}
+                onChange={e => updateProfileField('bio', e.target.value)}
+                placeholder="Tell us a bit about yourself..."
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', maxWidth: '100%' }}
+              />
+            </div>
+          </div>
+
+          {/* Section 4: Connected Accounts & Devices */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Connected Accounts &amp; Devices</div>
+
+            {/* Connected Phone Numbers */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Connected Phone Numbers</div>
+              {stations.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: 13, color: '#8e8e93' }}>No phone numbers connected</span>
+                  <button onClick={() => setActiveTab('settings')} style={{
+                    background: 'none', border: '1px solid rgba(55,138,221,0.3)', borderRadius: 6,
+                    padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+                  }}>Connect a Station</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {stations.map(s => {
+                    const isOnline = s.status === 'online';
+                    return (
+                      <div key={s.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 8, height: 8, borderRadius: 4,
+                            background: isOnline ? '#22C55E' : '#EF4444',
+                            boxShadow: isOnline ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+                          }} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{s.phone_number || 'No number'}</div>
+                            <div style={{ fontSize: 11, color: '#8e8e93' }}>{s.name}</div>
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                          color: isOnline ? '#16A34A' : '#DC2626',
+                          background: isOnline ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                          padding: '2px 8px', borderRadius: 10,
+                        }}>{s.status}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Connected Email */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Connected Email</div>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+                  </svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{userEmail}</span>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
+                  padding: '2px 8px', borderRadius: 10,
+                }}>Verified</span>
+              </div>
+            </div>
+
+            {/* iMessage Stations */}
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>iMessage Stations</div>
+              {stations.length === 0 ? (
+                <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
+                  <span style={{ fontSize: 13, color: '#8e8e93' }}>No stations configured</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {stations.map(s => {
+                    const isOnline = s.status === 'online';
+                    const lastBeat = s.last_heartbeat ? new Date(s.last_heartbeat) : null;
+                    return (
+                      <div key={s.id} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 8, height: 8, borderRadius: 4,
+                            background: isOnline ? '#22C55E' : '#EF4444',
+                            boxShadow: isOnline ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+                          }} />
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{s.name}</div>
+                            <div style={{ fontSize: 11, color: '#8e8e93' }}>
+                              {lastBeat ? `Last heartbeat: ${lastBeat.toLocaleString()}` : 'No heartbeat recorded'}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {s.auto_reply_enabled && (
+                            <span style={{ fontSize: 10, fontWeight: 600, color: '#378ADD', background: 'rgba(55,138,221,0.1)', padding: '2px 8px', borderRadius: 10 }}>Auto-Reply</span>
+                          )}
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                            color: isOnline ? '#16A34A' : '#DC2626',
+                            background: isOnline ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                            padding: '2px 8px', borderRadius: 10,
+                          }}>{isOnline ? 'Connected' : 'Disconnected'}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 5: Organization */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Organization</div>
+            <div style={fieldRowStyle}>
+              <div style={labelStyle}>Company</div>
+              <span style={{ fontSize: 13, color: '#1c1c1e', fontWeight: 600 }}>{orgName || 'Not set'}</span>
+            </div>
+            <div style={fieldRowStyle}>
+              <div style={labelStyle}>Plan</div>
+              <span style={{
+                fontSize: 10, fontWeight: 700,
+                color: plan === 'pro' ? '#2563EB' : plan === 'enterprise' ? '#9333EA' : '#16A34A',
+                background: plan === 'pro' ? 'rgba(37,99,235,0.1)' : plan === 'enterprise' ? 'rgba(147,51,234,0.1)' : 'rgba(22,163,74,0.1)',
+                padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>{plan}</span>
+            </div>
+            <div style={fieldRowStyle}>
+              <div style={labelStyle}>Your Role</div>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>{userRole.replace('_', ' ')}</span>
+            </div>
+            <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+              <div style={labelStyle}>Org Created</div>
+              <span style={{ fontSize: 13, color: '#6b7280' }}>
+                {orgCreatedAt ? new Date(orgCreatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
+              </span>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => setActiveTab('settings')} style={{
+                background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                padding: '7px 16px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+              }}>Manage Organization</button>
+            </div>
+          </div>
+
+          {/* Section 6: Security */}
+          <div style={{ ...sectionStyle, marginBottom: 40 }}>
+            <div style={sectionTitleStyle}>Security</div>
+            <div style={fieldRowStyle}>
+              <div>
+                <div style={labelStyle}>Password</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2, letterSpacing: '0.1em' }}>••••••••</div>
+              </div>
+              <button onClick={() => window.alert('Password change flow coming soon. Use "Forgot Password" on login for now.')} style={{
+                background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+              }}>Change Password</button>
+            </div>
+            <div style={fieldRowStyle}>
+              <div>
+                <div style={labelStyle}>Two-Factor Authentication</div>
+                <div style={sublabelStyle}>Not enabled</div>
+              </div>
+              <button onClick={() => window.alert('2FA setup coming soon.')} style={{
+                background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+              }}>Enable 2FA</button>
+            </div>
+            <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+              <div>
+                <div style={labelStyle}>Active Sessions</div>
+                <div style={sublabelStyle}>Current browser session</div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
+                padding: '3px 10px', borderRadius: 20,
+              }}>1 active session</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Render: Active Content ────────────────────────────────────────────────
 
   const renderContent = () => {
@@ -3255,6 +3711,7 @@ export default function DashboardPage() {
       case 'conversations': return renderConversations();
       case 'contacts': return renderContacts();
       case 'settings': return renderSettings();
+      case 'profile': return renderProfile();
       case 'integrations': return renderIntegrations();
       case 'campaigns': return renderPlaceholder('Campaigns', 'Campaign management coming soon.', (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3279,6 +3736,7 @@ export default function DashboardPage() {
     campaigns: 'Campaigns',
     'ai-drafts': 'AI Drafts',
     integrations: 'Integrations',
+    profile: 'Profile',
     settings: 'Settings',
   };
 
