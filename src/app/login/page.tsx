@@ -9,6 +9,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState('');
+  const [showReset, setShowReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleLogin = async () => {
     setError('');
@@ -82,7 +85,7 @@ export default function LoginPage() {
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#4a5568' }}>Password</label>
-              <a href="#" style={{ fontSize: 12, color: '#378ADD', textDecoration: 'none', fontWeight: 500 }}>Forgot password?</a>
+              <button onClick={() => setShowReset(true)} style={{ fontSize: 12, color: '#378ADD', textDecoration: 'none', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Forgot password?</button>
             </div>
             <input type="password" placeholder="Enter password"
               value={password} onChange={e => setPassword(e.target.value)}
@@ -107,6 +110,91 @@ export default function LoginPage() {
             Don&apos;t have an account? <a href="/signup" style={{ color: '#378ADD', textDecoration: 'none', fontWeight: 600 }}>Sign up</a>
           </p>
         </div>
+
+        {/* Forgot Password Modal */}
+        {showReset && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          }} onClick={() => !resetLoading && setShowReset(false)}>
+            <div style={{
+              background: '#fff', borderRadius: 24, padding: '36px 32px', maxWidth: 400, width: '90%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            }} onClick={e => e.stopPropagation()}>
+              {!resetSent ? (
+                <>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', marginBottom: 8, letterSpacing: '-0.02em' }}>Reset your password</h2>
+                  <p style={{ fontSize: 14, color: '#8e8e93', marginBottom: 24, lineHeight: 1.5 }}>
+                    Enter your email and we&apos;ll send you a link to reset your password.
+                  </p>
+                  {error && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 13 }}>{error}</div>
+                  )}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#4a5568', marginBottom: 6 }}>Email</label>
+                    <input type="email" placeholder="jackson@hedgepayments.co" value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && !resetLoading && (async () => {
+                        if (!email) { setError('Enter your email'); return; }
+                        setError(''); setResetLoading(true);
+                        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'https://vernacular.chat/login' });
+                        setResetLoading(false);
+                        if (resetErr) { setError(resetErr.message); return; }
+                        setResetSent(true);
+                      })()}
+                      style={{
+                        width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid rgba(0,0,0,0.1)',
+                        background: '#fff', fontSize: 15, color: '#1c1c1e', outline: 'none',
+                        fontFamily: "'Inter', sans-serif", boxSizing: 'border-box' as const,
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!email) { setError('Enter your email'); return; }
+                      setError(''); setResetLoading(true);
+                      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'https://vernacular.chat/login' });
+                      setResetLoading(false);
+                      if (resetErr) { setError(resetErr.message); return; }
+                      setResetSent(true);
+                    }}
+                    disabled={resetLoading}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                      background: resetLoading ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      color: '#fff', fontSize: 15, fontWeight: 700, cursor: resetLoading ? 'default' : 'pointer',
+                      boxShadow: resetLoading ? 'none' : '0 4px 16px rgba(55,138,221,0.3)',
+                    }}
+                  >
+                    {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                  </button>
+                  <button onClick={() => { setShowReset(false); setError(''); }} style={{
+                    width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+                    background: 'transparent', color: '#8e8e93', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, marginTop: 8,
+                  }}>Cancel</button>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 40, marginBottom: 16 }}>
+                    <img src="/logo.png" alt="" style={{ width: 48, height: 48, borderRadius: 12 }} />
+                  </div>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', marginBottom: 8 }}>Check your email</h2>
+                  <p style={{ fontSize: 14, color: '#8e8e93', lineHeight: 1.6, marginBottom: 24 }}>
+                    We sent a password reset link to<br />
+                    <strong style={{ color: '#1c1c1e' }}>{email}</strong>
+                  </p>
+                  <button onClick={() => { setShowReset(false); setResetSent(false); setError(''); }} style={{
+                    width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                    background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                    color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(55,138,221,0.3)',
+                  }}>Back to Login</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
