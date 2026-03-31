@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'campaigns' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
+type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'team' | 'campaigns' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
 
 interface Message {
   id: string;
@@ -198,6 +198,15 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
   {
     label: 'Contacts',
     tab: 'contacts',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Team',
+    tab: 'team',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
@@ -479,7 +488,29 @@ export default function DashboardPage() {
     }).catch(() => {});
 
     fetch('/api/notion/conversations').then(r => r.json()).then(data => {
-      if (data.conversations) setNotionConversations(data.conversations);
+      if (data.conversations) {
+        setNotionConversations(data.conversations);
+        // Also load Notion conversation contacts into contacts view
+        const notionContacts = data.conversations.map((c: any, i: number) => ({
+          id: `notion-contact-${i}`,
+          full_name: c.name,
+          phone: c.phone || '',
+          email: '',
+          school: c.school || 'UofSC',
+          company: c.org || 'Sigma Chi',
+          campaign_status: c.status || 'contacted',
+          source: 'notion',
+          import_source: 'notion',
+          tags: ['notion', 'derby-days'],
+          created_at: new Date().toISOString(),
+        }));
+        // Merge with existing contacts (avoid duplicates by name)
+        setContacts(prev => {
+          const existingNames = new Set(prev.map(c => c.full_name?.toLowerCase()));
+          const newOnes = notionContacts.filter((c: any) => !existingNames.has(c.full_name?.toLowerCase()));
+          return [...prev, ...newOnes];
+        });
+      }
     }).catch(() => {});
   }, [user]);
 
@@ -3372,6 +3403,273 @@ export default function DashboardPage() {
     );
   };
 
+  // ── Render: Team ──────────────────────────────────────────────────────────
+
+  const renderTeam = () => {
+    const teamSeats = 5;
+    const currentMembers = [
+      { id: 'me', full_name: 'Jackson Fitzgerald', email: 'jackson@vernacular.so', role: 'OWNER', phone: '+1 (803) 555-0100', station: stations[0]?.name || 'Unassigned', status: 'active' as const, lastActive: 'Just now' },
+      ...teamMembers.filter(m => m.full_name !== 'Jackson Fitzgerald').map(m => ({
+        id: m.id,
+        full_name: m.full_name,
+        email: m.email,
+        role: m.role?.toUpperCase() || 'MEMBER',
+        phone: '',
+        station: 'Unassigned',
+        status: 'invited' as const,
+        lastActive: 'Never',
+      })),
+    ];
+
+    const roleBadge = (role: string) => {
+      const colors: Record<string, { bg: string; color: string }> = {
+        OWNER: { bg: 'rgba(37,99,235,0.1)', color: '#2563EB' },
+        ADMIN: { bg: 'rgba(124,58,237,0.1)', color: '#7C3AED' },
+        MEMBER: { bg: 'rgba(107,114,128,0.1)', color: '#6B7280' },
+      };
+      const c = colors[role] || colors.MEMBER;
+      return (
+        <span style={{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: c.bg, color: c.color }}>
+          {role}
+        </span>
+      );
+    };
+
+    const statusDot = (s: string) => {
+      const colorMap: Record<string, string> = { active: '#22C55E', online: '#22C55E', invited: '#EAB308', connecting: '#EAB308', disabled: '#EF4444', offline: '#EF4444' };
+      return <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colorMap[s] || '#6B7280', marginRight: 6 }} />;
+    };
+
+    const permissions = [
+      { label: 'Send messages', owner: true, admin: true, member: true },
+      { label: 'View all conversations', owner: true, admin: true, member: true },
+      { label: 'Manage contacts', owner: true, admin: true, member: true },
+      { label: 'Manage campaigns', owner: true, admin: true, member: false },
+      { label: 'Manage integrations', owner: true, admin: true, member: false },
+      { label: 'Invite team members', owner: true, admin: true, member: false },
+      { label: 'Manage billing', owner: true, admin: false, member: false },
+      { label: 'Remove members', owner: true, admin: false, member: false },
+    ];
+
+    return (
+      <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+        {/* Section A: Team Members */}
+        <div style={{
+          background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', marginBottom: 24, overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px', borderBottom: '1px solid #e5e7eb',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>Team Members</span>
+              <span style={{
+                padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                background: 'rgba(37,99,235,0.08)', color: '#2563EB',
+              }}>
+                {currentMembers.length}/{teamSeats} seats
+              </span>
+            </div>
+            <button
+              onClick={() => alert('Invite member flow coming soon!')}
+              style={{
+                padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Invite Member
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  {['Name', 'Email', 'Role', 'Phone Number', 'Assigned Station', 'Status', 'Last Active', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {currentMembers.map(m => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', background: 'rgba(37,99,235,0.1)', color: '#2563EB',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {m.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <span style={{ fontWeight: 500, color: '#111' }}>{m.full_name}</span>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6B7280' }}>{m.email}</td>
+                    <td style={{ padding: '12px 16px' }}>{roleBadge(m.role)}</td>
+                    <td style={{ padding: '12px 16px', color: '#6B7280', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{m.phone || '--'}</td>
+                    <td style={{ padding: '12px 16px', color: '#6B7280' }}>{m.station}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {statusDot(m.status)}
+                        <span style={{ fontSize: 12, color: '#374151', textTransform: 'capitalize' }}>{m.status}</span>
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6B7280', fontSize: 12 }}>{m.lastActive}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {m.role !== 'OWNER' && (
+                        <button style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 12, color: '#6B7280' }}>
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Section B: Phone Numbers & Stations */}
+        <div style={{
+          background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', marginBottom: 24, overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px', borderBottom: '1px solid #e5e7eb',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>Phone Numbers & Stations</span>
+              <span style={{
+                padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                background: 'rgba(37,99,235,0.08)', color: '#2563EB',
+              }}>
+                {stations.length}/1 numbers
+              </span>
+            </div>
+            <button
+              onClick={() => alert('Add station flow coming soon!')}
+              style={{
+                padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Add Station
+            </button>
+          </div>
+          {stations.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px' }}>
+                <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>No stations connected</div>
+              <div style={{ fontSize: 13, color: '#9CA3AF', maxWidth: 380, margin: '0 auto 16px', lineHeight: 1.5 }}>
+                Stations are Mac computers running iMessage. Connect a station to start sending messages from its phone number.
+              </div>
+              <button
+                onClick={() => alert('Connect station flow coming soon!')}
+                style={{
+                  padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600,
+                }}
+              >
+                Connect Station
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {stations.map(s => (
+                <div key={s.id} style={{
+                  padding: 16, borderRadius: 10, border: '1px solid #e5e7eb', background: '#fafafa',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, background: 'rgba(37,99,235,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: '#111', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-0.02em' }}>
+                        {s.phone_number}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+                        {s.name} <span style={{ color: '#d1d5db' }}>|</span> <span style={{ fontSize: 11, color: '#9CA3AF' }}>This is the number texts are sent FROM</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+                        {statusDot(s.status)}
+                        <span style={{ fontSize: 12, fontWeight: 500, color: '#374151', textTransform: 'capitalize' }}>{s.status}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
+                        Last heartbeat: {s.last_heartbeat ? new Date(s.last_heartbeat).toLocaleString() : 'Never'}
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 500,
+                      background: s.auto_reply_enabled ? 'rgba(34,197,94,0.1)' : 'rgba(107,114,128,0.1)',
+                      color: s.auto_reply_enabled ? '#16A34A' : '#6B7280',
+                    }}>
+                      Auto-reply {s.auto_reply_enabled ? 'ON' : 'OFF'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6B7280' }}>
+                      Assigned: <span style={{ fontWeight: 500, color: '#374151' }}>
+                        {currentMembers[0]?.full_name || 'Unassigned'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section C: Roles & Permissions */}
+        <div style={{
+          background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden',
+        }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>Roles & Permissions</span>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                {['Permission', 'Owner', 'Admin', 'Member'].map(h => (
+                  <th key={h} style={{
+                    padding: '10px 20px', textAlign: h === 'Permission' ? 'left' : 'center',
+                    fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {permissions.map((p, i) => (
+                <tr key={p.label} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '10px 20px', fontWeight: 500, color: '#374151' }}>{p.label}</td>
+                  {[p.owner, p.admin, p.member].map((val, j) => (
+                    <td key={j} style={{ padding: '10px 20px', textAlign: 'center' }}>
+                      {val ? (
+                        <span style={{ color: '#22C55E', fontWeight: 600, fontSize: 16 }}>&#10003;</span>
+                      ) : (
+                        <span style={{ color: '#D1D5DB', fontSize: 16 }}>&#8211;</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   // ── Render: Placeholder views ─────────────────────────────────────────────
 
   const renderPlaceholder = (title: string, description: string, icon?: React.ReactNode) => (
@@ -3801,6 +4099,7 @@ export default function DashboardPage() {
       case 'dashboard': return renderDashboard();
       case 'conversations': return renderConversations();
       case 'contacts': return renderContacts();
+      case 'team': return renderTeam();
       case 'settings': return renderSettings();
       case 'profile': return renderProfile();
       case 'integrations': return renderIntegrations();
@@ -3824,6 +4123,7 @@ export default function DashboardPage() {
     dashboard: 'Dashboard',
     conversations: 'Conversations',
     contacts: 'Contacts',
+    team: 'Team',
     campaigns: 'Campaigns',
     'ai-drafts': 'AI Drafts',
     integrations: 'Integrations',
