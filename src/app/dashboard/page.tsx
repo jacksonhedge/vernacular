@@ -3259,6 +3259,82 @@ export default function DashboardPage() {
               )}
             </div>
 
+            {/* ── Salesforce Card (Coming Soon) ─────────── */}
+            <div
+              style={{ ...integrationCardStyle, opacity: 0.7 }}
+            >
+              <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 10, background: '#00A1E0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="28" height="20" viewBox="0 0 28 20" fill="none"><path d="M22.5 10c0-2.5-2-4.5-4.5-4.5-.7 0-1.4.2-2 .5C15.2 4.2 13.2 3 11 3 7.7 3 5 5.7 5 9c0 .3 0 .7.1 1C2.8 10.5 1 12.6 1 15c0 2.8 2.2 5 5 5h15c2.8 0 5-2.2 5-5 0-2.4-1.8-4.5-3.5-5z" fill="white"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Salesforce</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#6B7280', background: 'rgba(0,0,0,0.06)',
+                      padding: '3px 8px', borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                    }}>
+                      Coming Soon
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Sync contacts, leads, and opportunities with Salesforce. Automatically log iMessage conversations as activities on contact records.
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '0 24px 16px' }}>
+                <button
+                  onClick={() => window.alert('Thanks! We\'ll notify you when Salesforce integration is available.')}
+                  style={{
+                    padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    background: 'transparent', color: '#6B7280', border: '1px solid rgba(0,0,0,0.12)',
+                    cursor: 'pointer', transition: 'all 0.15s ease',
+                  }}
+                >
+                  Request Early Access
+                </button>
+              </div>
+            </div>
+
+            {/* ── HubSpot Card (Coming Soon) ──────────────── */}
+            <div
+              style={{ ...integrationCardStyle, opacity: 0.7 }}
+            >
+              <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 10, background: '#FF7A59', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17 2v4h-2V2h2zm-5 6a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm7 1v6h-2v-6h2zM5 11v6H3v-6h2zm4-7v4H7V4h2z"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>HubSpot</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#6B7280', background: 'rgba(0,0,0,0.06)',
+                      padding: '3px 8px', borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                    }}>
+                      Coming Soon
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Connect your HubSpot CRM to sync contacts, deals, and conversation history. Track iMessage engagement alongside your existing sales pipeline.
+                  </div>
+                </div>
+              </div>
+              <div style={{ padding: '0 24px 16px' }}>
+                <button
+                  onClick={() => window.alert('Thanks! We\'ll notify you when HubSpot integration is available.')}
+                  style={{
+                    padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                    background: 'transparent', color: '#6B7280', border: '1px solid rgba(0,0,0,0.12)',
+                    cursor: 'pointer', transition: 'all 0.15s ease',
+                  }}
+                >
+                  Request Early Access
+                </button>
+              </div>
+            </div>
+
             {/* ── Webhooks Card (Coming Soon) ────────────── */}
             <div
               style={{ ...integrationCardStyle, opacity: 0.6 }}
