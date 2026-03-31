@@ -280,6 +280,8 @@ export default function DashboardPage() {
 
   // Contacts
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
+  const [supabaseContactsLoaded, setSupabaseContactsLoaded] = useState(false);
+  const [notionContactsMerged, setNotionContactsMerged] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -308,6 +310,8 @@ export default function DashboardPage() {
   }>>([]);
   const [notionConversations, setNotionConversations] = useState<Array<{
     name: string; pageId: string; initials: string;
+    phone?: string; school?: string; org?: string; status?: string; messageCount?: number;
+    lastMessage?: string;
   }>>([]);
   const [loadingNotion, setLoadingNotion] = useState(false);
 
@@ -442,6 +446,7 @@ export default function DashboardPage() {
       }
 
       setContacts((contactData as ContactRecord[]) || []);
+      setSupabaseContactsLoaded(true);
 
       // Integrations
       const intgs = ((integrationData as OrgIntegration[]) || []);
@@ -489,27 +494,19 @@ export default function DashboardPage() {
 
     fetch('/api/notion/conversations').then(r => r.json()).then(data => {
       if (data.conversations) {
-        setNotionConversations(data.conversations);
-        // Also load Notion conversation contacts into contacts view
-        const notionContacts = data.conversations.map((c: any, i: number) => ({
-          id: `notion-contact-${i}`,
-          full_name: c.name,
-          phone: c.phone || '',
-          email: '',
-          school: c.school || 'UofSC',
-          company: c.org || 'Sigma Chi',
-          campaign_status: c.status || 'contacted',
-          source: 'notion',
-          import_source: 'notion',
-          tags: ['notion', 'derby-days'],
-          created_at: new Date().toISOString(),
+        // Store full conversation data including phone, status, lastMessage, etc.
+        const enriched = data.conversations.map((c: Record<string, unknown>) => ({
+          name: c.name as string,
+          pageId: c.pageId as string,
+          initials: c.initials as string,
+          phone: (c.phone as string) || '',
+          school: (c.school as string) || '',
+          org: (c.org as string) || '',
+          status: (c.status as string) || '',
+          messageCount: (c.messageCount as number) || 0,
+          lastMessage: (c.lastMessage as string) || '',
         }));
-        // Merge with existing contacts (avoid duplicates by name)
-        setContacts(prev => {
-          const existingNames = new Set(prev.map(c => c.full_name?.toLowerCase()));
-          const newOnes = notionContacts.filter((c: any) => !existingNames.has(c.full_name?.toLowerCase()));
-          return [...prev, ...newOnes];
-        });
+        setNotionConversations(enriched);
       }
     }).catch(() => {});
   }, [user]);
@@ -537,6 +534,35 @@ export default function DashboardPage() {
       setProfileLoaded(true);
     }
   }, [user, profileLoaded]);
+
+  // Merge Notion conversations into contacts after Supabase contacts are loaded
+  useEffect(() => {
+    if (!supabaseContactsLoaded || notionConversations.length === 0 || notionContactsMerged) return;
+    const notionAsContacts: ContactRecord[] = notionConversations.map((c, i) => ({
+      id: `notion-contact-${i}`,
+      phone: c.phone || '',
+      first_name: c.name.split(' ')[0] || '',
+      last_name: c.name.split(' ').slice(1).join(' ') || '',
+      full_name: c.name,
+      email: '',
+      school: c.school || 'UofSC',
+      greek_org: c.org || '',
+      position: '',
+      state: '',
+      campaign_status: c.status || 'contacted',
+      source: 'notion',
+      import_source: 'notion',
+      company: c.org || 'Sigma Chi',
+      tags: ['notion', 'derby-days'],
+      created_at: new Date().toISOString(),
+    }));
+    setContacts(prev => {
+      const existingNames = new Set(prev.map(ct => ct.full_name?.toLowerCase()));
+      const newOnes = notionAsContacts.filter(ct => !existingNames.has(ct.full_name?.toLowerCase()));
+      return [...prev, ...newOnes];
+    });
+    setNotionContactsMerged(true);
+  }, [supabaseContactsLoaded, notionConversations, notionContactsMerged]);
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -1202,7 +1228,7 @@ export default function DashboardPage() {
   // ── Render: Conversations ─────────────────────────────────────────────────
 
   // Mock data for Summary view
-  const SUMMARY_DATA = [
+  const MOCK_SUMMARY_DATA = [
     { name: 'Sarah Chen', phone: '+1 (415) 555-0121', lastMessage: "Perfect. Also, quick question -- is there SSO support? That's a requirement for us.", status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '92%', actionNeeded: true },
     { name: 'Marcus Williams', phone: '+1 (212) 555-0198', lastMessage: 'Found it -- it was set to read-only. Switching to read-write now.', status: 'active' as const, lastStep: 'Onboarding support', responseRate: '88%', actionNeeded: false },
     { name: 'David Kim', phone: '+1 (650) 555-0142', lastMessage: 'Tuesday works. Can you send a calendar invite?', status: 'pending' as const, lastStep: 'Proposal sent', responseRate: '75%', actionNeeded: true },
@@ -1210,6 +1236,23 @@ export default function DashboardPage() {
     { name: 'James Park', phone: '+1 (408) 555-0133', lastMessage: "Thanks, we'll review internally and get back to you.", status: 'pending' as const, lastStep: 'Awaiting reply', responseRate: '45%', actionNeeded: false },
     { name: 'Lisa Chang', phone: '+1 (312) 555-0156', lastMessage: 'Looks good, let me loop in our CTO.', status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '80%', actionNeeded: true },
   ];
+
+  // Merge Notion conversations into summary data
+  const notionSummaryRows = notionConversations.map(c => {
+    const statusLower = (c.status || '').toLowerCase();
+    const mappedStatus: 'active' | 'pending' = statusLower === 'onboarded' ? 'active' : 'pending';
+    const needsAction = statusLower !== 'onboarded';
+    return {
+      name: c.name,
+      phone: c.phone || '',
+      lastMessage: c.lastMessage || `${c.messageCount || 0} messages`,
+      status: mappedStatus,
+      lastStep: c.status || 'Contacted',
+      responseRate: c.messageCount ? `${Math.min(Math.round((c.messageCount / 10) * 100), 100)}%` : '--',
+      actionNeeded: needsAction,
+    };
+  });
+  const SUMMARY_DATA = [...MOCK_SUMMARY_DATA, ...notionSummaryRows];
 
   // Mock data for Schedule view
   const SCHEDULED_BLASTS = [
@@ -3698,9 +3741,7 @@ export default function DashboardPage() {
   const renderProfile = () => {
     const userEmail = (user?.email as string) || '';
     const userRole = (user?.role as string) || 'member';
-    const userCreatedAt = user?.created_at as string;
-    const orgName = (org?.name as string) || '';
-    const orgCreatedAt = org?.created_at as string;
+    const orgName = (org?.name as string) || 'FraternityBase';
     const initials = profileForm.full_name
       ? profileForm.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
       : userEmail.slice(0, 2).toUpperCase();
@@ -3731,6 +3772,9 @@ export default function DashboardPage() {
     };
     const roleColors = roleBadgeColors[userRole] || roleBadgeColors.agent;
 
+    // Find assigned station for this user
+    const assignedStation = stations.length > 0 ? stations[0] : null;
+
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Top Bar */}
@@ -3739,7 +3783,7 @@ export default function DashboardPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
-            Profile
+            My Account
           </h2>
           <button onClick={saveProfile} disabled={profileSaving || profileSaveStatus === 'saved'} style={{
             ...primaryBtnStyle,
@@ -3752,7 +3796,52 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 720 }}>
-          {/* Section 1: Profile Header */}
+          {/* Section 1: Company Card */}
+          <div style={{
+            ...sectionStyle,
+            background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%)',
+            border: '1px solid rgba(55,138,221,0.15)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: "'Inter', sans-serif",
+                }}>
+                  {orgName.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>{orgName}</div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 2 }}>{teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, color: plan === 'pro' ? '#2563EB' : plan === 'enterprise' ? '#9333EA' : '#16A34A',
+                background: plan === 'pro' ? 'rgba(37,99,235,0.1)' : plan === 'enterprise' ? 'rgba(147,51,234,0.1)' : 'rgba(22,163,74,0.1)',
+                padding: '4px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>{plan}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Website</div>
+                <input
+                  placeholder="https://yourcompany.com"
+                  style={{ ...inputStyle, fontSize: 12, padding: '7px 10px', background: 'rgba(255,255,255,0.8)' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Industry</div>
+                <input
+                  placeholder="e.g. Higher Education"
+                  style={{ ...inputStyle, fontSize: 12, padding: '7px 10px', background: 'rgba(255,255,255,0.8)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: My Profile */}
           <div style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
             <div style={{
               width: 80, height: 80, borderRadius: 40, flexShrink: 0,
@@ -3775,7 +3864,7 @@ export default function DashboardPage() {
               <input
                 value={profileForm.job_title}
                 onChange={e => updateProfileField('job_title', e.target.value)}
-                placeholder="Job Title"
+                placeholder="Title (e.g. Admin, Account Manager)"
                 style={{ ...inputStyle, fontSize: 14, color: '#6b7280', padding: '4px 10px', border: '1px solid transparent', background: 'transparent', marginBottom: 8 }}
                 onFocus={e => { e.currentTarget.style.border = '1px solid rgba(55,138,221,0.4)'; e.currentTarget.style.background = '#fff'; }}
                 onBlur={e => { e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.background = 'transparent'; }}
@@ -3785,23 +3874,72 @@ export default function DashboardPage() {
                   fontSize: 10, fontWeight: 700, color: roleColors.color, background: roleColors.bg,
                   padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}>{userRole.replace('_', ' ')}</span>
-                <span style={{ fontSize: 12, color: '#8e8e93' }}>{userEmail}</span>
-                {userCreatedAt && (
-                  <span style={{ fontSize: 12, color: '#8e8e93' }}>
-                    Member since {new Date(userCreatedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontSize: 12, color: '#8e8e93' }}>{userEmail}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#16A34A" stroke="#16A34A" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Contact Information */}
+          {/* Section 3: Assigned Vernacular Number */}
+          <div style={sectionStyle}>
+            <div style={sectionTitleStyle}>Your Vernacular Number</div>
+            {assignedStation ? (
+              <div>
+                <div style={{
+                  fontSize: 24, fontWeight: 700, color: '#378ADD', letterSpacing: '0.02em',
+                  fontFamily: "'JetBrains Mono', 'SF Mono', monospace", marginBottom: 8,
+                }}>
+                  {assignedStation.phone_number || 'No number assigned'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: 4,
+                    background: assignedStation.status === 'online' ? '#22C55E' : '#EF4444',
+                    boxShadow: assignedStation.status === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+                  }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{assignedStation.name}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                    color: assignedStation.status === 'online' ? '#16A34A' : '#DC2626',
+                    background: assignedStation.status === 'online' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                    padding: '2px 8px', borderRadius: 10,
+                  }}>{assignedStation.status}</span>
+                </div>
+                <div style={{ fontSize: 12, color: '#8e8e93' }}>
+                  Texts sent from Vernacular will come from this number
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                padding: '20px 16px', borderRadius: 10,
+                background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(0,0,0,0.12)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 6 }}>
+                  No Vernacular number assigned yet
+                </div>
+                <div style={{ fontSize: 12, color: '#8e8e93', maxWidth: 400, margin: '0 auto 14px', lineHeight: 1.5 }}>
+                  A Vernacular number is an iMessage-enabled phone number on a connected Mac station.
+                  This is the number your contacts will see when you text them.
+                </div>
+                <button onClick={() => setActiveTab('settings')} style={{
+                  ...primaryBtnStyle, fontSize: 12,
+                }}>Request Number</button>
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Contact Information */}
           <div style={sectionStyle}>
             <div style={sectionTitleStyle}>Contact Information</div>
             <div style={fieldRowStyle}>
               <div>
-                <div style={labelStyle}>Phone Number</div>
-                <div style={sublabelStyle}>Used for notifications</div>
+                <div style={labelStyle}>Personal Phone Number</div>
+                <div style={sublabelStyle}>Your personal contact number</div>
               </div>
               <input
                 value={profileForm.phone}
@@ -3810,19 +3948,6 @@ export default function DashboardPage() {
                 type="tel"
                 style={profileInputStyle}
               />
-            </div>
-            <div style={fieldRowStyle}>
-              <div>
-                <div style={labelStyle}>Email</div>
-                <div style={sublabelStyle}>Linked to your account</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{userEmail}</span>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
-                  padding: '2px 8px', borderRadius: 10,
-                }}>Verified</span>
-              </div>
             </div>
             <div style={fieldRowStyle}>
               <div>
@@ -3836,7 +3961,7 @@ export default function DashboardPage() {
                 style={profileInputStyle}
               />
             </div>
-            <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
+            <div style={fieldRowStyle}>
               <div>
                 <div style={labelStyle}>Timezone</div>
                 <div style={sublabelStyle}>For scheduling features</div>
@@ -3853,19 +3978,12 @@ export default function DashboardPage() {
                 <option value="UTC">UTC</option>
               </select>
             </div>
-          </div>
-
-          {/* Section 3: Social & Professional */}
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Social &amp; Professional</div>
             <div style={fieldRowStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                 </svg>
-                <div>
-                  <div style={labelStyle}>LinkedIn</div>
-                </div>
+                <div style={labelStyle}>LinkedIn</div>
               </div>
               <input
                 value={profileForm.linkedin_url}
@@ -3879,9 +3997,7 @@ export default function DashboardPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#1c1c1e">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
-                <div>
-                  <div style={labelStyle}>X (Twitter)</div>
-                </div>
+                <div style={labelStyle}>X (Twitter)</div>
               </div>
               <input
                 value={profileForm.twitter_handle}
@@ -3891,7 +4007,7 @@ export default function DashboardPage() {
               />
             </div>
             <div style={{ padding: '12px 0' }}>
-              <div style={{ ...labelStyle, marginBottom: 8 }}>Bio / About</div>
+              <div style={{ ...labelStyle, marginBottom: 8 }}>Bio</div>
               <textarea
                 value={profileForm.bio}
                 onChange={e => updateProfileField('bio', e.target.value)}
@@ -3902,155 +4018,70 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Section 4: Connected Accounts & Devices */}
+          {/* Section 5: Connected Devices */}
           <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Connected Accounts &amp; Devices</div>
-
-            {/* Connected Phone Numbers */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Connected Phone Numbers</div>
-              {stations.length === 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <span style={{ fontSize: 13, color: '#8e8e93' }}>No phone numbers connected</span>
-                  <button onClick={() => setActiveTab('settings')} style={{
-                    background: 'none', border: '1px solid rgba(55,138,221,0.3)', borderRadius: 6,
-                    padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
-                  }}>Connect a Station</button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {stations.map(s => {
-                    const isOnline = s.status === 'online';
-                    return (
-                      <div key={s.id} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 8, height: 8, borderRadius: 4,
-                            background: isOnline ? '#22C55E' : '#EF4444',
-                            boxShadow: isOnline ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
-                          }} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{s.phone_number || 'No number'}</div>
-                            <div style={{ fontSize: 11, color: '#8e8e93' }}>{s.name}</div>
+            <div style={sectionTitleStyle}>Connected Devices</div>
+            {stations.length === 0 ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
+              }}>
+                <span style={{ fontSize: 13, color: '#8e8e93' }}>No stations connected</span>
+                <button onClick={() => setActiveTab('settings')} style={{
+                  background: 'none', border: '1px solid rgba(55,138,221,0.3)', borderRadius: 6,
+                  padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+                }}>Connect a Station</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {stations.map((s, idx) => {
+                  const isOnline = s.status === 'online';
+                  const isAssigned = idx === 0;
+                  const lastBeat = s.last_heartbeat ? new Date(s.last_heartbeat) : null;
+                  return (
+                    <div key={s.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 16px', borderRadius: 10,
+                      background: isAssigned ? 'rgba(55,138,221,0.04)' : 'rgba(0,0,0,0.02)',
+                      border: isAssigned ? '1px solid rgba(55,138,221,0.15)' : '1px solid rgba(0,0,0,0.06)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 8, height: 8, borderRadius: 4,
+                          background: isOnline ? '#22C55E' : '#EF4444',
+                          boxShadow: isOnline ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+                        }} />
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{s.name}</span>
+                            {s.phone_number && (
+                              <span style={{ fontSize: 12, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>{s.phone_number}</span>
+                            )}
+                            {isAssigned && (
+                              <span style={{ fontSize: 9, fontWeight: 700, color: '#378ADD', background: 'rgba(55,138,221,0.1)', padding: '2px 6px', borderRadius: 8, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Assigned to you</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 2 }}>
+                            {lastBeat ? `Last heartbeat: ${formatHeartbeat(s.last_heartbeat)}` : 'No heartbeat recorded'}
                           </div>
                         </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {s.auto_reply_enabled && (
+                          <span style={{ fontSize: 10, fontWeight: 600, color: '#378ADD', background: 'rgba(55,138,221,0.1)', padding: '2px 8px', borderRadius: 10 }}>Auto-Reply</span>
+                        )}
                         <span style={{
                           fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                           color: isOnline ? '#16A34A' : '#DC2626',
                           background: isOnline ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
                           padding: '2px 8px', borderRadius: 10,
-                        }}>{s.status}</span>
+                        }}>{isOnline ? 'Connected' : 'Disconnected'}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Connected Email */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>Connected Email</div>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
-                  </svg>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{userEmail}</span>
-                </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
-                  padding: '2px 8px', borderRadius: 10,
-                }}>Verified</span>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-
-            {/* iMessage Stations */}
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 10 }}>iMessage Stations</div>
-              {stations.length === 0 ? (
-                <div style={{ padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <span style={{ fontSize: 13, color: '#8e8e93' }}>No stations configured</span>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {stations.map(s => {
-                    const isOnline = s.status === 'online';
-                    const lastBeat = s.last_heartbeat ? new Date(s.last_heartbeat) : null;
-                    return (
-                      <div key={s.id} style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{
-                            width: 8, height: 8, borderRadius: 4,
-                            background: isOnline ? '#22C55E' : '#EF4444',
-                            boxShadow: isOnline ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
-                          }} />
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{s.name}</div>
-                            <div style={{ fontSize: 11, color: '#8e8e93' }}>
-                              {lastBeat ? `Last heartbeat: ${lastBeat.toLocaleString()}` : 'No heartbeat recorded'}
-                            </div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {s.auto_reply_enabled && (
-                            <span style={{ fontSize: 10, fontWeight: 600, color: '#378ADD', background: 'rgba(55,138,221,0.1)', padding: '2px 8px', borderRadius: 10 }}>Auto-Reply</span>
-                          )}
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                            color: isOnline ? '#16A34A' : '#DC2626',
-                            background: isOnline ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                            padding: '2px 8px', borderRadius: 10,
-                          }}>{isOnline ? 'Connected' : 'Disconnected'}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section 5: Organization */}
-          <div style={sectionStyle}>
-            <div style={sectionTitleStyle}>Organization</div>
-            <div style={fieldRowStyle}>
-              <div style={labelStyle}>Company</div>
-              <span style={{ fontSize: 13, color: '#1c1c1e', fontWeight: 600 }}>{orgName || 'Not set'}</span>
-            </div>
-            <div style={fieldRowStyle}>
-              <div style={labelStyle}>Plan</div>
-              <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: plan === 'pro' ? '#2563EB' : plan === 'enterprise' ? '#9333EA' : '#16A34A',
-                background: plan === 'pro' ? 'rgba(37,99,235,0.1)' : plan === 'enterprise' ? 'rgba(147,51,234,0.1)' : 'rgba(22,163,74,0.1)',
-                padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.04em',
-              }}>{plan}</span>
-            </div>
-            <div style={fieldRowStyle}>
-              <div style={labelStyle}>Your Role</div>
-              <span style={{ fontSize: 13, color: '#6b7280' }}>{userRole.replace('_', ' ')}</span>
-            </div>
-            <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
-              <div style={labelStyle}>Org Created</div>
-              <span style={{ fontSize: 13, color: '#6b7280' }}>
-                {orgCreatedAt ? new Date(orgCreatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
-              </span>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <button onClick={() => setActiveTab('settings')} style={{
-                background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
-                padding: '7px 16px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
-              }}>Manage Organization</button>
-            </div>
+            )}
           </div>
 
           {/* Section 6: Security */}

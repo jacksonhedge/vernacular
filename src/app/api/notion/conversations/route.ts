@@ -136,16 +136,20 @@ export async function GET(request: Request) {
     }
 
     // Return list of all available conversations
-    const conversations = Object.entries(CONVERSATIONS).map(([id, conv]) => ({
-      name: conv.name,
-      pageId: id,
-      initials: conv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
-      phone: conv.phone,
-      school: conv.school,
-      org: conv.org,
-      status: conv.status,
-      messageCount: conv.messages.length,
-    }));
+    const conversations = Object.entries(CONVERSATIONS).map(([id, conv]) => {
+      const lastMsg = conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].text : '';
+      return {
+        name: conv.name,
+        pageId: id,
+        initials: conv.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+        phone: conv.phone,
+        school: conv.school,
+        org: conv.org,
+        status: conv.status,
+        messageCount: conv.messages.length,
+        lastMessage: lastMsg,
+      };
+    });
 
     return NextResponse.json({ conversations });
   } catch (err) {
