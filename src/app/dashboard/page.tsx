@@ -1714,6 +1714,21 @@ button:active { transform: scale(0.98); }`}</style>
                 })}
             </div>
           </div>
+          {/* Color Key */}
+          <div style={{ display: 'flex', gap: 10, padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)', background: '#fafbfc' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(34,197,94,0.3)' }} />
+              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Unread</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(245,158,11,0.3)' }} />
+              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Awaiting Approval</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(0,0,0,0.04)' }} />
+              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Read</span>
+            </div>
+          </div>
           {/* Conversation List */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {columns
@@ -1721,7 +1736,15 @@ button:active { transform: scale(0.98); }`}</style>
               .map(col => {
                 const lastMsg = col.messages.length > 0 ? col.messages[col.messages.length - 1] : null;
                 const hasUnread = lastMsg?.direction === 'incoming';
+                const hasAiDraft = lastMsg?.isAIDraft;
                 const isSelected = selectedConversationId === col.id;
+                const rowBg = isSelected
+                  ? 'rgba(55,138,221,0.08)'
+                  : hasAiDraft
+                    ? 'rgba(245,158,11,0.06)'
+                    : hasUnread
+                      ? 'rgba(34,197,94,0.06)'
+                      : 'transparent';
                 return (
                   <button key={col.id} onClick={() => {
                     setSelectedConversationId(col.id);
@@ -1730,7 +1753,7 @@ button:active { transform: scale(0.98); }`}</style>
                   }} style={{
                     display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                     padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    background: isSelected ? 'rgba(55,138,221,0.06)' : 'transparent',
+                    background: rowBg,
                     borderBottom: '1px solid rgba(0,0,0,0.04)',
                     minHeight: 68,
                   }}>
@@ -5328,10 +5351,12 @@ button:active { transform: scale(0.98); }`}</style>
         {(() => {
           const primaryStation = stations.find(s => s.phone_number && s.phone_number !== 'TBD') || stations[0];
           if (!primaryStation) return null;
-          const isOnline = primaryStation.status === 'online';
           const lastBeatTime = primaryStation.last_heartbeat ? new Date(primaryStation.last_heartbeat).getTime() : 0;
           const minutesSinceHeartbeat = lastBeatTime ? (Date.now() - lastBeatTime) / 60000 : Infinity;
-          const isActive = !isOnline && minutesSinceHeartbeat < 30;
+          // Online = status is 'online' OR heartbeat within 2 minutes (Cowork pings every ~60s)
+          const isOnline = primaryStation.status === 'online' || minutesSinceHeartbeat < 2;
+          // Active = heartbeat within 10 minutes (Cowork may be between pings)
+          const isActive = !isOnline && minutesSinceHeartbeat < 10;
           const statusColor = isOnline ? '#22C55E' : isActive ? '#3B82F6' : '#EF4444';
           const statusLabel = isOnline ? 'Online' : isActive ? 'Active' : 'Offline';
           return (
