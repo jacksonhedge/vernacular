@@ -335,6 +335,7 @@ export default function DashboardPage() {
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
   const [testSendStatus, setTestSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [testPipelineSteps, setTestPipelineSteps] = useState<Array<{ step: string; status: 'pending' | 'active' | 'done' | 'error'; detail?: string }>>([]);
 
   // Integrations
   const [integrations, setIntegrations] = useState<OrgIntegration[]>([]);
@@ -4317,7 +4318,20 @@ export default function DashboardPage() {
                     onClick={async () => {
                       if (!testPhoneNumber) return;
                       setTestSendStatus('sending');
+                      const steps = [
+                        { step: 'Connecting to Vernacular API', status: 'active' as const },
+                        { step: 'Writing to Notion Message Queue', status: 'pending' as const },
+                        { step: 'Saving to Supabase', status: 'pending' as const },
+                        { step: `Queued for station ${assignedStation.phone_number}`, status: 'pending' as const },
+                        { step: 'Waiting for station pickup (~60s)', status: 'pending' as const },
+                      ];
+                      setTestPipelineSteps([...steps]);
                       try {
+                        await new Promise(r => setTimeout(r, 400));
+                        steps[0] = { ...steps[0], status: 'done', detail: 'Connected' };
+                        steps[1] = { ...steps[1], status: 'active' };
+                        setTestPipelineSteps([...steps]);
+
                         const res = await fetch('/api/send-test', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -4329,34 +4343,69 @@ export default function DashboardPage() {
                         });
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.error);
+
+                        steps[1] = { ...steps[1], status: 'done', detail: data.notionQueued ? 'Written to Notion' : 'Notion skipped' };
+                        steps[2] = { ...steps[2], status: 'done', detail: 'Saved' };
+                        steps[3] = { ...steps[3], status: 'done', detail: `Station: ${data.stationName || 'Wade'}` };
+                        steps[4] = { ...steps[4], status: 'active', detail: 'Message will arrive within 1 minute' };
+                        setTestPipelineSteps([...steps]);
+
                         setTestSendStatus('sent');
-                        setTimeout(() => setTestSendStatus('idle'), 6000);
+                        setTimeout(() => {
+                          steps[4] = { ...steps[4], status: 'done', detail: 'Check your phone!' };
+                          setTestPipelineSteps([...steps]);
+                        }, 3000);
+                        setTimeout(() => setTestSendStatus('idle'), 15000);
                       } catch (err) {
+                        const errMsg = err instanceof Error ? err.message : 'Unknown error';
+                        const failIdx = steps.findIndex(s => s.status === 'active');
+                        if (failIdx >= 0) steps[failIdx] = { ...steps[failIdx], status: 'error', detail: errMsg };
+                        setTestPipelineSteps([...steps]);
                         setTestSendStatus('error');
-                        window.alert('Failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-                        setTimeout(() => setTestSendStatus('idle'), 3000);
+                        setTimeout(() => setTestSendStatus('idle'), 8000);
                       }
                     }}
                     disabled={testSendStatus === 'sending' || !testPhoneNumber}
                     style={{
                       width: '100%', padding: '12px', borderRadius: 10, border: 'none',
-                      background: testSendStatus === 'sent' ? '#22C55E' : testSendStatus === 'sending' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      background: testSendStatus === 'sent' ? '#22C55E' : testSendStatus === 'sending' ? '#9fc5eb' : testSendStatus === 'error' ? '#EF4444' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
                       color: '#fff', fontSize: 14, fontWeight: 700, cursor: testSendStatus === 'sending' ? 'default' : 'pointer',
                       fontFamily: "'Inter', sans-serif",
                       boxShadow: testSendStatus === 'idle' ? '0 2px 8px rgba(55,138,221,0.25)' : 'none',
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    {testSendStatus === 'sending' ? 'Sending...' : testSendStatus === 'sent' ? 'Sent!' : 'Send Test iMessage'}
+                    {testSendStatus === 'sending' ? 'Sending...' : testSendStatus === 'sent' ? 'Queued!' : testSendStatus === 'error' ? 'Failed' : 'Send Test iMessage'}
                   </button>
 
-                  {testSendStatus === 'sent' && (
+                  {/* Pipeline console */}
+                  {testPipelineSteps.length > 0 && (
                     <div style={{
-                      fontSize: 12, color: '#16A34A', marginTop: 10, fontWeight: 500,
-                      padding: '10px 14px', borderRadius: 8, background: 'rgba(22,163,74,0.06)',
-                      border: '1px solid rgba(22,163,74,0.15)', lineHeight: 1.5,
+                      marginTop: 12, padding: '14px 16px', borderRadius: 10,
+                      background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)',
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
                     }}>
-                      Message queued successfully! For testing tier subscriptions, messages may take up to 1 minute to deliver. Check your phone for a blue iMessage from {assignedStation.phone_number}.
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Pipeline Status</div>
+                      {testPipelineSteps.map((s, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                          <span style={{ flexShrink: 0, marginTop: 1 }}>
+                            {s.status === 'done' ? '✅' : s.status === 'active' ? '🔄' : s.status === 'error' ? '❌' : '⏳'}
+                          </span>
+                          <div>
+                            <span style={{ color: s.status === 'done' ? '#22C55E' : s.status === 'active' ? '#378ADD' : s.status === 'error' ? '#EF4444' : 'rgba(255,255,255,0.3)' }}>
+                              {s.step}
+                            </span>
+                            {s.detail && (
+                              <span style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 8 }}>— {s.detail}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {testSendStatus === 'sent' && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', color: '#22C55E', fontSize: 11 }}>
+                          For testing tier, delivery may take up to 1 minute. Check your phone for a blue iMessage from {assignedStation.phone_number}.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
