@@ -1655,9 +1655,22 @@ button:active { transform: scale(0.98); }`}</style>
           {/* Pinned Contacts Grid */}
           <div style={{ padding: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {/* AI Agent Pin */}
+              <button onClick={() => setActiveTab('ai-drafts')} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent',
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: 28,
+                  background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 24, boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+                }}>🤖</div>
+                <span style={{ fontSize: 11, color: '#D97706', fontWeight: 600, textAlign: 'center' }}>AI Agent</span>
+              </button>
               {columns
                 .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
-                .slice(0, 9)
+                .slice(0, 8)
                 .map(col => {
                   const hasUnread = col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming';
                   return (
@@ -1755,6 +1768,39 @@ button:active { transform: scale(0.98); }`}</style>
                           width: 8, height: 8, borderRadius: 4, background: '#378ADD',
                         }} />
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelected) {
+                            // Close: remove column and deselect
+                            removeColumn(col.id);
+                            setSelectedConversationId(null);
+                          } else {
+                            // Show: move column to first position and select
+                            setColumns(prev => {
+                              const idx = prev.findIndex(c => c.id === col.id);
+                              if (idx <= 0) return prev;
+                              const item = prev[idx];
+                              const rest = prev.filter((_, i) => i !== idx);
+                              return [item, ...rest];
+                            });
+                            setSelectedConversationId(col.id);
+                            setTimeout(() => {
+                              const el = document.getElementById(`stream-col-${col.id}`);
+                              if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                            }, 100);
+                          }
+                        }}
+                        style={{
+                          fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                          border: 'none', cursor: 'pointer',
+                          background: isSelected ? 'rgba(239,68,68,0.08)' : 'rgba(55,138,221,0.08)',
+                          color: isSelected ? '#DC2626' : '#378ADD',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {isSelected ? 'Close' : 'Show'}
+                      </button>
                     </div>
                   </button>
                 );
@@ -1816,21 +1862,7 @@ button:active { transform: scale(0.98); }`}</style>
                   Select a contact...
                 </div>
               )}
-              {/* AI Response toggle */}
-              {col.contact && (
-                <button
-                  onClick={() => setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] }))}
-                  title={aiResponseEnabled[col.id] ? 'Disable AI Responses' : 'Enable AI Responses'}
-                  style={{
-                    padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 9, fontWeight: 700,
-                    background: aiResponseEnabled[col.id] ? 'rgba(245,158,11,0.15)' : 'rgba(0,0,0,0.04)',
-                    color: aiResponseEnabled[col.id] ? '#D97706' : '#8e8e93', cursor: 'pointer',
-                    fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
-                  }}
-                >
-                  {aiResponseEnabled[col.id] ? 'AI ON' : 'AI'}
-                </button>
-              )}
+              {/* AI toggle moved to input bar */}
               <button
                 onClick={() => setShowTimestamps(prev => !prev)}
                 title={showTimestamps ? 'Hide Times' : 'Show Times'}
@@ -2072,12 +2104,26 @@ button:active { transform: scale(0.98); }`}</style>
                 padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
                 display: 'flex', flexDirection: 'column', gap: 6, background: '#fff',
               }}>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {/* AI toggle */}
+                  <button
+                    onClick={() => setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] }))}
+                    title={aiResponseEnabled[col.id] ? 'AI Agent ON — Click to disable' : 'Enable AI Agent'}
+                    style={{
+                      width: 32, height: 32, borderRadius: 8, border: 'none', flexShrink: 0,
+                      background: aiResponseEnabled[col.id] ? 'rgba(245,158,11,0.15)' : 'rgba(0,0,0,0.04)',
+                      color: aiResponseEnabled[col.id] ? '#D97706' : '#8e8e93', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14,
+                    }}
+                  >
+                    {aiResponseEnabled[col.id] ? '🤖' : '🤖'}
+                  </button>
                   <input
                     value={inputValues[col.id] || ''}
                     onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
                     onKeyDown={e => { if (e.key === 'Enter') sendMessage(col.id); }}
-                    placeholder="Type a message..."
+                    placeholder={aiResponseEnabled[col.id] ? 'AI Agent active...' : 'Type a message...'}
                     style={{
                       flex: 1, padding: '9px 12px', borderRadius: 8,
                       border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
