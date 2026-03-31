@@ -514,7 +514,7 @@ export default function DashboardPage() {
       if (saveError) throw saveError;
       setOrgSettings(settingsForm);
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
       setSaveStatus('idle');
       window.alert('Failed to save settings: ' + (err instanceof Error ? err.message : String(err)));
@@ -1650,41 +1650,47 @@ export default function DashboardPage() {
 
     const connectIntegration = async (provider: 'notion' | 'slack') => {
       const config = provider === 'notion' ? notionConfig : slackConfig;
-      const existing = integrations.find(i => i.provider === provider);
+      setIntegrationStatus(prev => ({ ...prev, [provider]: 'Connecting...' }));
       try {
+        const res = await fetch('/api/integrations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'connect', organizationId: orgId, provider, config }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to connect');
+        const existing = integrations.find(i => i.provider === provider);
         if (existing) {
-          const { error } = await supabase.from('org_integrations').update({
-            enabled: true, config, status: 'connected', last_synced_at: new Date().toISOString(),
-          }).eq('id', existing.id);
-          if (error) throw error;
-          setIntegrations(prev => prev.map(i => i.id === existing.id ? { ...i, enabled: true, config, status: 'connected' as const, last_synced_at: new Date().toISOString() } : i));
+          setIntegrations(prev => prev.map(i => i.provider === provider ? { ...i, ...result.data, enabled: true, status: 'connected' as const } : i));
         } else {
-          const { data, error } = await supabase.from('org_integrations').insert({
-            organization_id: orgId, provider, enabled: true, config, status: 'connected', last_synced_at: new Date().toISOString(),
-          }).select().single();
-          if (error) throw error;
-          setIntegrations(prev => [...prev, data as OrgIntegration]);
+          setIntegrations(prev => [...prev, result.data as OrgIntegration]);
         }
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Connected successfully!' }));
         setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
-      } catch (err) {
-        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + (err instanceof Error ? err.message : String(err)) }));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : JSON.stringify(err);
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + msg }));
       }
     };
 
     const disconnectIntegration = async (provider: 'notion' | 'slack') => {
       const existing = integrations.find(i => i.provider === provider);
       if (!existing) return;
+      setIntegrationStatus(prev => ({ ...prev, [provider]: 'Disconnecting...' }));
       try {
-        const { error } = await supabase.from('org_integrations').update({
-          enabled: false, status: 'disconnected',
-        }).eq('id', existing.id);
-        if (error) throw error;
+        const res = await fetch('/api/integrations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'disconnect', integrationId: existing.id }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to disconnect');
         setIntegrations(prev => prev.map(i => i.id === existing.id ? { ...i, enabled: false, status: 'disconnected' as const } : i));
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Disconnected.' }));
         setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
-      } catch (err) {
-        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + (err instanceof Error ? err.message : String(err)) }));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : JSON.stringify(err);
+        setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + msg }));
       }
     };
 
