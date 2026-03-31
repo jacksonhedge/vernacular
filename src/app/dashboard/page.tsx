@@ -252,6 +252,16 @@ export default function DashboardPage() {
   const [hoveredColClose, setHoveredColClose] = useState<string | null>(null);
   const messageEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Notion data
+  const [notionContacts, setNotionContacts] = useState<Array<{
+    id: string; name: string; phone: string; initials: string;
+    lastMessage: string; lastDate: string; chapter: string; messageCount: number;
+  }>>([]);
+  const [notionConversations, setNotionConversations] = useState<Array<{
+    name: string; pageId: string; initials: string;
+  }>>([]);
+  const [loadingNotion, setLoadingNotion] = useState(false);
+
   // Settings form
   const [settingsForm, setSettingsForm] = useState<OrgSettings | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -413,6 +423,15 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
+
+    // Fetch Notion contacts and conversation pages
+    fetch('/api/notion/contacts').then(r => r.json()).then(data => {
+      if (data.contacts) setNotionContacts(data.contacts);
+    }).catch(() => {});
+
+    fetch('/api/notion/conversations').then(r => r.json()).then(data => {
+      if (data.conversations) setNotionConversations(data.conversations);
+    }).catch(() => {});
   }, [user]);
 
   // Auto-scroll conversation columns
@@ -478,6 +497,66 @@ export default function DashboardPage() {
 
   const usedContactIds = columns.filter(c => c.contact).map(c => c.contact!.id);
   const availableContacts = MOCK_CONTACTS.filter(c => !usedContactIds.includes(c.id));
+
+  // Notion conversation loader
+  const loadNotionConversation = async (pageId: string, contactName: string, initials: string): Promise<Message[]> => {
+    try {
+      const res = await fetch(`/api/notion/conversations?pageId=${pageId}`);
+      const data = await res.json();
+      if (data.messages) {
+        return data.messages.map((m: { id: string; text: string; direction: string; timestamp: string; aiGenerated: boolean }) => ({
+          id: m.id,
+          text: m.text,
+          direction: m.direction as 'outgoing' | 'incoming',
+          timestamp: m.timestamp || '',
+          isAIDraft: m.aiGenerated,
+        }));
+      }
+    } catch { /* fallback to empty */ }
+    return [];
+  };
+
+  const pickNotionConversation = async (colId: string, conv: { name: string; pageId: string; initials: string }) => {
+    const contact: Contact = {
+      id: `notion-${conv.pageId}`,
+      name: conv.name,
+      initials: conv.initials,
+      tag: 'Notion',
+      tagColor: '#000000',
+      tagBg: 'rgba(0,0,0,0.06)',
+    };
+    setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
+    setShowContactPicker(null);
+    const messages = await loadNotionConversation(conv.pageId, conv.name, conv.initials);
+    setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages } : c));
+  };
+
+  const loadAllNotionConversations = async () => {
+    setLoadingNotion(true);
+    try {
+      const res = await fetch('/api/notion/conversations');
+      const data = await res.json();
+      if (data.conversations) {
+        const convos = data.conversations.slice(0, 4);
+        for (const conv of convos) {
+          const colId = `col-notion-${conv.pageId}`;
+          // Skip if already loaded
+          if (columns.some(c => c.id === colId)) continue;
+          const contact: Contact = {
+            id: `notion-${conv.pageId}`,
+            name: conv.name,
+            initials: conv.initials,
+            tag: 'Notion',
+            tagColor: '#000000',
+            tagBg: 'rgba(0,0,0,0.06)',
+          };
+          const messages = await loadNotionConversation(conv.pageId, conv.name, conv.initials);
+          setColumns(prev => [...prev, { id: colId, contact, messages }]);
+        }
+      }
+    } catch { /* silent */ }
+    setLoadingNotion(false);
+  };
 
   // Format time
   const formatTime = (dateStr: string) => {
@@ -1057,12 +1136,31 @@ export default function DashboardPage() {
           )}
         </div>
         {conversationViewMode === 'streams' && (
-          <button onClick={addColumn} style={primaryBtnStyle}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Add Column
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={loadAllNotionConversations} disabled={loadingNotion} style={{
+              ...primaryBtnStyle,
+              background: loadingNotion ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.06)',
+              color: loadingNotion ? '#8e8e93' : '#1c1c1e',
+              boxShadow: 'none',
+            }}>
+              {loadingNotion ? (
+                'Loading Notion data...'
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" /><path d="M14 14h6v6h-6z" />
+                  </svg>
+                  Load from Notion
+                </>
+              )}
+            </button>
+            <button onClick={addColumn} style={primaryBtnStyle}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Column
+            </button>
+          </div>
         )}
         {conversationViewMode === 'schedule' && (
           <button onClick={() => window.alert('New Scheduled Blast form coming soon.')} style={primaryBtnStyle}>
@@ -1286,8 +1384,63 @@ export default function DashboardPage() {
 
             {/* Contact Picker */}
             {!col.contact && showContactPicker === col.id && (
-              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                {availableContacts.length === 0 ? (
+              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 280, overflow: 'auto' }}>
+                {/* Notion Conversations Group */}
+                {notionConversations.length > 0 && (
+                  <>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
+                      letterSpacing: '0.06em', padding: '4px 10px 6px', marginTop: 2,
+                    }}>
+                      Notion Conversations
+                    </div>
+                    {notionConversations.map(conv => (
+                      <button
+                        key={conv.pageId}
+                        onClick={() => pickNotionConversation(col.id, conv)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent',
+                          cursor: 'pointer', fontFamily: "'Inter', sans-serif", textAlign: 'left',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div style={{
+                          width: 30, height: 30, borderRadius: 15,
+                          background: 'linear-gradient(135deg, #1a1a1a, #444)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                        }}>
+                          {conv.initials}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{conv.name}</div>
+                        </div>
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, color: '#000', background: 'rgba(0,0,0,0.06)',
+                          padding: '2px 6px', borderRadius: 4, fontFamily: "'JetBrains Mono', monospace",
+                          textTransform: 'uppercase', letterSpacing: '0.04em',
+                        }}>
+                          Notion
+                        </span>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {/* Demo Contacts Group */}
+                {(notionConversations.length > 0 || availableContacts.length > 0) && (
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
+                    letterSpacing: '0.06em', padding: '8px 10px 6px',
+                    borderTop: notionConversations.length > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                    marginTop: notionConversations.length > 0 ? 6 : 2,
+                  }}>
+                    Demo Contacts
+                  </div>
+                )}
+                {availableContacts.length === 0 && notionConversations.length === 0 ? (
                   <div style={{ fontSize: 12, color: '#8e8e93', textAlign: 'center', padding: '8px 0' }}>
                     No more contacts available
                   </div>
