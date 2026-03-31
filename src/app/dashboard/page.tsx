@@ -297,6 +297,8 @@ export default function DashboardPage() {
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [editingContact, setEditingContact] = useState<{ colId: string; name: string; phone: string } | null>(null);
   const [aiResponseEnabled, setAiResponseEnabled] = useState<Record<string, boolean>>({});
+  const [showAiAgentPanel, setShowAiAgentPanel] = useState(false);
+  const [aiAgentSettings, setAiAgentSettings] = useState({ enabled: false, prepareText: true });
   const [newConvPhone, setNewConvPhone] = useState('');
   const [newConvName, setNewConvName] = useState('');
   const [hoveredColClose, setHoveredColClose] = useState<string | null>(null);
@@ -1656,7 +1658,7 @@ button:active { transform: scale(0.98); }`}</style>
           <div style={{ padding: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {/* AI Agent Pin */}
-              <button onClick={() => setActiveTab('ai-drafts')} style={{
+              <button onClick={() => setShowAiAgentPanel(true)} style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent',
               }}>
@@ -2206,6 +2208,125 @@ button:active { transform: scale(0.98); }`}</style>
                 background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer',
               }}>Cancel</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Agent Settings Panel */}
+      {showAiAgentPanel && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }} onClick={() => setShowAiAgentPanel(false)}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '32px 28px', width: 400,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 24,
+                background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24, boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+              }}>🤖</div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', margin: 0 }}>AI Agent</h3>
+                <p style={{ fontSize: 12, color: '#8e8e93', margin: 0 }}>Configure AI-powered responses for your conversations</p>
+              </div>
+            </div>
+
+            {/* AI Agent ON/OFF */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 18px', borderRadius: 14, marginBottom: 12,
+              background: aiAgentSettings.enabled ? 'rgba(245,158,11,0.06)' : 'rgba(0,0,0,0.02)',
+              border: `1.5px solid ${aiAgentSettings.enabled ? 'rgba(245,158,11,0.2)' : 'rgba(0,0,0,0.06)'}`,
+            }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>AI Agent</div>
+                <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 2 }}>
+                  {aiAgentSettings.enabled ? 'AI is actively monitoring conversations' : 'Turn on to enable AI-powered responses'}
+                </div>
+              </div>
+              <button onClick={() => setAiAgentSettings(prev => ({ ...prev, enabled: !prev.enabled }))} style={{
+                width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: aiAgentSettings.enabled ? '#F59E0B' : '#e5e5ea',
+                position: 'relative', transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 12, background: '#fff',
+                  position: 'absolute', top: 2,
+                  left: aiAgentSettings.enabled ? 22 : 2,
+                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                }} />
+              </button>
+            </div>
+
+            {/* Prepare Text Mode */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 18px', borderRadius: 14, marginBottom: 12,
+              background: aiAgentSettings.prepareText ? 'rgba(245,158,11,0.06)' : 'rgba(0,0,0,0.02)',
+              border: `1.5px solid ${aiAgentSettings.prepareText ? 'rgba(245,158,11,0.2)' : 'rgba(0,0,0,0.06)'}`,
+              opacity: aiAgentSettings.enabled ? 1 : 0.5,
+              pointerEvents: aiAgentSettings.enabled ? 'auto' : 'none',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Prepare Text</div>
+                <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 2, lineHeight: 1.4 }}>
+                  AI drafts appear in <span style={{ color: '#D97706', fontWeight: 600 }}>yellow</span> and require your approval before sending. You can edit the message before approving.
+                </div>
+              </div>
+              <button onClick={() => setAiAgentSettings(prev => ({ ...prev, prepareText: !prev.prepareText }))} style={{
+                width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: aiAgentSettings.prepareText ? '#F59E0B' : '#e5e5ea',
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: 12, background: '#fff',
+                  position: 'absolute', top: 2,
+                  left: aiAgentSettings.prepareText ? 22 : 2,
+                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                }} />
+              </button>
+            </div>
+
+            {/* Preview of what AI drafts look like */}
+            {aiAgentSettings.enabled && aiAgentSettings.prepareText && (
+              <div style={{
+                padding: '14px 16px', borderRadius: 12, marginBottom: 16,
+                background: 'rgba(245,158,11,0.06)', border: '1px dashed rgba(245,158,11,0.3)',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#D97706', marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  AI DRAFT PREVIEW
+                </div>
+                <div style={{ fontSize: 13, color: '#92400E', lineHeight: 1.4, marginBottom: 10 }}>
+                  Thanks for your interest! I can set up a demo call for Tuesday at 2pm. Would that work?
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button style={{ padding: '5px 14px', borderRadius: 6, border: 'none', background: '#F59E0B', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Approve & Send</button>
+                  <button style={{ padding: '5px 14px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#666', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                  <button style={{ padding: '5px 14px', borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.04)', color: '#8e8e93', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            <div style={{ fontSize: 12, color: '#8e8e93', textAlign: 'center', marginBottom: 16 }}>
+              {aiAgentSettings.enabled
+                ? aiAgentSettings.prepareText
+                  ? '✨ AI will draft responses for your approval'
+                  : '⚡ AI will auto-respond to incoming messages'
+                : 'AI Agent is off'}
+            </div>
+
+            <button onClick={() => setShowAiAgentPanel(false)} style={{
+              width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+              background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: '#fff',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+            }}>Done</button>
           </div>
         </div>
       )}
