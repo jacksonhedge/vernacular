@@ -193,8 +193,9 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     ),
   },
   {
-    label: 'AI Drafts',
+    label: 'AI Response Skills',
     tab: 'ai-drafts',
+    color: '#D97706',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
@@ -294,6 +295,8 @@ export default function DashboardPage() {
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [editingContact, setEditingContact] = useState<{ colId: string; name: string; phone: string } | null>(null);
+  const [aiResponseEnabled, setAiResponseEnabled] = useState<Record<string, boolean>>({});
   const [newConvPhone, setNewConvPhone] = useState('');
   const [newConvName, setNewConvName] = useState('');
   const [hoveredColClose, setHoveredColClose] = useState<string | null>(null);
@@ -1659,16 +1662,25 @@ button:active { transform: scale(0.98); }`}</style>
             }}>
               {col.contact ? (
                 <>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: 17,
-                    background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
-                  }}>
+                  <div
+                    onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '' })}
+                    style={{
+                      width: 34, height: 34, borderRadius: 17,
+                      background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
+                      cursor: 'pointer',
+                    }}
+                    title="Edit contact info"
+                  >
                     {col.contact.initials}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div
+                      onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '' })}
+                      style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                      title="Edit contact info"
+                    >
                       {col.contact.name}
                       {col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming' && !col.messages[col.messages.length - 1].isAIDraft && (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -1689,6 +1701,21 @@ button:active { transform: scale(0.98); }`}</style>
                 <div style={{ flex: 1, fontSize: 13, color: '#8e8e93', fontWeight: 500 }}>
                   Select a contact...
                 </div>
+              )}
+              {/* AI Response toggle */}
+              {col.contact && (
+                <button
+                  onClick={() => setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] }))}
+                  title={aiResponseEnabled[col.id] ? 'Disable AI Responses' : 'Enable AI Responses'}
+                  style={{
+                    padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 9, fontWeight: 700,
+                    background: aiResponseEnabled[col.id] ? 'rgba(245,158,11,0.15)' : 'rgba(0,0,0,0.04)',
+                    color: aiResponseEnabled[col.id] ? '#D97706' : '#8e8e93', cursor: 'pointer',
+                    fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
+                  }}
+                >
+                  {aiResponseEnabled[col.id] ? 'AI ON' : 'AI'}
+                </button>
               )}
               <button
                 onClick={() => setShowTimestamps(prev => !prev)}
@@ -1929,37 +1956,98 @@ button:active { transform: scale(0.98); }`}</style>
             {col.contact && (
               <div style={{
                 padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
-                display: 'flex', gap: 8, background: '#fff',
+                display: 'flex', flexDirection: 'column', gap: 6, background: '#fff',
               }}>
-                <input
-                  value={inputValues[col.id] || ''}
-                  onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
-                  onKeyDown={e => { if (e.key === 'Enter') sendMessage(col.id); }}
-                  placeholder="Type a message..."
-                  style={{
-                    flex: 1, padding: '9px 12px', borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
-                    fontFamily: "'Inter', sans-serif", outline: 'none', background: '#f8f9fa',
-                  }}
-                />
-                <button
-                  onClick={() => sendMessage(col.id)}
-                  style={{
-                    width: 36, height: 36, borderRadius: 8, border: 'none',
-                    background: '#378ADD', color: '#fff', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={inputValues[col.id] || ''}
+                    onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
+                    onKeyDown={e => { if (e.key === 'Enter') sendMessage(col.id); }}
+                    placeholder="Type a message..."
+                    style={{
+                      flex: 1, padding: '9px 12px', borderRadius: 8,
+                      border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
+                      fontFamily: "'Inter', sans-serif", outline: 'none', background: '#f8f9fa',
+                    }}
+                  />
+                  {/* Schedule button */}
+                  <button
+                    onClick={() => window.alert('Schedule message coming soon. Use the Schedule tab for blast scheduling.')}
+                    title="Schedule message"
+                    style={{
+                      width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                      background: '#fff', color: '#8e8e93', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </button>
+                  {/* Send button */}
+                  <button
+                    onClick={() => sendMessage(col.id)}
+                    style={{
+                      width: 36, height: 36, borderRadius: 8, border: 'none',
+                      background: '#378ADD', color: '#fff', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
           </div>
         ))}
       </div>}
+
+      {/* Contact Edit Modal */}
+      {editingContact && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }} onClick={() => setEditingContact(null)}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px', width: 360,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', marginBottom: 16 }}>Edit Contact</h3>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Name</label>
+              <input value={editingContact.name}
+                onChange={e => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Phone</label>
+              <input value={editingContact.phone}
+                onChange={e => setEditingContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: "'JetBrains Mono', monospace", outline: 'none', boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => {
+                const ec = editingContact;
+                const initials = ec.name ? ec.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
+                setColumns(prev => prev.map(c => c.id === ec.colId && c.contact ? {
+                  ...c, contact: { ...c.contact, name: ec.name, initials, phone: ec.phone }
+                } : c));
+                setEditingContact(null);
+              }} style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', color: '#fff',
+                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}>Save</button>
+              <button onClick={() => setEditingContact(null)} style={{
+                flex: 1, padding: '12px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)',
+                background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -5020,9 +5108,9 @@ button:active { transform: scale(0.98); }`}</style>
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   fontSize: 13, fontWeight: isActive ? 600 : 500,
                   fontFamily: "'Inter', sans-serif",
-                  color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
+                  color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.55)',
                   background: isActive
-                    ? 'rgba(55,138,221,0.2)'
+                    ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.2)')
                     : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
                   marginBottom: 2, transition: 'all 0.15s ease', textAlign: 'left',
                   position: 'relative',
