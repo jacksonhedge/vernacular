@@ -335,7 +335,8 @@ export default function DashboardPage() {
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
   const [testSendStatus, setTestSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
-  const [testPipelineSteps, setTestPipelineSteps] = useState<Array<{ step: string; status: 'pending' | 'active' | 'done' | 'error'; detail?: string }>>([]);
+  type PipelineStep = { step: string; status: 'pending' | 'active' | 'done' | 'error'; detail?: string };
+  const [testPipelineSteps, setTestPipelineSteps] = useState<PipelineStep[]>([]);
 
   // Integrations
   const [integrations, setIntegrations] = useState<OrgIntegration[]>([]);
@@ -4318,12 +4319,12 @@ export default function DashboardPage() {
                     onClick={async () => {
                       if (!testPhoneNumber) return;
                       setTestSendStatus('sending');
-                      const steps = [
-                        { step: 'Connecting to Vernacular API', status: 'active' as const },
-                        { step: 'Writing to Notion Message Queue', status: 'pending' as const },
-                        { step: 'Saving to Supabase', status: 'pending' as const },
-                        { step: `Queued for station ${assignedStation.phone_number}`, status: 'pending' as const },
-                        { step: 'Waiting for station pickup (~60s)', status: 'pending' as const },
+                      const steps: PipelineStep[] = [
+                        { step: 'Connecting to Vernacular API', status: 'active' },
+                        { step: 'Writing to Notion Message Queue', status: 'pending' },
+                        { step: 'Saving to Supabase', status: 'pending' },
+                        { step: `Queued for station ${assignedStation.phone_number}`, status: 'pending' },
+                        { step: 'Waiting for station pickup (~60s)', status: 'pending' },
                       ];
                       setTestPipelineSteps([...steps]);
                       try {
