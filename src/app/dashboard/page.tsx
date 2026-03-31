@@ -280,6 +280,7 @@ export default function DashboardPage() {
   // Conversations (loaded from Supabase)
   const [columns, setColumns] = useState<ConversationColumn[]>([]);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
+  const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [newConvPhone, setNewConvPhone] = useState('');
   const [newConvName, setNewConvName] = useState('');
@@ -1664,6 +1665,18 @@ export default function DashboardPage() {
                 </div>
               )}
               <button
+                onClick={() => setShowTimestamps(prev => !prev)}
+                title={showTimestamps ? 'Hide Times' : 'Show Times'}
+                style={{
+                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+                  background: showTimestamps ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
+                  color: showTimestamps ? '#378ADD' : '#8e8e93', cursor: 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                {showTimestamps ? 'Hide Times' : 'Times'}
+              </button>
+              <button
                 onClick={() => removeColumn(col.id)}
                 onMouseEnter={() => setHoveredColClose(col.id)}
                 onMouseLeave={() => setHoveredColClose(null)}
@@ -1835,62 +1848,54 @@ export default function DashboardPage() {
               flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8,
               background: '#f8f9fa',
             }}>
-              {col.messages.map((msg, msgIdx) => (
-                <div key={msg.id} style={{
-                  display: 'flex',
-                  justifyContent: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
-                }}>
-                  <div style={{
-                    maxWidth: '85%',
-                    padding: '10px 14px',
-                    borderRadius: msg.direction === 'outgoing' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    background: msg.isAIDraft
-                      ? 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06))'
-                      : msg.direction === 'outgoing'
-                        ? '#378ADD'
-                        : '#fff',
-                    color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
-                    fontSize: 13, lineHeight: 1.5, fontWeight: 400,
-                    border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                    position: 'relative',
+              {col.messages.map((msg, msgIdx) => {
+                const isLastOutgoing = msg.direction === 'outgoing' && !msg.isAIDraft &&
+                  !col.messages.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
+                const isRecent = msg.id.startsWith('m-');
+                return (
+                  <div key={msg.id} style={{
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                   }}>
-                    {msg.isAIDraft && (
-                      <div style={{
-                        fontSize: 10, fontWeight: 700, color: '#F59E0B', marginBottom: 6,
-                        fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
-                      }}>
-                        AI DRAFT
-                      </div>
-                    )}
-                    {msg.text}
-                    {msg.timestamp && (
-                      <div style={{
-                        fontSize: 10, marginTop: 6,
-                        color: msg.direction === 'outgoing' && !msg.isAIDraft ? 'rgba(255,255,255,0.6)' : '#8e8e93',
-                        textAlign: 'right',
-                      }}>
-                        {msg.timestamp}
-                      </div>
-                    )}
+                    {/* Bubble */}
+                    <div style={{
+                      maxWidth: '85%',
+                      padding: '10px 14px',
+                      borderRadius: msg.direction === 'outgoing' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      background: msg.isAIDraft
+                        ? 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06))'
+                        : msg.direction === 'outgoing' ? '#378ADD' : '#fff',
+                      color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
+                      fontSize: 13, lineHeight: 1.5, fontWeight: 400,
+                      border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                    }}>
+                      {msg.isAIDraft && (
+                        <div style={{
+                          fontSize: 10, fontWeight: 700, color: '#F59E0B', marginBottom: 6,
+                          fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
+                        }}>AI DRAFT</div>
+                      )}
+                      {msg.text}
+                    </div>
+                    {/* Timestamp + delivery status (below bubble) */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 6, marginTop: 2,
+                      paddingLeft: msg.direction === 'incoming' ? 4 : 0,
+                      paddingRight: msg.direction === 'outgoing' ? 4 : 0,
+                    }}>
+                      {showTimestamps && msg.timestamp && (
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{msg.timestamp}</span>
+                      )}
+                      {isLastOutgoing && (
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>
+                          {isRecent ? 'Delivering...' : 'Delivered'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  {/* Delivery status for last outgoing message */}
-                  {msg.direction === 'outgoing' && !msg.isAIDraft && (() => {
-                    // Show status on the last outgoing message in the thread
-                    const isLastOutgoing = !col.messages.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
-                    if (!isLastOutgoing) return null;
-                    const isRecent = msg.id.startsWith('m-'); // messages sent from dashboard have timestamp IDs
-                    return (
-                      <div style={{
-                        fontSize: 10, color: '#8e8e93', marginTop: 2,
-                        textAlign: 'right', fontWeight: 400, paddingRight: 2,
-                      }}>
-                        {isRecent ? 'Delivering...' : 'Delivered'}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ))}
+                );
+              })}
               <div ref={el => { messageEndRefs.current[col.id] = el; }} />
             </div>
 
