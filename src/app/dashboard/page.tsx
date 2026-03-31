@@ -1426,12 +1426,21 @@ export default function DashboardPage() {
             ))}
           </div>
           {conversationViewMode === 'streams' && (
-            <span style={{
-              fontSize: 12, fontWeight: 600, color: '#8e8e93',
-              background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
-            }}>
-              {columns.length} streams
-            </span>
+            <>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: '#8e8e93',
+                background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
+              }}>
+                {columns.length} streams
+              </span>
+              <span style={{
+                fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                Updated Last: {stations.length > 0 && stations[0].last_heartbeat
+                  ? new Date(stations[0].last_heartbeat).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                  : 'N/A'}
+              </span>
+            </>
           )}
         </div>
         {conversationViewMode === 'streams' && (
