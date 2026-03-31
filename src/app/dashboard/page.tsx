@@ -296,8 +296,10 @@ export default function DashboardPage() {
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [editingContact, setEditingContact] = useState<{
-    colId: string; name: string; phone: string; email: string; company: string;
-    jobTitle: string; linkedin: string; instagram: string; notes: string;
+    colId: string; firstName: string; lastName: string; name: string; phone: string; email: string;
+    company: string; jobTitle: string; linkedin: string; instagram: string; twitter: string;
+    school: string; greekOrg: string; state: string; city: string; dob: string;
+    venmo: string; notes: string;
   } | null>(null);
   const [aiResponseEnabled, setAiResponseEnabled] = useState<Record<string, boolean>>({});
   const [showAiAgentPanel, setShowAiAgentPanel] = useState(false);
@@ -1851,7 +1853,7 @@ button:active { transform: scale(0.98); }`}</style>
               {col.contact ? (
                 <>
                   <div
-                    onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', notes: '' })}
+                    onClick={() => (() => { const n = col.contact!.name.split(' '); setEditingContact({ colId: col.id, firstName: n[0] || '', lastName: n.slice(1).join(' ') || '', name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
                     style={{
                       width: 34, height: 34, borderRadius: 17,
                       background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
@@ -1865,7 +1867,7 @@ button:active { transform: scale(0.98); }`}</style>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', notes: '' })}
+                      onClick={() => (() => { const n = col.contact!.name.split(' '); setEditingContact({ colId: col.id, firstName: n[0] || '', lastName: n.slice(1).join(' ') || '', name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
                       style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                       title="Edit contact info"
                     >
@@ -2220,26 +2222,89 @@ button:active { transform: scale(0.98); }`}</style>
 
             {/* Contact fields */}
             <div style={{ padding: '16px 24px' }}>
+              {/* Name row */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 2 }}>First Name</label>
+                  <input value={editingContact.firstName} placeholder="First"
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, firstName: e.target.value, name: `${e.target.value} ${prev.lastName}`.trim() } : null)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 2 }}>Last Name</label>
+                  <input value={editingContact.lastName} placeholder="Last"
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, lastName: e.target.value, name: `${prev.firstName} ${e.target.value}`.trim() } : null)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
+                </div>
+              </div>
+
+              {/* Section: Contact */}
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 0 4px' }}>Contact</div>
               {[
-                { label: 'Phone', key: 'phone' as const, placeholder: '+1 (412) 735-1089', mono: true },
-                { label: 'Email', key: 'email' as const, placeholder: 'name@company.com', mono: false },
-                { label: 'Company', key: 'company' as const, placeholder: 'Acme Inc', mono: false },
-                { label: 'Job Title', key: 'jobTitle' as const, placeholder: 'VP of Sales', mono: false },
-                { label: 'LinkedIn', key: 'linkedin' as const, placeholder: 'linkedin.com/in/username', mono: false },
-                { label: 'Instagram', key: 'instagram' as const, placeholder: '@handle', mono: false },
+                { label: 'Phone', key: 'phone', placeholder: '+1 (412) 735-1089', mono: true },
+                { label: 'Email', key: 'email', placeholder: 'name@company.com', mono: false },
               ].map(field => (
-                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <label style={{ width: 80, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
-                  <input
-                    value={(editingContact as Record<string, string>)[field.key] || ''}
-                    placeholder={field.placeholder}
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
                     onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
-                    style={{
-                      flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 14, outline: 'none',
-                      color: '#1c1c1e', background: 'transparent',
-                      fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif",
-                    }}
-                  />
+                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent', fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif" }} />
+                </div>
+              ))}
+
+              {/* Section: Work */}
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Work</div>
+              {[
+                { label: 'Company', key: 'company', placeholder: 'Acme Inc' },
+                { label: 'Title', key: 'jobTitle', placeholder: 'VP of Sales' },
+              ].map(field => (
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
+                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
+                </div>
+              ))}
+
+              {/* Section: Social */}
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Social</div>
+              {[
+                { label: 'LinkedIn', key: 'linkedin', placeholder: 'linkedin.com/in/...' },
+                { label: 'Instagram', key: 'instagram', placeholder: '@handle' },
+                { label: 'Twitter/X', key: 'twitter', placeholder: '@handle' },
+                { label: 'Venmo', key: 'venmo', placeholder: '@username' },
+              ].map(field => (
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
+                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
+                </div>
+              ))}
+
+              {/* Section: Personal */}
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Personal</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0' }}>
+                    <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>School</label>
+                    <input value={editingContact.school} placeholder="UofSC"
+                      onChange={e => setEditingContact(prev => prev ? { ...prev, school: e.target.value } : null)}
+                      style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
+                  </div>
+                </div>
+              </div>
+              {[
+                { label: 'Greek Org', key: 'greekOrg', placeholder: 'Sigma Chi' },
+                { label: 'City', key: 'city', placeholder: 'Pittsburgh' },
+                { label: 'State', key: 'state', placeholder: 'PA' },
+                { label: 'Birthday', key: 'dob', placeholder: 'MM/DD/YYYY' },
+              ].map(field => (
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
+                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
                 </div>
               ))}
               {/* Notes */}
@@ -2276,10 +2341,16 @@ button:active { transform: scale(0.98); }`}</style>
                       source: 'edit',
                       contacts: [{
                         phone: ec.phone, fullName: ec.name, full_name: ec.name,
+                        firstName: ec.firstName, first_name: ec.firstName,
+                        lastName: ec.lastName, last_name: ec.lastName,
                         email: ec.email, company: ec.company,
                         jobTitle: ec.jobTitle, job_title: ec.jobTitle,
                         linkedinUrl: ec.linkedin, linkedin_url: ec.linkedin,
                         instagram: ec.instagram, instagram_handle: ec.instagram,
+                        twitter: ec.twitter, twitter_handle: ec.twitter,
+                        school: ec.school, greekOrg: ec.greekOrg, greek_org: ec.greekOrg,
+                        state: ec.state, city: ec.city,
+                        dob: ec.dob, venmo: ec.venmo, venmo_handle: ec.venmo,
                         notes: ec.notes,
                       }],
                     }),
