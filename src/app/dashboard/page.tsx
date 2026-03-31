@@ -96,6 +96,25 @@ interface ContactRecord {
   state: string;
   campaign_status: string;
   source: string;
+  company?: string;
+  job_title?: string;
+  linkedin_url?: string;
+  instagram_handle?: string;
+  twitter_handle?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  zip?: string;
+  venmo_handle?: string;
+  notes?: string;
+  tags?: string[];
+  import_source?: string;
+  referred_by?: string;
+  dob?: string;
+  last_contacted_at?: string;
+  total_messages?: number;
+  response_rate?: number;
+  created_at?: string;
 }
 
 interface OrgIntegration {
@@ -244,6 +263,18 @@ export default function DashboardPage() {
   // Contacts
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [contactSearch, setContactSearch] = useState('');
+  const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showImportModal, setShowImportModal] = useState<'vcf' | 'csv' | 'notion' | null>(null);
+  const [importPreview, setImportPreview] = useState<Record<string, string>[]>([]);
+  const [importResults, setImportResults] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+  const [importingContacts, setImportingContacts] = useState(false);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvRows, setCsvRows] = useState<string[][]>([]);
+  const [csvMapping, setCsvMapping] = useState<Record<string, string>>({});
+  const [showImportDropdown, setShowImportDropdown] = useState(false);
+  const [addFormData, setAddFormData] = useState({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
+  const importDropdownRef = useRef<HTMLDivElement>(null);
 
   // Conversations (mock)
   const [columns, setColumns] = useState<ConversationColumn[]>(MOCK_CONVERSATIONS);
@@ -1570,8 +1601,205 @@ export default function DashboardPage() {
 
   // ── Render: Contacts ──────────────────────────────────────────────────────
 
+  const TAG_COLORS = ['#2563EB', '#7C3AED', '#D97706', '#DC2626', '#059669', '#DB2777', '#9333EA', '#EA580C'];
+  const getTagColor = (tag: string) => TAG_COLORS[Math.abs([...tag].reduce((a, c) => a + c.charCodeAt(0), 0)) % TAG_COLORS.length];
+  const getInitials = (c: ContactRecord) => {
+    const f = c.first_name || c.full_name?.split(' ')[0] || '';
+    const l = c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '';
+    return ((f[0] || '') + (l[0] || '')).toUpperCase() || '?';
+  };
+  const getDisplayName = (c: ContactRecord) => c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+  const relativeTime = (dateStr?: string | null) => {
+    if (!dateStr) return 'Never';
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD}d ago`;
+    if (diffD < 30) return `${Math.floor(diffD / 7)}w ago`;
+    return d.toLocaleDateString();
+  };
+  const statusColors: Record<string, { color: string; bg: string }> = {
+    active: { color: '#22C55E', bg: 'rgba(34,197,94,0.1)' },
+    prospect: { color: '#2563EB', bg: 'rgba(37,99,235,0.1)' },
+    contacted: { color: '#D97706', bg: 'rgba(217,119,6,0.1)' },
+    replied: { color: '#378ADD', bg: 'rgba(55,138,221,0.1)' },
+    won: { color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+    lost: { color: '#DC2626', bg: 'rgba(220,38,38,0.1)' },
+  };
+
+  const getOrgId = () => {
+    if (!user) return '';
+    return ((user.organizations as Record<string, unknown>)?.id as string) || '';
+  };
+
+  const handleVcfImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const cards = text.split('BEGIN:VCARD').filter(c => c.trim());
+      const parsed: Record<string, string>[] = [];
+      for (const card of cards) {
+        const contact: Record<string, string> = {};
+        const lines = card.split('\n').map(l => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          if (line.startsWith('END:VCARD') || line.startsWith('VERSION:')) continue;
+          if (line.startsWith('FN:') || line.startsWith('FN;')) contact.fullName = line.split(':').slice(1).join(':').trim();
+          else if (line.startsWith('N:') || line.startsWith('N;')) {
+            const parts = line.split(':').slice(1).join(':').split(';');
+            contact.lastName = parts[0]?.trim() || '';
+            contact.firstName = parts[1]?.trim() || '';
+          }
+          else if (line.startsWith('TEL') && line.includes(':')) contact.phone = line.split(':').slice(1).join(':').trim();
+          else if (line.startsWith('EMAIL') && line.includes(':')) contact.email = line.split(':').slice(1).join(':').trim();
+          else if (line.startsWith('ORG:') || line.startsWith('ORG;')) contact.company = line.split(':').slice(1).join(':').replace(/;/g, ', ').trim();
+          else if (line.startsWith('TITLE:') || line.startsWith('TITLE;')) contact.jobTitle = line.split(':').slice(1).join(':').trim();
+          else if (line.startsWith('URL') && line.includes(':')) {
+            const url = line.split(':').slice(1).join(':').trim();
+            if (url.includes('linkedin.com')) contact.linkedinUrl = url;
+            else if (url.includes('instagram.com')) contact.instagram = url.replace(/.*instagram\.com\//, '').replace(/\/$/, '');
+            else if (url.includes('twitter.com') || url.includes('x.com')) contact.twitter = url.replace(/.*(?:twitter|x)\.com\//, '').replace(/\/$/, '');
+            else contact.website = url;
+          }
+          else if (line.startsWith('ADR') && line.includes(':')) {
+            const parts = line.split(':').slice(1).join(':').split(';');
+            contact.address = [parts[2], parts[3], parts[4], parts[5]].filter(Boolean).join(', ').trim();
+            contact.city = parts[3]?.trim() || '';
+            contact.state = parts[4]?.trim() || '';
+            contact.zip = parts[5]?.trim() || '';
+          }
+          else if (line.startsWith('NOTE:') || line.startsWith('NOTE;')) contact.notes = line.split(':').slice(1).join(':').trim();
+        }
+        if (contact.fullName || contact.phone || contact.email) parsed.push(contact);
+      }
+      setImportPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return;
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      setCsvHeaders(headers);
+      const rows = lines.slice(1).map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+      setCsvRows(rows);
+      // auto-map obvious columns
+      const map: Record<string, string> = {};
+      const fieldMap: Record<string, string> = {
+        phone: 'phone', tel: 'phone', mobile: 'phone',
+        first_name: 'first_name', firstname: 'first_name', 'first name': 'first_name',
+        last_name: 'last_name', lastname: 'last_name', 'last name': 'last_name',
+        name: 'full_name', full_name: 'full_name', 'full name': 'full_name',
+        email: 'email', 'e-mail': 'email',
+        company: 'company', organization: 'company', org: 'company',
+        title: 'job_title', job_title: 'job_title', 'job title': 'job_title',
+        school: 'school', university: 'school',
+        notes: 'notes', note: 'notes',
+        tags: 'tags',
+      };
+      headers.forEach(h => {
+        const key = h.toLowerCase().trim();
+        if (fieldMap[key]) map[h] = fieldMap[key];
+      });
+      setCsvMapping(map);
+    };
+    reader.readAsText(file);
+  };
+
+  const submitImport = async (source: 'vcf' | 'csv') => {
+    setImportingContacts(true);
+    const orgId = getOrgId();
+    let contactsToImport: Record<string, string>[] = [];
+    if (source === 'vcf') {
+      contactsToImport = importPreview;
+    } else {
+      contactsToImport = csvRows.map(row => {
+        const obj: Record<string, string> = {};
+        csvHeaders.forEach((h, i) => {
+          const field = csvMapping[h];
+          if (field && row[i]) obj[field] = row[i];
+        });
+        return obj;
+      }).filter(c => c.full_name || c.first_name || c.phone || c.email);
+    }
+    try {
+      const res = await fetch('/api/contacts/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId, contacts: contactsToImport, source }),
+      });
+      const data = await res.json();
+      setImportResults({ imported: data.imported || 0, skipped: data.skipped || 0, errors: data.errors || [] });
+      // Refresh contacts
+      const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
+      if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
+    } catch {
+      setImportResults({ imported: 0, skipped: 0, errors: ['Network error'] });
+    }
+    setImportingContacts(false);
+  };
+
+  const handleAddContact = async () => {
+    const orgId = getOrgId();
+    setImportingContacts(true);
+    try {
+      const contact = {
+        first_name: addFormData.first_name,
+        last_name: addFormData.last_name,
+        phone: addFormData.phone,
+        email: addFormData.email,
+        company: addFormData.company,
+        job_title: addFormData.job_title,
+        linkedin_url: addFormData.linkedin_url,
+        notes: addFormData.notes,
+        tags: addFormData.tags.split(',').map(t => t.trim()).filter(Boolean),
+      };
+      await fetch('/api/contacts/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId, contacts: [contact], source: 'manual' }),
+      });
+      setShowAddForm(false);
+      setAddFormData({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
+      const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
+      if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
+    } catch { /* ignore */ }
+    setImportingContacts(false);
+  };
+
+  const handleDeleteContact = async (id: string) => {
+    if (!window.confirm('Delete this contact? This cannot be undone.')) return;
+    await supabase.from('contacts').delete().eq('id', id);
+    setContacts(prev => prev.filter(c => c.id !== id));
+    if (selectedContact?.id === id) setSelectedContact(null);
+  };
+
+  const closeImportModal = () => {
+    setShowImportModal(null);
+    setImportPreview([]);
+    setImportResults(null);
+    setCsvHeaders([]);
+    setCsvRows([]);
+    setCsvMapping({});
+  };
+
+  const CSV_FIELDS = ['', 'phone', 'first_name', 'last_name', 'full_name', 'email', 'company', 'job_title', 'school', 'notes', 'tags'];
+
   const renderContacts = () => (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
       {/* Top Bar */}
       <div style={{
         height: 56, minHeight: 56, background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)',
@@ -1588,12 +1816,46 @@ export default function DashboardPage() {
             {contacts.length} total
           </span>
         </div>
-        <button onClick={() => window.alert('CSV import coming soon. You can add contacts manually via the Supabase dashboard.')} style={primaryBtnStyle}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          Import Contacts
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setShowAddForm(!showAddForm)} style={{ ...primaryBtnStyle, background: '#22C55E', boxShadow: '0 1px 3px rgba(34,197,94,0.3)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Contact
+          </button>
+          <div ref={importDropdownRef} style={{ position: 'relative' }}>
+            <button onClick={() => setShowImportDropdown(!showImportDropdown)} style={primaryBtnStyle}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Import
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {showImportDropdown && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#fff',
+                borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                minWidth: 180, zIndex: 50, overflow: 'hidden',
+              }}>
+                {[
+                  { label: 'Import VCF', key: 'vcf' as const },
+                  { label: 'Import CSV', key: 'csv' as const },
+                  { label: 'Import from Notion', key: 'notion' as const },
+                ].map(opt => (
+                  <button key={opt.key} onClick={() => { setShowImportModal(opt.key); setShowImportDropdown(false); }} style={{
+                    display: 'block', width: '100%', padding: '10px 16px', border: 'none', background: 'none',
+                    textAlign: 'left', fontSize: 13, fontWeight: 500, color: '#1c1c1e', cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif", borderBottom: '1px solid rgba(0,0,0,0.04)',
+                  }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Search */}
@@ -1612,59 +1874,443 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
-        <table style={{
-          width: '100%', borderCollapse: 'collapse', fontSize: 13,
-          fontFamily: "'Inter', sans-serif",
-        }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
-              {['Name', 'Phone', 'Email', 'School', 'Status', 'Source'].map(h => (
-                <th key={h} style={{
-                  textAlign: 'left', padding: '12px 8px', fontSize: 11, fontWeight: 700,
-                  color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
-                }}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredContacts.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
-                  {contacts.length === 0 ? 'No contacts yet. Import contacts to get started.' : 'No contacts match your search.'}
-                </td>
+      {/* Add Contact Form */}
+      {showAddForm && (
+        <div style={{ padding: '16px 24px', background: '#FAFAFA', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>New Contact</span>
+            <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8e93', fontSize: 18, lineHeight: 1 }}>x</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, maxWidth: 720 }}>
+            <input value={addFormData.first_name} onChange={e => setAddFormData(p => ({ ...p, first_name: e.target.value }))} placeholder="First Name" style={inputStyle} />
+            <input value={addFormData.last_name} onChange={e => setAddFormData(p => ({ ...p, last_name: e.target.value }))} placeholder="Last Name" style={inputStyle} />
+            <input value={addFormData.phone} onChange={e => setAddFormData(p => ({ ...p, phone: e.target.value }))} placeholder="Phone" style={inputStyle} />
+            <input value={addFormData.email} onChange={e => setAddFormData(p => ({ ...p, email: e.target.value }))} placeholder="Email" style={inputStyle} />
+            <input value={addFormData.company} onChange={e => setAddFormData(p => ({ ...p, company: e.target.value }))} placeholder="Company" style={inputStyle} />
+            <input value={addFormData.job_title} onChange={e => setAddFormData(p => ({ ...p, job_title: e.target.value }))} placeholder="Job Title" style={inputStyle} />
+            <input value={addFormData.linkedin_url} onChange={e => setAddFormData(p => ({ ...p, linkedin_url: e.target.value }))} placeholder="LinkedIn URL" style={{ ...inputStyle, gridColumn: '1 / -1' }} />
+            <input value={addFormData.tags} onChange={e => setAddFormData(p => ({ ...p, tags: e.target.value }))} placeholder="Tags (comma separated)" style={{ ...inputStyle, gridColumn: '1 / -1' }} />
+            <textarea value={addFormData.notes} onChange={e => setAddFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Notes" rows={2} style={{ ...inputStyle, gridColumn: '1 / -1', resize: 'vertical' as const }} />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button onClick={handleAddContact} disabled={importingContacts} style={{ ...primaryBtnStyle, opacity: importingContacts ? 0.6 : 1 }}>
+              {importingContacts ? 'Saving...' : 'Save Contact'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Table */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+          <table style={{
+            width: '100%', borderCollapse: 'collapse', fontSize: 13,
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
+                {['', 'Name', 'Phone', 'Email', 'Company / School', 'Tags', 'Status', 'Last Contacted', ''].map((h, i) => (
+                  <th key={`${h}-${i}`} style={{
+                    textAlign: 'left', padding: '12px 8px', fontSize: 11, fontWeight: 700,
+                    color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
+                    ...(i === 0 ? { width: 40 } : {}),
+                  }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              filteredContacts.map(c => (
-                <tr key={c.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <td style={{ padding: '10px 8px', fontWeight: 600, color: '#1c1c1e' }}>
-                    {c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || '—'}
+            </thead>
+            <tbody>
+              {filteredContacts.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
+                    {contacts.length === 0 ? 'No contacts yet. Add a contact or import to get started.' : 'No contacts match your search.'}
                   </td>
-                  <td style={{ padding: '10px 8px', color: '#666', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
-                    {c.phone || '—'}
-                  </td>
-                  <td style={{ padding: '10px 8px', color: '#666' }}>{c.email || '—'}</td>
-                  <td style={{ padding: '10px 8px', color: '#666' }}>{c.school || '—'}</td>
-                  <td style={{ padding: '10px 8px' }}>
-                    {c.campaign_status ? (
-                      <span style={badgeStyle(
-                        c.campaign_status === 'active' ? '#22C55E' : c.campaign_status === 'replied' ? '#378ADD' : '#8e8e93',
-                        c.campaign_status === 'active' ? 'rgba(34,197,94,0.1)' : c.campaign_status === 'replied' ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
-                      )}>
-                        {c.campaign_status}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td style={{ padding: '10px 8px', color: '#666', fontSize: 12 }}>{c.source || '—'}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredContacts.map(c => {
+                  const name = getDisplayName(c);
+                  const initials = getInitials(c);
+                  const st = statusColors[c.campaign_status] || statusColors['prospect'];
+                  return (
+                    <tr key={c.id} onClick={() => setSelectedContact(c)} style={{
+                      borderBottom: '1px solid rgba(0,0,0,0.04)', cursor: 'pointer',
+                      background: selectedContact?.id === c.id ? 'rgba(55,138,221,0.04)' : 'transparent',
+                      transition: 'background 0.15s',
+                    }}>
+                      <td style={{ padding: '8px', width: 40 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 16, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+                        }}>
+                          {initials}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 8px', fontWeight: 600, color: '#1c1c1e' }}>{name}</td>
+                      <td style={{ padding: '10px 8px', color: '#666', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+                        {c.phone || '\u2014'}
+                      </td>
+                      <td style={{ padding: '10px 8px', color: '#666', fontSize: 12 }}>{c.email || '\u2014'}</td>
+                      <td style={{ padding: '10px 8px', color: '#666', fontSize: 12 }}>{c.company || c.school || '\u2014'}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {(c.tags || []).slice(0, 3).map(tag => (
+                            <span key={tag} style={{
+                              fontSize: 10, fontWeight: 600, color: getTagColor(tag),
+                              background: `${getTagColor(tag)}15`, padding: '2px 7px', borderRadius: 4,
+                            }}>{tag}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 8px' }}>
+                        {c.campaign_status ? (
+                          <span style={badgeStyle(st.color, st.bg)}>{c.campaign_status}</span>
+                        ) : '\u2014'}
+                      </td>
+                      <td style={{ padding: '10px 8px', color: '#8e8e93', fontSize: 12 }}>
+                        {relativeTime(c.last_contacted_at)}
+                      </td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <button onClick={(e) => { e.stopPropagation(); setSelectedContact(c); }} style={{
+                          background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 6,
+                          padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+                          fontFamily: "'Inter', sans-serif",
+                        }}>View</button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Contact Detail Panel */}
+        {selectedContact && (
+          <div style={{
+            width: 400, minWidth: 400, height: '100%', background: '#fff', borderLeft: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '-4px 0 20px rgba(0,0,0,0.06)', overflow: 'auto', padding: '0',
+          }}>
+            {/* Panel Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Contact Profile</span>
+              <button onClick={() => setSelectedContact(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', color: '#8e8e93',
+                fontSize: 18, lineHeight: 1, padding: 4,
+              }}>x</button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              {/* Avatar + Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: 32, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 22, fontWeight: 700, letterSpacing: '0.02em', marginBottom: 10,
+                }}>
+                  {getInitials(selectedContact)}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', textAlign: 'center' }}>
+                  {getDisplayName(selectedContact)}
+                </div>
+                {(selectedContact.job_title || selectedContact.company) && (
+                  <div style={{ fontSize: 13, color: '#8e8e93', marginTop: 2, textAlign: 'center' }}>
+                    {[selectedContact.job_title, selectedContact.company].filter(Boolean).join(' at ')}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Info */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Contact</div>
+                {selectedContact.phone && (
+                  <a href={`tel:${selectedContact.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', color: '#378ADD', textDecoration: 'none', fontSize: 13 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                    {selectedContact.phone}
+                  </a>
+                )}
+                {selectedContact.email && (
+                  <a href={`mailto:${selectedContact.email}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', color: '#378ADD', textDecoration: 'none', fontSize: 13 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                    {selectedContact.email}
+                  </a>
+                )}
+              </div>
+
+              {/* Social Links */}
+              {(selectedContact.linkedin_url || selectedContact.instagram_handle || selectedContact.twitter_handle || selectedContact.website) && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Social</div>
+                  {selectedContact.linkedin_url && (
+                    <a href={selectedContact.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#0A66C2', textDecoration: 'none', fontSize: 13 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                      LinkedIn
+                    </a>
+                  )}
+                  {selectedContact.instagram_handle && (
+                    <a href={`https://instagram.com/${selectedContact.instagram_handle}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#E1306C', textDecoration: 'none', fontSize: 13 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" /></svg>
+                      @{selectedContact.instagram_handle}
+                    </a>
+                  )}
+                  {selectedContact.twitter_handle && (
+                    <a href={`https://x.com/${selectedContact.twitter_handle}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#1c1c1e', textDecoration: 'none', fontSize: 13 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#1c1c1e"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                      @{selectedContact.twitter_handle}
+                    </a>
+                  )}
+                  {selectedContact.website && (
+                    <a href={selectedContact.website.startsWith('http') ? selectedContact.website : `https://${selectedContact.website}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', color: '#378ADD', textDecoration: 'none', fontSize: 13 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                      {selectedContact.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Location */}
+              {(selectedContact.address || selectedContact.city || selectedContact.state || selectedContact.zip) && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Location</div>
+                  <div style={{ fontSize: 13, color: '#666', lineHeight: 1.6 }}>
+                    {selectedContact.address && <div>{selectedContact.address}</div>}
+                    <div>{[selectedContact.city, selectedContact.state, selectedContact.zip].filter(Boolean).join(', ')}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Personal */}
+              {(selectedContact.dob || selectedContact.school || selectedContact.greek_org) && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Personal</div>
+                  <div style={{ fontSize: 13, color: '#666', lineHeight: 1.8 }}>
+                    {selectedContact.dob && <div>DOB: {selectedContact.dob}</div>}
+                    {selectedContact.school && <div>School: {selectedContact.school}</div>}
+                    {selectedContact.greek_org && <div>Greek Org: {selectedContact.greek_org}</div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment */}
+              {selectedContact.venmo_handle && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Payment</div>
+                  <div style={{ fontSize: 13, color: '#666' }}>Venmo: @{selectedContact.venmo_handle}</div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {(selectedContact.tags || []).length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Tags</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(selectedContact.tags || []).map(tag => (
+                      <span key={tag} style={{
+                        fontSize: 11, fontWeight: 600, color: getTagColor(tag),
+                        background: `${getTagColor(tag)}15`, padding: '3px 10px', borderRadius: 20,
+                      }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedContact.notes && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Notes</div>
+                  <div style={{ fontSize: 13, color: '#666', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedContact.notes}</div>
+                </div>
+              )}
+
+              {/* Source & Referred By */}
+              <div style={{ marginBottom: 20, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {selectedContact.source && (
+                  <span style={badgeStyle(
+                    selectedContact.source === 'vcf' ? '#7C3AED' : selectedContact.source === 'csv' ? '#D97706' : selectedContact.source === 'notion' ? '#1c1c1e' : selectedContact.source === 'imessage' ? '#22C55E' : '#378ADD',
+                    selectedContact.source === 'vcf' ? 'rgba(124,58,237,0.1)' : selectedContact.source === 'csv' ? 'rgba(217,119,6,0.1)' : selectedContact.source === 'notion' ? 'rgba(0,0,0,0.06)' : selectedContact.source === 'imessage' ? 'rgba(34,197,94,0.1)' : 'rgba(55,138,221,0.1)',
+                  )}>
+                    {selectedContact.source}
+                  </span>
+                )}
+                {selectedContact.referred_by && (
+                  <span style={{ fontSize: 12, color: '#8e8e93' }}>Referred by: {selectedContact.referred_by}</span>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div style={{ marginBottom: 24, display: 'flex', gap: 16 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e' }}>{selectedContact.total_messages || 0}</div>
+                  <div style={{ fontSize: 10, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Messages</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e' }}>{selectedContact.response_rate || 0}%</div>
+                  <div style={{ fontSize: 10, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Response</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{relativeTime(selectedContact.last_contacted_at)}</div>
+                  <div style={{ fontSize: 10, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Last Contact</div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => {/* TODO: edit mode */}} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
+                  background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                }}>Edit</button>
+                <button onClick={() => handleDeleteContact(selectedContact.id)} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(220,38,38,0.2)',
+                  background: 'rgba(220,38,38,0.05)', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer',
+                  fontFamily: "'Inter', sans-serif",
+                }}>Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Import Modal Overlay */}
+      {showImportModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+        }} onClick={closeImportModal}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: '#fff', borderRadius: 16, padding: '28px 32px', maxWidth: 640, width: '90%',
+            maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', margin: 0 }}>
+                {showImportModal === 'vcf' ? 'Import VCF' : showImportModal === 'csv' ? 'Import CSV' : 'Import from Notion'}
+              </h3>
+              <button onClick={closeImportModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8e8e93', fontSize: 20, lineHeight: 1 }}>x</button>
+            </div>
+
+            {/* Import Results */}
+            {importResults ? (
+              <div>
+                <div style={{ padding: 20, background: 'rgba(34,197,94,0.06)', borderRadius: 10, marginBottom: 16 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#22C55E', marginBottom: 4 }}>Import Complete</div>
+                  <div style={{ fontSize: 13, color: '#666' }}>
+                    Imported {importResults.imported} contact{importResults.imported !== 1 ? 's' : ''}.
+                    {importResults.skipped > 0 && ` Skipped ${importResults.skipped} duplicate${importResults.skipped !== 1 ? 's' : ''}.`}
+                  </div>
+                  {importResults.errors.length > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#DC2626' }}>
+                      {importResults.errors.slice(0, 5).map((err, i) => <div key={i}>{err}</div>)}
+                    </div>
+                  )}
+                </div>
+                <button onClick={closeImportModal} style={primaryBtnStyle}>Done</button>
+              </div>
+            ) : showImportModal === 'vcf' ? (
+              <div>
+                {importPreview.length === 0 ? (
+                  <div>
+                    <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Select a .vcf file to import contacts.</div>
+                    <input type="file" accept=".vcf" onChange={handleVcfImport} style={{ fontSize: 13 }} />
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>
+                      Found {importPreview.length} contact{importPreview.length !== 1 ? 's' : ''}
+                    </div>
+                    <div style={{ maxHeight: 300, overflow: 'auto', marginBottom: 16 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                        <thead>
+                          <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
+                            {['Name', 'Phone', 'Email', 'Company'].map(h => (
+                              <th key={h} style={{ textAlign: 'left', padding: '8px 6px', fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.slice(0, 20).map((c, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                              <td style={{ padding: '6px', color: '#1c1c1e', fontWeight: 500 }}>{c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || '\u2014'}</td>
+                              <td style={{ padding: '6px', color: '#666' }}>{c.phone || '\u2014'}</td>
+                              <td style={{ padding: '6px', color: '#666' }}>{c.email || '\u2014'}</td>
+                              <td style={{ padding: '6px', color: '#666' }}>{c.company || '\u2014'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {importPreview.length > 20 && (
+                        <div style={{ padding: 8, fontSize: 12, color: '#8e8e93', textAlign: 'center' }}>
+                          ...and {importPreview.length - 20} more
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => submitImport('vcf')} disabled={importingContacts} style={{ ...primaryBtnStyle, opacity: importingContacts ? 0.6 : 1 }}>
+                      {importingContacts ? 'Importing...' : `Import ${importPreview.length} Contacts`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : showImportModal === 'csv' ? (
+              <div>
+                {csvHeaders.length === 0 ? (
+                  <div>
+                    <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>Select a .csv file to import contacts.</div>
+                    <input type="file" accept=".csv" onChange={handleCsvImport} style={{ fontSize: 13 }} />
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>
+                      Map columns ({csvRows.length} row{csvRows.length !== 1 ? 's' : ''} found)
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      {csvHeaders.map(h => (
+                        <div key={h} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e', minWidth: 120 }}>{h}</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2"><path d="M5 12h14" /><path d="M12 5l7 7-7 7" /></svg>
+                          <select value={csvMapping[h] || ''} onChange={e => setCsvMapping(prev => ({ ...prev, [h]: e.target.value }))} style={{ ...inputStyle, width: 160, padding: '5px 8px' }}>
+                            {CSV_FIELDS.map(f => <option key={f} value={f}>{f || '(skip)'}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Preview first 5 rows */}
+                    <div style={{ maxHeight: 160, overflow: 'auto', marginBottom: 16, fontSize: 11 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                            {csvHeaders.map(h => (
+                              <th key={h} style={{ textAlign: 'left', padding: '4px 6px', fontSize: 10, fontWeight: 700, color: '#8e8e93' }}>{csvMapping[h] || h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvRows.slice(0, 5).map((row, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid rgba(0,0,0,0.03)' }}>
+                              {row.map((cell, j) => (
+                                <td key={j} style={{ padding: '3px 6px', color: '#666' }}>{cell || '\u2014'}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <button onClick={() => submitImport('csv')} disabled={importingContacts} style={{ ...primaryBtnStyle, opacity: importingContacts ? 0.6 : 1 }}>
+                      {importingContacts ? 'Importing...' : `Import ${csvRows.length} Contacts`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: '#666' }}>
+                Notion import is configured through the Integrations tab. Make sure your Notion integration is connected, then contacts will sync automatically.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
