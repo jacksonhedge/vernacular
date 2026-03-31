@@ -345,6 +345,8 @@ export default function DashboardPage() {
 
   // Conversations view mode
   const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>('streams');
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   // Unread notification count
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1425,26 +1427,6 @@ button:active { transform: scale(0.98); }`}</style>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
             Conversations
           </h2>
-          {/* View Mode Selector */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 2 }}>
-            {(['streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setConversationViewMode(mode)}
-                style={{
-                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
-                  background: conversationViewMode === mode ? '#fff' : 'transparent',
-                  color: conversationViewMode === mode ? '#1c1c1e' : '#8e8e93',
-                  boxShadow: conversationViewMode === mode ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s ease',
-                  textTransform: 'capitalize',
-                }}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
           {conversationViewMode === 'streams' && (
             <>
               <span style={{
@@ -1648,9 +1630,141 @@ button:active { transform: scale(0.98); }`}</style>
       )}
 
       {/* Streams (Columns) View */}
-      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '16px 16px', minHeight: 0 }}>
+      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* Contact List Panel */}
+        <div style={{ width: 300, minWidth: 300, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.08)', background: '#fff' }}>
+          {/* Search */}
+          <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ position: 'relative' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                value={conversationSearch}
+                onChange={e => setConversationSearch(e.target.value)}
+                placeholder="Search"
+                style={{
+                  width: '100%', padding: '8px 12px 8px 32px', borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.08)', fontSize: 13, outline: 'none',
+                  fontFamily: "'Inter', sans-serif", background: 'rgba(0,0,0,0.02)',
+                  boxSizing: 'border-box' as const, color: '#1c1c1e',
+                }}
+              />
+            </div>
+          </div>
+          {/* Pinned Contacts Grid */}
+          <div style={{ padding: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {columns
+                .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+                .slice(0, 9)
+                .map(col => {
+                  const hasUnread = col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming';
+                  return (
+                    <button key={col.id} onClick={() => {
+                      setSelectedConversationId(col.id);
+                      const el = document.getElementById(`stream-col-${col.id}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                    }} style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: selectedConversationId === col.id ? 'rgba(55,138,221,0.08)' : 'transparent',
+                    }}>
+                      <div style={{ position: 'relative' }}>
+                        <div style={{
+                          width: 56, height: 56, borderRadius: 28,
+                          background: 'linear-gradient(135deg, #378ADD, #6366F1)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
+                        }}>
+                          {col.contact?.initials || '##'}
+                        </div>
+                        {hasUnread && (
+                          <div style={{
+                            position: 'absolute', top: 0, right: 0,
+                            width: 12, height: 12, borderRadius: 6,
+                            background: '#378ADD', border: '2px solid #fff',
+                          }} />
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: 11, color: '#1c1c1e', fontWeight: 500, textAlign: 'center',
+                        maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', sans-serif",
+                      }}>
+                        {col.contact?.name.split(' ')[0] || 'Unknown'}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+          {/* Conversation List */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {columns
+              .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+              .map(col => {
+                const lastMsg = col.messages.length > 0 ? col.messages[col.messages.length - 1] : null;
+                const hasUnread = lastMsg?.direction === 'incoming';
+                const isSelected = selectedConversationId === col.id;
+                return (
+                  <button key={col.id} onClick={() => {
+                    setSelectedConversationId(col.id);
+                    const el = document.getElementById(`stream-col-${col.id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                  }} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                    padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    background: isSelected ? 'rgba(55,138,221,0.06)' : 'transparent',
+                    borderBottom: '1px solid rgba(0,0,0,0.04)',
+                    minHeight: 68,
+                  }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 20, flexShrink: 0,
+                      background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
+                    }}>
+                      {col.contact?.initials || '##'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 13, fontWeight: hasUnread ? 700 : 600, color: '#1c1c1e',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', sans-serif",
+                      }}>
+                        {col.contact?.name || 'Unknown'}
+                      </div>
+                      <div style={{
+                        fontSize: 11, color: '#8e8e93', fontWeight: 400,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: "'Inter', sans-serif", marginTop: 2,
+                      }}>
+                        {lastMsg?.text || 'No messages yet'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: 11, color: '#8e8e93', fontFamily: "'Inter', sans-serif",
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}
+                      </span>
+                      {hasUnread && (
+                        <div style={{
+                          width: 8, height: 8, borderRadius: 4, background: '#378ADD',
+                        }} />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+        {/* Stream Columns */}
+        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '16px 16px', minHeight: 0 }}>
         {columns.map(col => (
-          <div key={col.id} style={{
+          <div key={col.id} id={`stream-col-${col.id}`} style={{
             width: 360, minWidth: 360, height: '100%', display: 'flex', flexDirection: 'column',
             background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)',
             marginRight: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -2002,6 +2116,7 @@ button:active { transform: scale(0.98); }`}</style>
             )}
           </div>
         ))}
+      </div>
       </div>}
 
       {/* Contact Edit Modal */}
@@ -5097,45 +5212,60 @@ button:active { transform: scale(0.98); }`}</style>
             const isActive = activeTab === item.tab;
             const isHovered = hoveredNav === item.label;
             return (
-              <button
-                key={item.label}
-                onClick={() => setActiveTab(item.tab)}
-                onMouseEnter={() => setHoveredNav(item.label)}
-                onMouseLeave={() => setHoveredNav(null)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: sidebarCollapsed ? 0 : 10, width: '100%',
-                  padding: sidebarCollapsed ? '9px 0' : '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  fontSize: 13, fontWeight: isActive ? 600 : 500,
-                  fontFamily: "'Inter', sans-serif",
-                  color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.55)',
-                  background: isActive
-                    ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.2)')
-                    : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
-                  marginBottom: 2, transition: 'all 0.15s ease', textAlign: 'left',
-                  position: 'relative',
-                }}
-              >
-                {isActive && (
-                  <div style={{
-                    position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                    width: 3, height: 18, borderRadius: '0 3px 3px 0', background: '#378ADD',
-                  }} />
+              <div key={item.label}>
+                <button
+                  onClick={() => setActiveTab(item.tab)}
+                  onMouseEnter={() => setHoveredNav(item.label)}
+                  onMouseLeave={() => setHoveredNav(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: sidebarCollapsed ? 0 : 10, width: '100%',
+                    padding: sidebarCollapsed ? '9px 0' : '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                    fontSize: 13, fontWeight: isActive ? 600 : 500,
+                    fontFamily: "'Inter', sans-serif",
+                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.55)',
+                    background: isActive
+                      ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.2)')
+                      : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
+                    marginBottom: 2, transition: 'all 0.15s ease', textAlign: 'left',
+                    position: 'relative',
+                  }}
+                >
+                  {isActive && (
+                    <div style={{
+                      position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
+                      width: 3, height: 18, borderRadius: '0 3px 3px 0', background: '#378ADD',
+                    }} />
+                  )}
+                  <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex', flexShrink: 0 }}>
+                    {item.icon}
+                  </span>
+                  {!sidebarCollapsed && item.label}
+                  {item.label === 'Conversations' && unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 4, right: 8,
+                      width: 18, height: 18, borderRadius: 9,
+                      background: '#EF4444', color: '#fff',
+                      fontSize: 10, fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{unreadCount}</span>
+                  )}
+                </button>
+                {item.tab === 'conversations' && activeTab === 'conversations' && !sidebarCollapsed && (
+                  <div style={{ paddingLeft: 32, marginBottom: 4 }}>
+                    {(['streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
+                      <button key={mode} onClick={() => setConversationViewMode(mode)} style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        fontSize: 12, fontWeight: conversationViewMode === mode ? 600 : 400,
+                        color: conversationViewMode === mode ? '#378ADD' : 'rgba(255,255,255,0.4)',
+                        background: conversationViewMode === mode ? 'rgba(55,138,221,0.1)' : 'transparent',
+                        fontFamily: "'Inter', sans-serif", textTransform: 'capitalize',
+                      }}>{mode}</button>
+                    ))}
+                  </div>
                 )}
-                <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex', flexShrink: 0 }}>
-                  {item.icon}
-                </span>
-                {!sidebarCollapsed && item.label}
-                {item.label === 'Conversations' && unreadCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: 4, right: 8,
-                    width: 18, height: 18, borderRadius: 9,
-                    background: '#EF4444', color: '#fff',
-                    fontSize: 10, fontWeight: 700,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{unreadCount}</span>
-                )}
-              </button>
+              </div>
             );
           })}
         </nav>
