@@ -20,17 +20,20 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
-    // Find Wade station (or any available station)
+    // Find station with a real phone number (prefer online, then by phone number)
     let station;
     if (organizationId) {
       const { data } = await supabase
         .from('stations').select('*').eq('organization_id', organizationId)
+        .neq('phone_number', 'TBD').neq('phone_number', '')
         .order('status', { ascending: false }).limit(1);
       station = data?.[0];
     }
     if (!station) {
       const { data } = await supabase
-        .from('stations').select('*').order('status', { ascending: false }).limit(1);
+        .from('stations').select('*')
+        .neq('phone_number', 'TBD').neq('phone_number', '')
+        .order('status', { ascending: false }).limit(1);
       station = data?.[0];
     }
     if (!station) {
