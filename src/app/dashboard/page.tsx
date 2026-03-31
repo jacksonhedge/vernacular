@@ -4300,7 +4300,7 @@ export default function DashboardPage() {
                           const res = await fetch('/api/send-test', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phoneNumber: testPhoneNumber, organizationId: orgId }),
+                            body: JSON.stringify({ phoneNumber: testPhoneNumber, organizationId: (user?.organizations as Record<string, unknown>)?.id }),
                           });
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error);
