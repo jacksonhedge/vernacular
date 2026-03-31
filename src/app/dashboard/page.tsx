@@ -295,7 +295,10 @@ export default function DashboardPage() {
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
-  const [editingContact, setEditingContact] = useState<{ colId: string; name: string; phone: string } | null>(null);
+  const [editingContact, setEditingContact] = useState<{
+    colId: string; name: string; phone: string; email: string; company: string;
+    jobTitle: string; linkedin: string; instagram: string; notes: string;
+  } | null>(null);
   const [aiResponseEnabled, setAiResponseEnabled] = useState<Record<string, boolean>>({});
   const [showAiAgentPanel, setShowAiAgentPanel] = useState(false);
   const [aiAgentSettings, setAiAgentSettings] = useState({ enabled: false, prepareText: true });
@@ -1848,7 +1851,7 @@ button:active { transform: scale(0.98); }`}</style>
               {col.contact ? (
                 <>
                   <div
-                    onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '' })}
+                    onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', notes: '' })}
                     style={{
                       width: 34, height: 34, borderRadius: 17,
                       background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
@@ -1862,7 +1865,7 @@ button:active { transform: scale(0.98); }`}</style>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '' })}
+                      onClick={() => setEditingContact({ colId: col.id, name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', notes: '' })}
                       style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                       title="Edit contact info"
                     >
@@ -2190,70 +2193,104 @@ button:active { transform: scale(0.98); }`}</style>
       </div>
       </div>}
 
-      {/* Contact Edit Modal */}
+      {/* Contact Edit Modal — iMessage Contact Card */}
       {editingContact && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
         }} onClick={() => setEditingContact(null)}>
           <div style={{
-            background: '#fff', borderRadius: 20, padding: '28px 24px', width: 360,
+            background: '#fff', borderRadius: 20, padding: '0', width: 400, maxHeight: '80vh', overflow: 'auto',
             boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
           }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', marginBottom: 16 }}>Edit Contact</h3>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Name</label>
-              <input value={editingContact.name}
+            {/* Avatar header */}
+            <div style={{ padding: '28px 24px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: 36, margin: '0 auto 12px',
+                background: 'linear-gradient(135deg, #378ADD, #6366F1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 24, fontWeight: 700,
+              }}>
+                {editingContact.name ? editingContact.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##'}
+              </div>
+              <input value={editingContact.name} placeholder="Contact Name"
                 onChange={e => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
+                style={{ width: '80%', padding: '8px', borderRadius: 8, border: 'none', fontSize: 18, fontWeight: 700, textAlign: 'center', outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Phone</label>
-              <input value={editingContact.phone}
-                onChange={e => setEditingContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: "'JetBrains Mono', monospace", outline: 'none', boxSizing: 'border-box' as const }} />
+
+            {/* Contact fields */}
+            <div style={{ padding: '16px 24px' }}>
+              {[
+                { label: 'Phone', key: 'phone' as const, placeholder: '+1 (412) 735-1089', mono: true },
+                { label: 'Email', key: 'email' as const, placeholder: 'name@company.com', mono: false },
+                { label: 'Company', key: 'company' as const, placeholder: 'Acme Inc', mono: false },
+                { label: 'Job Title', key: 'jobTitle' as const, placeholder: 'VP of Sales', mono: false },
+                { label: 'LinkedIn', key: 'linkedin' as const, placeholder: 'linkedin.com/in/username', mono: false },
+                { label: 'Instagram', key: 'instagram' as const, placeholder: '@handle', mono: false },
+              ].map(field => (
+                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                  <label style={{ width: 80, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                  <input
+                    value={(editingContact as Record<string, string>)[field.key] || ''}
+                    placeholder={field.placeholder}
+                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
+                    style={{
+                      flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 14, outline: 'none',
+                      color: '#1c1c1e', background: 'transparent',
+                      fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif",
+                    }}
+                  />
+                </div>
+              ))}
+              {/* Notes */}
+              <div style={{ padding: '10px 0' }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 6 }}>Notes</label>
+                <textarea
+                  value={editingContact.notes || ''}
+                  placeholder="Add notes about this contact..."
+                  onChange={e => setEditingContact(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)',
+                    fontSize: 13, outline: 'none', color: '#1c1c1e', resize: 'vertical', boxSizing: 'border-box' as const,
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+
+            {/* Save / Cancel */}
+            <div style={{ display: 'flex', gap: 8, padding: '12px 24px 20px' }}>
               <button onClick={async () => {
                 const ec = editingContact;
                 const initials = ec.name ? ec.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
-                // Update locally
                 setColumns(prev => prev.map(c => c.id === ec.colId && c.contact ? {
                   ...c, contact: { ...c.contact, name: ec.name, initials, phone: ec.phone }
                 } : c));
-                // Also update in Supabase contacts table
                 try {
-                  const col = columns.find(c => c.id === ec.colId);
-                  const contactId = col?.contact?.id;
-                  if (contactId && !contactId.startsWith('notion-') && !contactId.startsWith('new-')) {
-                    await fetch('/api/contacts/import', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        organizationId: (user?.organizations as Record<string, unknown>)?.id,
-                        source: 'edit',
-                        contacts: [{ phone: ec.phone, fullName: ec.name, full_name: ec.name }],
-                      }),
-                    });
-                  } else {
-                    // For new/notion contacts, create via import API
-                    await fetch('/api/contacts/import', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        organizationId: (user?.organizations as Record<string, unknown>)?.id,
-                        source: 'edit',
-                        contacts: [{ phone: ec.phone, fullName: ec.name, full_name: ec.name }],
-                      }),
-                    });
-                  }
+                  await fetch('/api/contacts/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      organizationId: (user?.organizations as Record<string, unknown>)?.id,
+                      source: 'edit',
+                      contacts: [{
+                        phone: ec.phone, fullName: ec.name, full_name: ec.name,
+                        email: ec.email, company: ec.company,
+                        jobTitle: ec.jobTitle, job_title: ec.jobTitle,
+                        linkedinUrl: ec.linkedin, linkedin_url: ec.linkedin,
+                        instagram: ec.instagram, instagram_handle: ec.instagram,
+                        notes: ec.notes,
+                      }],
+                    }),
+                  });
                 } catch { /* save locally even if API fails */ }
                 setEditingContact(null);
               }} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: 'none',
                 background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', color: '#fff',
                 fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              }}>Save</button>
+              }}>Save Contact</button>
               <button onClick={() => setEditingContact(null)} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)',
                 background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer',
