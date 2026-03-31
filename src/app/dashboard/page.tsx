@@ -365,6 +365,9 @@ export default function DashboardPage() {
   // Conversations view mode
   const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>('streams');
 
+  // Unread notification count
+  const [unreadCount, setUnreadCount] = useState(0);
+
   // Getting Started banner
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
 
@@ -441,7 +444,7 @@ export default function DashboardPage() {
         supabase.from('messages').select('*', { count: 'exact', head: true })
           .eq('ai_generated', true),
         supabase.from('conversations').select('id', { count: 'exact', head: true }),
-        supabase.from('conversations').select('id')
+        supabase.from('conversations').select('id, unread_count')
           .gt('unread_count', 0),
         supabase.from('messages').select(`
           id, direction, body, ai_generated, sent_at, status,
@@ -483,6 +486,11 @@ export default function DashboardPage() {
       setRecentMessages(formatted);
       setStations((stationData as Station[]) || []);
       setTeamMembers((memberData as TeamMember[]) || []);
+
+      // Unread count from conversations with unread_count > 0
+      if (respondedConvData) {
+        setUnreadCount((respondedConvData as Array<{ unread_count?: number }>).reduce((sum, c) => sum + (c.unread_count || 0), 0));
+      }
 
       if (settingsData) {
         const s = settingsData as unknown as OrgSettings;
@@ -554,6 +562,34 @@ export default function DashboardPage() {
         setNotionConversations(enriched);
       }
     }).catch(() => {});
+  }, [user]);
+
+  // ── Polling: re-fetch station status + unread counts every 30s ────────────
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // Re-fetch station statuses
+        const { data: stationData } = await supabase
+          .from('stations').select('*')
+          .eq('organization_id', orgId).order('name');
+        if (stationData) {
+          setStations(stationData as Station[]);
+        }
+
+        // Re-fetch conversations for unread counts
+        const { data: convData } = await supabase
+          .from('conversations').select('unread_count')
+          .gt('unread_count', 0);
+        if (convData) {
+          setUnreadCount((convData as Array<{ unread_count?: number }>).reduce((sum, c) => sum + (c.unread_count || 0), 0));
+        }
+      } catch { /* silent */ }
+    }, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   // Auto-scroll conversation columns
@@ -4857,6 +4893,11 @@ export default function DashboardPage() {
           const primaryStation = stations.find(s => s.phone_number && s.phone_number !== 'TBD') || stations[0];
           if (!primaryStation) return null;
           const isOnline = primaryStation.status === 'online';
+          const lastBeatTime = primaryStation.last_heartbeat ? new Date(primaryStation.last_heartbeat).getTime() : 0;
+          const minutesSinceHeartbeat = lastBeatTime ? (Date.now() - lastBeatTime) / 60000 : Infinity;
+          const isActive = !isOnline && minutesSinceHeartbeat < 30;
+          const statusColor = isOnline ? '#22C55E' : isActive ? '#3B82F6' : '#EF4444';
+          const statusLabel = isOnline ? 'Online' : isActive ? 'Active' : 'Offline';
           return (
             <div style={{
               padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -4864,7 +4905,7 @@ export default function DashboardPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{
                   width: 8, height: 8, borderRadius: '50%',
-                  background: isOnline ? '#22C55E' : '#EF4444',
+                  background: statusColor,
                   boxShadow: isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
                   animation: isOnline ? 'pulse 2s ease infinite' : 'none',
                 }} />
@@ -4876,7 +4917,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
-                {isOnline ? 'Online' : 'Offline'}
+                {statusLabel}
               </div>
             </div>
           );
@@ -4916,6 +4957,15 @@ export default function DashboardPage() {
                   {item.icon}
                 </span>
                 {item.label}
+                {item.label === 'Conversations' && unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 8,
+                    width: 18, height: 18, borderRadius: 9,
+                    background: '#EF4444', color: '#fff',
+                    fontSize: 10, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{unreadCount}</span>
+                )}
               </button>
             );
           })}
