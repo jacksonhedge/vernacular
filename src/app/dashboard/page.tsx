@@ -1782,12 +1782,7 @@ export default function DashboardPage() {
                 onClick={() => setExpandedIntegration(expandedIntegration === 'notion' ? null : 'notion')}
               >
                 {/* Notion logo */}
-                <div style={{
-                  width: 48, height: 48, borderRadius: 10, background: '#000', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  <span style={{ color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>N</span>
-                </div>
+                <img src="/notion-logo.webp" alt="Notion" style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Notion</span>
@@ -1906,15 +1901,7 @@ export default function DashboardPage() {
                 onClick={() => setExpandedIntegration(expandedIntegration === 'slack' ? null : 'slack')}
               >
                 {/* Slack logo */}
-                <div style={{
-                  width: 48, height: 48, borderRadius: 10, background: '#4A154B', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', gap: 3, flexWrap: 'wrap' as const, padding: 10, flexShrink: 0,
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#E01E5A' }} />
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#36C5F0' }} />
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#2EB67D' }} />
-                  <div style={{ width: 8, height: 8, borderRadius: 2, background: '#ECB22E' }} />
-                </div>
+                <img src="/slack-logo.png" alt="Slack" style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>Slack</span>
