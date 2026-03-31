@@ -4278,7 +4278,8 @@ export default function DashboardPage() {
                 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 4 }}>Send a test iMessage</div>
                   <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.4 }}>
-                    Enter a phone number to send a blue iMessage from {assignedStation.phone_number}
+                    Enter a phone number to send a blue iMessage from {assignedStation.phone_number}.
+                    Test messages may take up to 1 minute to send, for confirming signals.
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input
@@ -4328,7 +4329,7 @@ export default function DashboardPage() {
                   </div>
                   {testSendStatus === 'sent' && (
                     <div style={{ fontSize: 12, color: '#16A34A', marginTop: 8, fontWeight: 500 }}>
-                      Test message queued! Check your phone for a blue iMessage from {assignedStation.phone_number}
+                      Test message queued! Check your phone within 1 minute for a blue iMessage from {assignedStation.phone_number}
                     </div>
                   )}
                 </div>

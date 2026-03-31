@@ -375,7 +375,7 @@ export default function SignupPage() {
                 </div>
                 {testResult.success && (
                   <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 6 }}>
-                    Check your phone for a blue iMessage from {testResult.stationPhone}
+                    Check your phone within 1 minute for a blue iMessage from {testResult.stationPhone}
                   </div>
                 )}
               </div>
