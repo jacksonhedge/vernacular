@@ -333,6 +333,7 @@ export default function DashboardPage() {
   const [profileSaveStatus, setProfileSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
   const [testSendStatus, setTestSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   // Integrations
@@ -4258,7 +4259,6 @@ export default function DashboardPage() {
                     background: assignedStation.status === 'online' ? '#22C55E' : '#EF4444',
                     boxShadow: assignedStation.status === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
                   }} />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{assignedStation.name}</span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                     color: assignedStation.status === 'online' ? '#16A34A' : '#DC2626',
@@ -4276,60 +4276,87 @@ export default function DashboardPage() {
                   background: 'linear-gradient(135deg, #EBF5FF, #E0EDFF)',
                   border: '1px solid rgba(55,138,221,0.15)',
                 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 4 }}>Send a test iMessage</div>
-                  <div style={{ fontSize: 12, color: '#8e8e93', marginBottom: 12, lineHeight: 1.4 }}>
-                    Enter a phone number to send a blue iMessage from {assignedStation.phone_number}.
-                    Test messages may take up to 1 minute to send, for confirming signals.
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Send a test iMessage</div>
+
+                  {/* To field */}
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 4, display: 'block' }}>To:</label>
                     <input
                       type="tel"
                       placeholder="(412) 735-1089"
                       value={testPhoneNumber}
                       onChange={e => setTestPhoneNumber(e.target.value)}
                       style={{
-                        flex: 1, padding: '10px 14px', borderRadius: 10,
+                        width: '100%', padding: '10px 14px', borderRadius: 10,
                         border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff',
                         fontSize: 15, fontWeight: 600, color: '#1c1c1e', outline: 'none',
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' as const,
                       }}
                     />
-                    <button
-                      onClick={async () => {
-                        if (!testPhoneNumber) return;
-                        setTestSendStatus('sending');
-                        try {
-                          const res = await fetch('/api/send-test', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phoneNumber: testPhoneNumber, organizationId: (user?.organizations as Record<string, unknown>)?.id }),
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error);
-                          setTestSendStatus('sent');
-                          setTimeout(() => setTestSendStatus('idle'), 4000);
-                        } catch (err) {
-                          setTestSendStatus('error');
-                          window.alert('Failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-                          setTimeout(() => setTestSendStatus('idle'), 3000);
-                        }
-                      }}
-                      disabled={testSendStatus === 'sending' || !testPhoneNumber}
-                      style={{
-                        padding: '10px 20px', borderRadius: 10, border: 'none',
-                        background: testSendStatus === 'sent' ? '#22C55E' : testSendStatus === 'sending' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-                        color: '#fff', fontSize: 13, fontWeight: 700, cursor: testSendStatus === 'sending' ? 'default' : 'pointer',
-                        whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif",
-                        boxShadow: testSendStatus === 'idle' ? '0 2px 8px rgba(55,138,221,0.25)' : 'none',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {testSendStatus === 'sending' ? 'Sending...' : testSendStatus === 'sent' ? 'Sent!' : 'Send Test'}
-                    </button>
                   </div>
+
+                  {/* Message field */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', marginBottom: 4, display: 'block' }}>Message:</label>
+                    <textarea
+                      placeholder="Hey! This is a test from Vernacular."
+                      value={testMessageText}
+                      onChange={e => setTestMessageText(e.target.value)}
+                      rows={2}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: 10,
+                        border: '1.5px solid rgba(0,0,0,0.1)', background: '#fff',
+                        fontSize: 14, color: '#1c1c1e', outline: 'none', resize: 'vertical',
+                        fontFamily: "'Inter', sans-serif", boxSizing: 'border-box' as const,
+                        lineHeight: 1.4,
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!testPhoneNumber) return;
+                      setTestSendStatus('sending');
+                      try {
+                        const res = await fetch('/api/send-test', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            phoneNumber: testPhoneNumber,
+                            message: testMessageText,
+                            organizationId: (user?.organizations as Record<string, unknown>)?.id,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error);
+                        setTestSendStatus('sent');
+                        setTimeout(() => setTestSendStatus('idle'), 6000);
+                      } catch (err) {
+                        setTestSendStatus('error');
+                        window.alert('Failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+                        setTimeout(() => setTestSendStatus('idle'), 3000);
+                      }
+                    }}
+                    disabled={testSendStatus === 'sending' || !testPhoneNumber}
+                    style={{
+                      width: '100%', padding: '12px', borderRadius: 10, border: 'none',
+                      background: testSendStatus === 'sent' ? '#22C55E' : testSendStatus === 'sending' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      color: '#fff', fontSize: 14, fontWeight: 700, cursor: testSendStatus === 'sending' ? 'default' : 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      boxShadow: testSendStatus === 'idle' ? '0 2px 8px rgba(55,138,221,0.25)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {testSendStatus === 'sending' ? 'Sending...' : testSendStatus === 'sent' ? 'Sent!' : 'Send Test iMessage'}
+                  </button>
+
                   {testSendStatus === 'sent' && (
-                    <div style={{ fontSize: 12, color: '#16A34A', marginTop: 8, fontWeight: 500 }}>
-                      Test message queued! Check your phone within 1 minute for a blue iMessage from {assignedStation.phone_number}
+                    <div style={{
+                      fontSize: 12, color: '#16A34A', marginTop: 10, fontWeight: 500,
+                      padding: '10px 14px', borderRadius: 8, background: 'rgba(22,163,74,0.06)',
+                      border: '1px solid rgba(22,163,74,0.15)', lineHeight: 1.5,
+                    }}>
+                      Message queued successfully! For testing tier subscriptions, messages may take up to 1 minute to deliver. Check your phone for a blue iMessage from {assignedStation.phone_number}.
                     </div>
                   )}
                 </div>
@@ -4650,7 +4677,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
-                {isOnline ? 'Online' : 'Offline'} &middot; {primaryStation.name}
+                {isOnline ? 'Online' : 'Offline'}
               </div>
             </div>
           );

@@ -7,7 +7,7 @@ const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
 
 export async function POST(request: Request) {
   try {
-    const { phoneNumber, organizationId, contactName } = await request.json();
+    const { phoneNumber, organizationId, contactName, message: customMessage } = await request.json();
 
     if (!phoneNumber) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No stations available' }, { status: 503 });
     }
 
-    const testMessage = `Hey! This is a test from Vernacular. Your iMessage CRM is ready to go. 💬\n\nSent from your Vernacular number: ${station.phone_number}`;
+    const testMessage = customMessage || `Hey! This is a test from Vernacular. Your iMessage CRM is ready to go. 💬\n\nSent from your Vernacular number: ${station.phone_number}`;
 
     // 1. Write to Notion Message Queue (Wade listens to this)
     let notionPageId: string | null = null;
