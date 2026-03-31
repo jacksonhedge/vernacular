@@ -277,6 +277,18 @@ export default function DashboardPage() {
   const [addFormData, setAddFormData] = useState({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
   const importDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close import dropdown on outside click
+  useEffect(() => {
+    if (!showImportDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (importDropdownRef.current && !importDropdownRef.current.contains(e.target as Node)) {
+        setShowImportDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showImportDropdown]);
+
   // Conversations (loaded from Supabase)
   const [columns, setColumns] = useState<ConversationColumn[]>([]);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
@@ -336,6 +348,9 @@ export default function DashboardPage() {
 
   // Getting Started banner
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
+
+  // Sidebar collapse
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // ── Auth Check ────────────────────────────────────────────────────────────
 
@@ -659,7 +674,9 @@ export default function DashboardPage() {
           }} />
           <p style={{ color: '#8e8e93', fontSize: 15, fontWeight: 500 }}>Loading workspace...</p>
         </div>
-        <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }`}</style>
+        <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+button:hover { opacity: 0.9; }
+button:active { transform: scale(0.98); }`}</style>
       </div>
     );
   }
@@ -1058,7 +1075,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#8e8e93', marginTop: 4 }}>Messages Sent</div>
           <div style={{ fontSize: 12, color: '#378ADD', fontWeight: 600, marginTop: 8 }}>
-            {metrics.messagesToday} today
+            {metrics.messagesAllTime === 0 ? 'Send your first message' : `${metrics.messagesToday} today`}
           </div>
         </div>
 
@@ -1079,7 +1096,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#8e8e93', marginTop: 4 }}>Response Rate</div>
           <div style={{ fontSize: 12, color: '#22C55E', fontWeight: 600, marginTop: 8 }}>
-            Conversations with replies
+            {metrics.responseRate === 0 ? 'Waiting for data' : 'Conversations with replies'}
           </div>
         </div>
 
@@ -1100,7 +1117,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#8e8e93', marginTop: 4 }}>Active Conversations</div>
           <div style={{ fontSize: 12, color: '#A855F7', fontWeight: 600, marginTop: 8 }}>
-            Currently open threads
+            {metrics.activeConversations === 0 ? 'Start a conversation' : 'Currently open threads'}
           </div>
         </div>
 
@@ -1121,7 +1138,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ fontSize: 13, fontWeight: 500, color: '#8e8e93', marginTop: 4 }}>AI Drafts</div>
           <div style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600, marginTop: 8 }}>
-            AI-generated messages
+            {metrics.aiDrafts === 0 ? 'Enable in Settings' : 'AI-generated messages'}
           </div>
         </div>
       </div>
@@ -1628,7 +1645,7 @@ export default function DashboardPage() {
       )}
 
       {/* Streams (Columns) View */}
-      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', padding: '16px 16px', minHeight: 0 }}>
+      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '16px 16px', minHeight: 0 }}>
         {columns.map(col => (
           <div key={col.id} style={{
             width: 360, minWidth: 360, height: '100%', display: 'flex', flexDirection: 'column',
@@ -2795,7 +2812,10 @@ export default function DashboardPage() {
                 <thead>
                   <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
                     {['Feature', 'Starter', 'Pro', 'Enterprise'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Feature' ? 'left' : 'center', fontWeight: 600, color: '#1c1c1e', fontSize: 12 }}>{h}</th>
+                      <th key={h} style={{
+                        padding: '8px 12px', textAlign: h === 'Feature' ? 'left' : 'center', fontWeight: 600, color: '#1c1c1e', fontSize: 12,
+                        ...(h === 'Starter' ? { borderTop: '3px solid #22C55E', background: 'rgba(34,197,94,0.06)' } : {}),
+                      }}>{h}{h === 'Starter' && <span style={{ display: 'block', fontSize: 9, color: '#22C55E', fontWeight: 700, letterSpacing: '0.04em' }}>CURRENT</span>}</th>
                     ))}
                   </tr>
                 </thead>
@@ -2811,7 +2831,7 @@ export default function DashboardPage() {
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280' }}>{row[1]}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280', background: 'rgba(34,197,94,0.04)' }}>{row[1]}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#2563EB', fontWeight: 600 }}>{row[2]}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#7C3AED', fontWeight: 600 }}>{row[3]}</td>
                     </tr>
@@ -3547,7 +3567,7 @@ export default function DashboardPage() {
 
             {/* ── Salesforce Card (Coming Soon) ─────────── */}
             <div
-              style={{ ...integrationCardStyle, opacity: 0.7 }}
+              style={{ ...integrationCardStyle, opacity: 0.6 }}
             >
               <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 10, background: '#00A1E0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -3585,7 +3605,7 @@ export default function DashboardPage() {
 
             {/* ── HubSpot Card (Coming Soon) ──────────────── */}
             <div
-              style={{ ...integrationCardStyle, opacity: 0.7 }}
+              style={{ ...integrationCardStyle, opacity: 0.6 }}
             >
               <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 10, background: '#FF7A59', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -4359,8 +4379,32 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          {/* Profile Anchor Links */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {[
+              { label: 'Organization', anchor: 'profile-org' },
+              { label: 'Profile', anchor: 'profile-me' },
+              { label: 'Number', anchor: 'profile-number' },
+              { label: 'Devices', anchor: 'profile-devices' },
+              { label: 'Security', anchor: 'profile-security' },
+            ].map((link, i) => (
+              <button
+                key={link.anchor}
+                onClick={() => document.getElementById(link.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                style={{
+                  background: 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 8,
+                  padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#378ADD',
+                  cursor: 'pointer', transition: 'background 0.15s ease',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {link.label}
+                {i < 4 ? '' : ''}
+              </button>
+            ))}
+          </div>
           {/* Section 1: Company Card */}
-          <div style={{
+          <div id="profile-org" style={{
             ...sectionStyle,
             background: 'linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%)',
             border: '1px solid rgba(55,138,221,0.15)',
@@ -4405,7 +4449,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Section 2: My Profile */}
-          <div style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div id="profile-me" style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 20 }}>
             <div style={{
               width: 80, height: 80, borderRadius: 40, flexShrink: 0,
               background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
@@ -4448,7 +4492,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Section 3: Assigned Vernacular Number */}
-          <div style={sectionStyle}>
+          <div id="profile-number" style={sectionStyle}>
             <div style={sectionTitleStyle}>Your Vernacular Number</div>
             {assignedStation ? (
               <div>
@@ -4720,7 +4764,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Section 5: Connected Devices */}
-          <div style={sectionStyle}>
+          <div id="profile-devices" style={sectionStyle}>
             <div style={sectionTitleStyle}>Connected Devices</div>
             {stations.length === 0 ? (
               <div style={{
@@ -4786,7 +4830,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Section 6: Security */}
-          <div style={{ ...sectionStyle, marginBottom: 40 }}>
+          <div id="profile-security" style={{ ...sectionStyle, marginBottom: 40 }}>
             <div style={sectionTitleStyle}>Security</div>
             <div style={fieldRowStyle}>
               <div>
@@ -4872,38 +4916,42 @@ export default function DashboardPage() {
     }}>
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside style={{
-        width: 240,
-        minWidth: 240,
+        width: sidebarCollapsed ? 64 : 240,
+        minWidth: sidebarCollapsed ? 64 : 240,
         background: '#1a1a2e',
         display: 'flex',
         flexDirection: 'column',
         borderRight: '1px solid rgba(255,255,255,0.06)',
+        transition: 'width 0.2s ease, min-width 0.2s ease',
       }}>
         {/* Logo + Org */}
         <div style={{
-          padding: '20px 18px 16px',
+          padding: sidebarCollapsed ? '20px 16px 16px' : '20px 18px 16px',
           borderBottom: '1px solid rgba(255,255,255,0.06)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: sidebarCollapsed ? 'center' : 'center',
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
           gap: 10,
         }}>
-          <img src="/logo.png" alt="Vernacular" style={{ width: 32, height: 32, borderRadius: 8 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {(org?.name as string) || 'Vernacular'}
+          <img src="/logo.png" alt="Vernacular" style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }} />
+          {!sidebarCollapsed && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {(org?.name as string) || 'Vernacular'}
+              </div>
+              <div style={{
+                fontSize: 10, fontWeight: 700,
+                color: plan === 'enterprise' ? '#A78BFA' : plan === 'pro' ? '#60A5FA' : '#6EE7B7',
+                fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                letterSpacing: '0.06em', marginTop: 2,
+              }}>
+                {plan}
+              </div>
             </div>
-            <div style={{
-              fontSize: 10, fontWeight: 700,
-              color: plan === 'enterprise' ? '#A78BFA' : plan === 'pro' ? '#60A5FA' : '#6EE7B7',
-              fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-              letterSpacing: '0.06em', marginTop: 2,
-            }}>
-              {plan}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Phone Line Status */}
@@ -4917,25 +4965,39 @@ export default function DashboardPage() {
           const statusColor = isOnline ? '#22C55E' : isActive ? '#3B82F6' : '#EF4444';
           const statusLabel = isOnline ? 'Online' : isActive ? 'Active' : 'Offline';
           return (
-            <div style={{
-              padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: statusColor,
-                  boxShadow: isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
-                  animation: isOnline ? 'pulse 2s ease infinite' : 'none',
-                }} />
-                <span style={{
-                  fontSize: 13, fontWeight: 700, color: '#378ADD',
-                  fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
-                }}>
-                  {primaryStation.phone_number}
-                </span>
-              </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
-                {statusLabel}
+            <div
+              onClick={() => setActiveTab('stations')}
+              style={{
+                padding: sidebarCollapsed ? '12px 0' : '12px 18px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                cursor: 'pointer',
+                display: 'flex',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: statusColor,
+                    boxShadow: isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
+                    animation: isOnline ? 'pulse 2s ease infinite' : 'none',
+                    flexShrink: 0,
+                  }} />
+                  {!sidebarCollapsed && (
+                    <span style={{
+                      fontSize: 13, fontWeight: 700, color: '#378ADD',
+                      fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
+                    }}>
+                      {primaryStation.phone_number}
+                    </span>
+                  )}
+                </div>
+                {!sidebarCollapsed && (
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
+                    {statusLabel}
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -4953,8 +5015,9 @@ export default function DashboardPage() {
                 onMouseEnter={() => setHoveredNav(item.label)}
                 onMouseLeave={() => setHoveredNav(null)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: sidebarCollapsed ? 0 : 10, width: '100%',
+                  padding: sidebarCollapsed ? '9px 0' : '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   fontSize: 13, fontWeight: isActive ? 600 : 500,
                   fontFamily: "'Inter', sans-serif",
                   color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
@@ -4971,10 +5034,10 @@ export default function DashboardPage() {
                     width: 3, height: 18, borderRadius: '0 3px 3px 0', background: '#378ADD',
                   }} />
                 )}
-                <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex' }}>
+                <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex', flexShrink: 0 }}>
                   {item.icon}
                 </span>
-                {item.label}
+                {!sidebarCollapsed && item.label}
                 {item.label === 'Conversations' && unreadCount > 0 && (
                   <span style={{
                     position: 'absolute', top: 4, right: 8,
@@ -4989,14 +5052,36 @@ export default function DashboardPage() {
           })}
         </nav>
 
+        {/* Collapse Toggle */}
+        <div style={{ padding: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-end' }}>
+          <button
+            onClick={() => setSidebarCollapsed(c => !c)}
+            style={{
+              width: 28, height: 28, borderRadius: 6, border: 'none',
+              background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s ease',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {sidebarCollapsed
+                ? <polyline points="9 18 15 12 9 6" />
+                : <polyline points="15 18 9 12 15 6" />
+              }
+            </svg>
+          </button>
+        </div>
+
         {/* Bottom: User + Logout */}
-        <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{
-            fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 500, marginBottom: 10,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {user?.email as string}
-          </div>
+        <div style={{ padding: sidebarCollapsed ? '14px 8px' : '14px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {!sidebarCollapsed && (
+            <div style={{
+              fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 500, marginBottom: 10,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {user?.email as string}
+            </div>
+          )}
           <button
             onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
             style={{
@@ -5006,7 +5091,11 @@ export default function DashboardPage() {
               cursor: 'pointer', transition: 'all 0.15s ease',
             }}
           >
-            Log Out
+            {sidebarCollapsed ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            ) : 'Log Out'}
           </button>
         </div>
       </aside>

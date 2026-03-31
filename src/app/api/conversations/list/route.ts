@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `+1 (${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  if (digits.length === 11 && digits[0] === '1') return `+1 (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
+  return phone;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -73,7 +80,8 @@ export async function GET(request: Request) {
     // Build response
     const result = conversations.map(conv => {
       const contact = contactMap[conv.contact_id];
-      const name = contact?.full_name?.trim() || contact?.phone || 'Unknown';
+      const rawName = contact?.full_name?.trim();
+      const name = rawName || (contact?.phone ? formatPhone(contact.phone) : 'Unknown');
       const initials = name.startsWith('+') || name.match(/^\d/)
         ? '##'
         : name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
