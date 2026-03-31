@@ -686,14 +686,18 @@ export default function DashboardPage() {
   };
 
   const saveProfile = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      window.alert('User not loaded. Please refresh the page.');
+      return;
+    }
     setProfileSaving(true);
     setProfileSaveStatus('saving');
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expired. Please log in again.');
       const res = await fetch('/api/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ userId: user.id, ...profileForm }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to save'); }
@@ -1811,11 +1815,15 @@ export default function DashboardPage() {
 
   const handleAddContact = async () => {
     const orgId = getOrgId();
+    if (!orgId) { window.alert('Organization not found. Please reload.'); return; }
     setImportingContacts(true);
     try {
+      const firstName = addFormData.first_name.trim();
+      const lastName = addFormData.last_name.trim();
       const contact = {
-        first_name: addFormData.first_name,
-        last_name: addFormData.last_name,
+        first_name: firstName,
+        last_name: lastName,
+        full_name: [firstName, lastName].filter(Boolean).join(' ') || null,
         phone: addFormData.phone,
         email: addFormData.email,
         company: addFormData.company,
@@ -1824,16 +1832,23 @@ export default function DashboardPage() {
         notes: addFormData.notes,
         tags: addFormData.tags.split(',').map(t => t.trim()).filter(Boolean),
       };
-      await fetch('/api/contacts/import', {
+      const res = await fetch('/api/contacts/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ organizationId: orgId, contacts: [contact], source: 'manual' }),
       });
-      setShowAddForm(false);
-      setAddFormData({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
-      const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
-      if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
-    } catch { /* ignore */ }
+      const result = await res.json();
+      if (!res.ok || result.errors?.length) {
+        window.alert('Failed to save contact: ' + (result.error || result.errors?.join(', ') || 'Unknown error'));
+      } else {
+        setShowAddForm(false);
+        setAddFormData({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
+        const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
+        if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
+      }
+    } catch (err) {
+      window.alert('Failed to save contact: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
     setImportingContacts(false);
   };
 

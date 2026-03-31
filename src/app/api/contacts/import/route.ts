@@ -40,7 +40,7 @@ export async function POST(request: Request) {
             phone: contact.phone || '',
             first_name: contact.firstName || contact.first_name || null,
             last_name: contact.lastName || contact.last_name || null,
-            full_name: contact.fullName || contact.full_name || [contact.firstName, contact.lastName].filter(Boolean).join(' ') || null,
+            full_name: contact.fullName || contact.full_name || [contact.firstName || contact.first_name, contact.lastName || contact.last_name].filter(Boolean).join(' ') || null,
             email: contact.email || null,
             company: contact.company || contact.organization || null,
             job_title: contact.jobTitle || contact.job_title || contact.title || null,

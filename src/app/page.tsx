@@ -718,7 +718,11 @@ export default function LandingPage() {
             <img src="/logo.png" alt="Vernacular" style={{ width: 20, height: 20, borderRadius: 5 }} />
             Vernacular
           </div>
-          <div>&copy; {new Date().getFullYear()} CoverPay, Inc.</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a href="#" style={{ color: t.textTertiary, textDecoration: 'none', fontSize: 13 }}>Privacy Policy</a>
+            <a href="#" style={{ color: t.textTertiary, textDecoration: 'none', fontSize: 13 }}>Terms of Service</a>
+            <span>&copy; {new Date().getFullYear()} CoverPay, Inc.</span>
+          </div>
         </footer>
       </div>
 

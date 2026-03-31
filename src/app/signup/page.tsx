@@ -299,7 +299,10 @@ export default function SignupPage() {
         )}
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>
-          By signing up, you agree to our Terms of Service and Privacy Policy.
+          By signing up, you agree to our{' '}
+          <a href="#" style={{ color: 'rgba(0,0,0,0.45)', textDecoration: 'underline' }}>Terms of Service</a>
+          {' '}and{' '}
+          <a href="#" style={{ color: 'rgba(0,0,0,0.45)', textDecoration: 'underline' }}>Privacy Policy</a>.
         </p>
       </div>
     </div>
