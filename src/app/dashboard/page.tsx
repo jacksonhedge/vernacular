@@ -1795,7 +1795,7 @@ export default function DashboardPage() {
               flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8,
               background: '#f8f9fa',
             }}>
-              {col.messages.map(msg => (
+              {col.messages.map((msg, msgIdx) => (
                 <div key={msg.id} style={{
                   display: 'flex',
                   justifyContent: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
@@ -1834,6 +1834,21 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </div>
+                  {/* Delivery status for last outgoing message */}
+                  {msg.direction === 'outgoing' && !msg.isAIDraft && (() => {
+                    // Show status on the last outgoing message in the thread
+                    const isLastOutgoing = !col.messages.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
+                    if (!isLastOutgoing) return null;
+                    const isRecent = msg.id.startsWith('m-'); // messages sent from dashboard have timestamp IDs
+                    return (
+                      <div style={{
+                        fontSize: 10, color: '#8e8e93', marginTop: 2,
+                        textAlign: 'right', fontWeight: 400, paddingRight: 2,
+                      }}>
+                        {isRecent ? 'Delivering...' : 'Delivered'}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
               <div ref={el => { messageEndRefs.current[col.id] = el; }} />
