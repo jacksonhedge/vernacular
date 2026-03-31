@@ -4151,7 +4151,8 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 720 }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
           {/* Section 1: Company Card */}
           <div style={{
             ...sectionStyle,
@@ -4537,6 +4538,7 @@ export default function DashboardPage() {
               }}>1 active session</span>
             </div>
           </div>
+          </div>
         </div>
       </div>
     );
@@ -4622,6 +4624,36 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Phone Line Status */}
+        {(() => {
+          const primaryStation = stations.find(s => s.phone_number && s.phone_number !== 'TBD') || stations[0];
+          if (!primaryStation) return null;
+          const isOnline = primaryStation.status === 'online';
+          return (
+            <div style={{
+              padding: '12px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: isOnline ? '#22C55E' : '#EF4444',
+                  boxShadow: isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
+                  animation: isOnline ? 'pulse 2s ease infinite' : 'none',
+                }} />
+                <span style={{
+                  fontSize: 13, fontWeight: 700, color: '#378ADD',
+                  fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
+                }}>
+                  {primaryStation.phone_number}
+                </span>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
+                {isOnline ? 'Online' : 'Offline'} &middot; {primaryStation.name}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Nav Items */}
         <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
