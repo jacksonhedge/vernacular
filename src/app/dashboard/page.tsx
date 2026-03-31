@@ -218,7 +218,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     ),
   },
   {
-    label: 'Stations',
+    label: 'Phone Lines',
     tab: 'stations',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -887,7 +887,7 @@ export default function DashboardPage() {
               <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 16px', opacity: 0.9 }}>Get started in 3 easy steps:</p>
               <div style={{ display: 'flex', gap: 24 }}>
                 {[
-                  { num: '1', text: 'Connect a station' },
+                  { num: '1', text: 'Connect a phone line' },
                   { num: '2', text: 'Import contacts' },
                   { num: '3', text: 'Send your first message' },
                 ].map(step => (
@@ -1066,12 +1066,12 @@ export default function DashboardPage() {
         {/* Station Status */}
         <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column', maxHeight: 400 }}>
           <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-            <div style={panelHeaderStyle}>Station Status</div>
+            <div style={panelHeaderStyle}>Phone Line Status</div>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
             {stations.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#8e8e93', fontSize: 13 }}>
-                No stations configured yet.
+                No phone lines configured yet.
               </div>
             ) : (
               stations.map(st => (
@@ -1102,7 +1102,7 @@ export default function DashboardPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Add Station
+              Add Phone Line
             </button>
           </div>
         </div>
@@ -2761,8 +2761,8 @@ export default function DashboardPage() {
             </div>
             <div style={{ ...fieldRowStyle, borderBottom: 'none' }}>
               <div>
-                <div style={labelStyle}>Station Offline</div>
-                <div style={sublabelStyle}>Notify when a station goes offline</div>
+                <div style={labelStyle}>Phone Line Offline</div>
+                <div style={sublabelStyle}>Notify when a phone line goes offline</div>
               </div>
               <button onClick={() => updateField('notify_on_station_offline', !f.notify_on_station_offline)} style={toggleStyle(f.notify_on_station_offline)}>
                 <div style={toggleDotStyle(f.notify_on_station_offline)} />
@@ -3101,7 +3101,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
-                    Get real-time notifications in Slack when messages arrive, conversations are flagged, or stations go offline.
+                    Get real-time notifications in Slack when messages arrive, conversations are flagged, or phone lines go offline.
                   </div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -3157,8 +3157,8 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ ...toggleRowStyle, borderBottom: 'none' }}>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Station Offline</div>
-                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on station offline</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>Phone Line Offline</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93' }}>Notify on phone line offline</div>
                       </div>
                       <button onClick={() => setSlackConfig(prev => ({ ...prev, notify_station_offline: !prev.notify_station_offline }))} style={toggleStyle(slackConfig.notify_station_offline)}>
                         <div style={toggleDotStyle(slackConfig.notify_station_offline)} />
@@ -3533,7 +3533,7 @@ export default function DashboardPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  {['Name', 'Email', 'Role', 'Phone Number', 'Assigned Station', 'Status', 'Last Active', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Role', 'Phone Number', 'Assigned Phone Line', 'Status', 'Last Active', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
                   ))}
                 </tr>
@@ -3575,7 +3575,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Section B: Phone Numbers & Stations */}
+        {/* Section B: Phone Numbers & Phone Lines */}
         <div style={{
           background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', marginBottom: 24, overflow: 'hidden',
         }}>
@@ -3584,7 +3584,7 @@ export default function DashboardPage() {
             padding: '16px 20px', borderBottom: '1px solid #e5e7eb',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>Phone Numbers & Stations</span>
+              <span style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>Phone Numbers & Phone Lines</span>
               <span style={{
                 padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
                 background: 'rgba(37,99,235,0.08)', color: '#2563EB',
@@ -3593,7 +3593,7 @@ export default function DashboardPage() {
               </span>
             </div>
             <button
-              onClick={() => alert('Add station flow coming soon!')}
+              onClick={() => alert('Add phone line flow coming soon!')}
               style={{
                 padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
                 background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600,
@@ -3601,7 +3601,7 @@ export default function DashboardPage() {
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Add Station
+              Add Phone Line
             </button>
           </div>
           {stations.length === 0 ? (
@@ -3609,18 +3609,18 @@ export default function DashboardPage() {
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 12px' }}>
                 <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
               </svg>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>No stations connected</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>No phone lines connected</div>
               <div style={{ fontSize: 13, color: '#9CA3AF', maxWidth: 380, margin: '0 auto 16px', lineHeight: 1.5 }}>
-                Stations are Mac computers running iMessage. Connect a station to start sending messages from its phone number.
+                Phone lines are Mac computers running iMessage. Connect a phone line to start sending messages from its phone number.
               </div>
               <button
-                onClick={() => alert('Connect station flow coming soon!')}
+                onClick={() => alert('Connect phone line flow coming soon!')}
                 style={{
                   padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600,
                 }}
               >
-                Connect Station
+                Connect Phone Line
               </button>
             </div>
           ) : (
@@ -3781,7 +3781,7 @@ export default function DashboardPage() {
         }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Network Topology</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Station Overview</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Phone Line Overview</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, flexWrap: 'wrap' }}>
             {/* Left stations */}
@@ -3865,7 +3865,7 @@ export default function DashboardPage() {
                   background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)',
                   borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>No stations connected</div>
+                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>No phone lines connected</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>Connect a Mac to get started</div>
                 </div>
               </>
@@ -3873,7 +3873,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Section B: Station Detail Cards ────────────────────────────── */}
+        {/* ── Section B: Phone Line Detail Cards ────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {stations.map(st => {
             const stColor = getStatusColor(st.status);
@@ -3902,11 +3902,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => alert('Edit station coming soon')} style={{
+                    <button onClick={() => alert('Edit phone line coming soon')} style={{
                       padding: '6px 14px', borderRadius: 8, border: '1px solid #e5e7eb',
                       background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer',
                     }}>Edit</button>
-                    <button onClick={() => alert('Remove station coming soon')} style={{
+                    <button onClick={() => alert('Remove phone line coming soon')} style={{
                       padding: '6px 14px', borderRadius: 8, border: '1px solid #fecaca',
                       background: '#fff', fontSize: 12, fontWeight: 600, color: '#EF4444', cursor: 'pointer',
                     }}>Remove</button>
@@ -3983,7 +3983,7 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* ── Section C: Add Station ─────────────────────────────────────── */}
+        {/* ── Section C: Add Phone Line ─────────────────────────────────── */}
         <div style={{
           border: '2px dashed #d1d5db', borderRadius: 20, padding: '40px 32px',
           textAlign: 'center', background: '#fafafa',
@@ -3998,7 +3998,7 @@ export default function DashboardPage() {
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 8 }}>Connect a Mac</div>
           <div style={{ fontSize: 14, color: '#6b7280', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
-            Stations are Mac computers running iMessage. Each station has its own phone number and can send/receive messages autonomously.
+            Phone lines are Mac computers running iMessage. Each phone line has its own phone number and can send/receive messages autonomously.
           </div>
           <div style={{
             background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px 24px',
@@ -4008,7 +4008,7 @@ export default function DashboardPage() {
               { step: '1', text: 'Install the Vernacular agent on your Mac' },
               { step: '2', text: (<>Run the setup command: <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13, fontFamily: "'JetBrains Mono', monospace" }}>npx vernacular-agent setup</code></>)},
               { step: '3', text: 'Enter your organization key when prompted' },
-              { step: '4', text: 'The station will appear here automatically' },
+              { step: '4', text: 'The phone line will appear here automatically' },
             ].map((s, idx) => (
               <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: idx < 3 ? 14 : 0 }}>
                 <div style={{
@@ -4032,13 +4032,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Section D: Station Metrics ─────────────────────────────────── */}
+        {/* ── Section D: Phone Line Metrics ─────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {[
-            { label: 'Total Stations', value: stations.length.toString(), icon: (
+            { label: 'Total Phone Lines', value: stations.length.toString(), icon: (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
             )},
-            { label: 'Online Stations', value: onlineCount.toString(), icon: (
+            { label: 'Online Phone Lines', value: onlineCount.toString(), icon: (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
             )},
             { label: 'Messages Today', value: '0', icon: (
@@ -4126,8 +4126,8 @@ export default function DashboardPage() {
     };
     const roleColors = roleBadgeColors[userRole] || roleBadgeColors.agent;
 
-    // Find assigned station for this user
-    const assignedStation = stations.length > 0 ? stations[0] : null;
+    // Find assigned station for this user — prefer the first station with a real phone number
+    const assignedStation = stations.find(s => s.phone_number && s.phone_number !== 'TBD') || stations[0] || null;
 
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -4277,7 +4277,7 @@ export default function DashboardPage() {
                   No Vernacular number assigned yet
                 </div>
                 <div style={{ fontSize: 12, color: '#8e8e93', maxWidth: 400, margin: '0 auto 14px', lineHeight: 1.5 }}>
-                  A Vernacular number is an iMessage-enabled phone number on a connected Mac station.
+                  A Vernacular number is an iMessage-enabled phone number on a connected Mac phone line.
                   This is the number your contacts will see when you text them.
                 </div>
                 <button onClick={() => setActiveTab('settings')} style={{
@@ -4380,11 +4380,11 @@ export default function DashboardPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '12px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)',
               }}>
-                <span style={{ fontSize: 13, color: '#8e8e93' }}>No stations connected</span>
+                <span style={{ fontSize: 13, color: '#8e8e93' }}>No phone lines connected</span>
                 <button onClick={() => setActiveTab('settings')} style={{
                   background: 'none', border: '1px solid rgba(55,138,221,0.3)', borderRadius: 6,
                   padding: '5px 12px', fontSize: 12, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
-                }}>Connect a Station</button>
+                }}>Connect a Phone Line</button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -4505,7 +4505,7 @@ export default function DashboardPage() {
     conversations: 'Conversations',
     contacts: 'Contacts',
     team: 'Team',
-    stations: 'Stations',
+    stations: 'Phone Lines',
     'ai-drafts': 'AI Drafts',
     integrations: 'Integrations',
     profile: 'Profile',
