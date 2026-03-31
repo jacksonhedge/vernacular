@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'team' | 'campaigns' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
+type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'team' | 'stations' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
 
 interface Message {
   id: string;
@@ -56,6 +56,10 @@ interface Station {
   status: string;
   last_heartbeat: string;
   auto_reply_enabled: boolean;
+  apple_id?: string;
+  machine_name?: string;
+  system_prompt?: string;
+  model?: string;
 }
 
 interface TeamMember {
@@ -214,11 +218,11 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
     ),
   },
   {
-    label: 'Campaigns',
-    tab: 'campaigns',
+    label: 'Stations',
+    tab: 'stations',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M2 8c0-3.314 2.686-6 6-6" /><path d="M22 8c0-3.314-2.686-6-6-6" />
+        <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><path d="M6 10l2-2 2 2" /><path d="M14 10l2-2 2 2" />
       </svg>
     ),
   },
@@ -3713,6 +3717,356 @@ export default function DashboardPage() {
     );
   };
 
+  // ── Render: Stations ──────────────────────────────────────────────────────
+
+  const renderStations = () => {
+    const getStatusColor = (status: string) => {
+      if (status === 'online') return '#22C55E';
+      if (status === 'syncing') return '#F59E0B';
+      return '#EF4444';
+    };
+    const getStatusLabel = (status: string) => {
+      if (status === 'online') return 'ONLINE';
+      if (status === 'syncing') return 'SYNCING';
+      return 'OFFLINE';
+    };
+    const getRelativeTime = (ts: string | null | undefined) => {
+      if (!ts) return 'Never';
+      const diff = Date.now() - new Date(ts).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'Just now';
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days}d ago`;
+    };
+    const getMachineIcon = (machineName?: string) => {
+      const isLaptop = machineName?.toLowerCase().includes('book');
+      if (isLaptop) {
+        return (
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11H4V5z" /><path d="M2 18h20v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1z" />
+          </svg>
+        );
+      }
+      return (
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+      );
+    };
+    const SignalBars = ({ status }: { status: string }) => {
+      const filled = status === 'online' ? 3 : status === 'syncing' ? 2 : 0;
+      const color = getStatusColor(status);
+      return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 16 }}>
+          {[8, 12, 16].map((h, i) => (
+            <div key={i} style={{ width: 4, height: h, borderRadius: 1, background: i < filled ? color : '#374151', transition: 'background 0.3s' }} />
+          ))}
+        </div>
+      );
+    };
+
+    const onlineCount = stations.filter(s => s.status === 'online').length;
+    const uptimePct = stations.length > 0 ? Math.round((onlineCount / stations.length) * 100) : 0;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', flex: 1, padding: '0 0 32px' }}>
+
+        {/* ── Section A: Network Topology Diagram ────────────────────────── */}
+        <div style={{
+          background: '#1a1a2e', borderRadius: 20, padding: '40px 32px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Network Topology</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Station Overview</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, flexWrap: 'wrap' }}>
+            {/* Left stations */}
+            {stations.filter((_, i) => i % 2 === 0).map(st => {
+              const stColor = getStatusColor(st.status);
+              return (
+                <div key={st.id} style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${st.status === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
+                  }}>
+                    <div style={{ color: stColor, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{getMachineIcon(st.machine_name)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{st.name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>{st.machine_name || 'Unknown Machine'}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>{st.phone_number || 'TBD'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: stColor, boxShadow: `0 0 8px ${stColor}` }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabel(st.status)}</span>
+                      <SignalBars status={st.status} />
+                    </div>
+                  </div>
+                  {/* Connection line */}
+                  <div style={{
+                    width: 48, height: 2,
+                    background: st.status === 'online' ? '#22C55E' : 'transparent',
+                    borderTop: st.status === 'online' ? 'none' : '2px dashed #374151',
+                  }} />
+                </div>
+              );
+            })}
+
+            {/* Center Hub */}
+            <div style={{
+              width: 100, height: 100, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #378ADD, #2563EB)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+              boxShadow: '0 0 32px rgba(55,138,221,0.4), 0 0 64px rgba(55,138,221,0.15)',
+              flexShrink: 0,
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+              </svg>
+              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.8)', marginTop: 4, letterSpacing: '0.08em' }}>VERNACULAR</div>
+            </div>
+
+            {/* Right stations */}
+            {stations.filter((_, i) => i % 2 === 1).map(st => {
+              const stColor = getStatusColor(st.status);
+              return (
+                <div key={st.id} style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{
+                    width: 48, height: 2,
+                    background: st.status === 'online' ? '#22C55E' : 'transparent',
+                    borderTop: st.status === 'online' ? 'none' : '2px dashed #374151',
+                  }} />
+                  <div style={{
+                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${st.status === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
+                  }}>
+                    <div style={{ color: stColor, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{getMachineIcon(st.machine_name)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 2 }}>{st.name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>{st.machine_name || 'Unknown Machine'}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>{st.phone_number || 'TBD'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: stColor, boxShadow: `0 0 8px ${stColor}` }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabel(st.status)}</span>
+                      <SignalBars status={st.status} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* If no stations at all, show empty state in diagram */}
+            {stations.length === 0 && (
+              <>
+                <div style={{
+                  width: 48, height: 2, borderTop: '2px dashed #374151',
+                }} />
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.15)',
+                  borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', fontWeight: 500 }}>No stations connected</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>Connect a Mac to get started</div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ── Section B: Station Detail Cards ────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {stations.map(st => {
+            const stColor = getStatusColor(st.status);
+            const stLabel = getStatusLabel(st.status);
+            return (
+              <div key={st.id} style={{
+                background: '#fff', borderRadius: 20, padding: 0,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden',
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '18px 24px', borderBottom: '1px solid #f0f0f0',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ color: '#378ADD' }}>{getMachineIcon(st.machine_name)}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>{st.name}</span>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                          background: stColor + '18', color: stColor, letterSpacing: '0.04em',
+                        }}>{stLabel}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Assigned to: Jackson Fitzgerald</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => alert('Edit station coming soon')} style={{
+                      padding: '6px 14px', borderRadius: 8, border: '1px solid #e5e7eb',
+                      background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer',
+                    }}>Edit</button>
+                    <button onClick={() => alert('Remove station coming soon')} style={{
+                      padding: '6px 14px', borderRadius: 8, border: '1px solid #fecaca',
+                      background: '#fff', fontSize: 12, fontWeight: 600, color: '#EF4444', cursor: 'pointer',
+                    }}>Remove</button>
+                  </div>
+                </div>
+
+                {/* Info Grid */}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0',
+                  padding: '0', borderBottom: '1px solid #f0f0f0',
+                }}>
+                  {[
+                    {
+                      label: 'Phone Number',
+                      value: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 20, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>{st.phone_number || 'TBD'}</span>
+                          <button onClick={() => { navigator.clipboard.writeText(st.phone_number || ''); alert('Copied!'); }} style={{
+                            background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', fontSize: 11, color: '#6b7280',
+                          }}>Copy</button>
+                        </div>
+                      ),
+                    },
+                    { label: 'Apple ID', value: st.apple_id || 'Not set' },
+                    { label: 'Machine Name', value: st.machine_name || 'Unknown' },
+                    { label: 'Last Heartbeat', value: getRelativeTime(st.last_heartbeat) },
+                    { label: 'Messages Sent Today', value: '0' },
+                    { label: 'Messages This Week', value: '0' },
+                    { label: 'Auto-Reply', value: (
+                      <span style={{
+                        fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 6,
+                        background: st.auto_reply_enabled ? '#DCFCE7' : '#F3F4F6',
+                        color: st.auto_reply_enabled ? '#16A34A' : '#6b7280',
+                      }}>{st.auto_reply_enabled ? 'ON' : 'OFF'}</span>
+                    )},
+                    { label: 'AI Model', value: st.model || 'Default' },
+                    { label: 'System Prompt', value: (
+                      <span style={{ fontSize: 12, color: '#6b7280', fontStyle: st.system_prompt ? 'normal' : 'italic' }}>
+                        {st.system_prompt ? (st.system_prompt.length > 60 ? st.system_prompt.slice(0, 60) + '...' : st.system_prompt) : 'Using org default'}
+                      </span>
+                    )},
+                  ].map((item, idx) => (
+                    <div key={idx} style={{
+                      padding: '14px 24px',
+                      borderBottom: '1px solid #f8f8f8',
+                      borderRight: idx % 2 === 0 ? '1px solid #f0f0f0' : 'none',
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{item.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: '#1c1c1e' }}>{typeof item.value === 'string' ? item.value : item.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Status Signals Row */}
+                <div style={{ display: 'flex', padding: '14px 24px', gap: 24, flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'Connection', ok: st.status === 'online', onText: 'Connected', offText: 'Disconnected' },
+                    { label: 'iMessage', ok: st.status === 'online', onText: 'Active', offText: 'Inactive' },
+                    { label: 'Sync', ok: st.status !== 'offline', onText: st.status === 'syncing' ? 'Syncing' : 'Up to date', offText: 'Behind', color: st.status === 'syncing' ? '#F59E0B' : undefined },
+                    { label: 'Last Error', ok: true, onText: 'None', offText: '' },
+                  ].map((sig, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: sig.color || (sig.ok ? '#22C55E' : '#EF4444'),
+                      }} />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{sig.label}:</span>
+                      <span style={{ fontSize: 12, color: sig.ok ? '#6b7280' : '#EF4444', fontWeight: sig.ok ? 400 : 600 }}>{sig.ok ? sig.onText : sig.offText}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Section C: Add Station ─────────────────────────────────────── */}
+        <div style={{
+          border: '2px dashed #d1d5db', borderRadius: 20, padding: '40px 32px',
+          textAlign: 'center', background: '#fafafa',
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 14, background: 'rgba(55,138,221,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+          }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#111', marginBottom: 8 }}>Connect a Mac</div>
+          <div style={{ fontSize: 14, color: '#6b7280', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
+            Stations are Mac computers running iMessage. Each station has its own phone number and can send/receive messages autonomously.
+          </div>
+          <div style={{
+            background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px 24px',
+            textAlign: 'left', maxWidth: 480, margin: '0 auto 24px',
+          }}>
+            {[
+              { step: '1', text: 'Install the Vernacular agent on your Mac' },
+              { step: '2', text: (<>Run the setup command: <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13, fontFamily: "'JetBrains Mono', monospace" }}>npx vernacular-agent setup</code></>)},
+              { step: '3', text: 'Enter your organization key when prompted' },
+              { step: '4', text: 'The station will appear here automatically' },
+            ].map((s, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: idx < 3 ? 14 : 0 }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%', background: '#378ADD', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700, flexShrink: 0,
+                }}>{s.step}</div>
+                <div style={{ fontSize: 14, color: '#374151', paddingTop: 2 }}>{s.text}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button onClick={() => alert('Setup Key: vern_sk_' + Math.random().toString(36).slice(2, 14))} style={{
+              padding: '10px 20px', borderRadius: 10, border: 'none',
+              background: '#378ADD', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>Generate Setup Key</button>
+            <button onClick={() => alert('Agent download coming soon')} style={{
+              padding: '10px 20px', borderRadius: 10, border: '1px solid #d1d5db',
+              background: '#fff', color: '#374151', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>Download Agent</button>
+          </div>
+        </div>
+
+        {/* ── Section D: Station Metrics ─────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          {[
+            { label: 'Total Stations', value: stations.length.toString(), icon: (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+            )},
+            { label: 'Online Stations', value: onlineCount.toString(), icon: (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+            )},
+            { label: 'Messages Today', value: '0', icon: (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            )},
+            { label: 'Uptime', value: `${uptimePct}%`, icon: (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+            )},
+          ].map((m, idx) => (
+            <div key={idx} style={{
+              background: '#fff', borderRadius: 16, padding: '20px 20px',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, background: 'rgba(55,138,221,0.08)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{m.icon}</div>
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#111', marginBottom: 2 }}>{m.value}</div>
+              <div style={{ fontSize: 12, fontWeight: 500, color: '#9ca3af' }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // ── Render: Placeholder views ─────────────────────────────────────────────
 
   const renderPlaceholder = (title: string, description: string, icon?: React.ReactNode) => (
@@ -4134,11 +4488,7 @@ export default function DashboardPage() {
       case 'settings': return renderSettings();
       case 'profile': return renderProfile();
       case 'integrations': return renderIntegrations();
-      case 'campaigns': return renderPlaceholder('Campaigns', 'Campaign management coming soon.', (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /><path d="M2 8c0-3.314 2.686-6 6-6" /><path d="M22 8c0-3.314-2.686-6-6-6" />
-        </svg>
-      ));
+      case 'stations': return renderStations();
       case 'ai-drafts': return renderPlaceholder('AI Drafts', 'Review and manage AI-generated drafts coming soon.', (
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
@@ -4155,7 +4505,7 @@ export default function DashboardPage() {
     conversations: 'Conversations',
     contacts: 'Contacts',
     team: 'Team',
-    campaigns: 'Campaigns',
+    stations: 'Stations',
     'ai-drafts': 'AI Drafts',
     integrations: 'Integrations',
     profile: 'Profile',
