@@ -23,6 +23,7 @@ interface Contact {
   tagColor: string;
   tagBg: string;
   avatar?: string;
+  phone?: string;
 }
 
 interface ConversationColumn {
@@ -617,14 +618,40 @@ export default function DashboardPage() {
     setShowContactPicker(null);
   };
 
-  const sendMessage = (colId: string) => {
+  const sendMessage = async (colId: string) => {
     const text = inputValues[colId]?.trim();
     if (!text) return;
     const now = new Date();
     const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     const msg: Message = { id: `m-${Date.now()}`, text, direction: 'outgoing', timestamp: time };
+
+    // Optimistic update — show message immediately
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, msg] } : c));
     setInputValues(prev => ({ ...prev, [colId]: '' }));
+
+    // Find the column's contact phone number
+    const col = columns.find(c => c.id === colId);
+    const contactPhone = col?.contact?.phone;
+    const contactName = col?.contact?.name;
+
+    // If contact has a phone number, send via the real pipeline
+    if (contactPhone && contactPhone !== 'TBD') {
+      try {
+        await fetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phoneNumber: contactPhone,
+            message: text,
+            contactName: contactName || '',
+            organizationId: (user?.organizations as Record<string, unknown>)?.id,
+          }),
+        });
+      } catch {
+        // Message shown in UI already — log silently
+        console.error('Failed to queue message via API');
+      }
+    }
   };
 
   const usedContactIds = columns.filter(c => c.contact).map(c => c.contact!.id);
@@ -648,7 +675,7 @@ export default function DashboardPage() {
     return [];
   };
 
-  const pickNotionConversation = async (colId: string, conv: { name: string; pageId: string; initials: string }) => {
+  const pickNotionConversation = async (colId: string, conv: { name: string; pageId: string; initials: string; phone?: string }) => {
     const contact: Contact = {
       id: `notion-${conv.pageId}`,
       name: conv.name,
@@ -656,6 +683,7 @@ export default function DashboardPage() {
       tag: 'Notion',
       tagColor: '#000000',
       tagBg: 'rgba(0,0,0,0.06)',
+      phone: conv.phone || (notionConversations.find(c => c.pageId === conv.pageId) as Record<string, unknown>)?.phone as string || '',
     };
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
     setShowContactPicker(null);
@@ -681,6 +709,7 @@ export default function DashboardPage() {
             tag: 'Notion',
             tagColor: '#000000',
             tagBg: 'rgba(0,0,0,0.06)',
+            phone: conv.phone || '',
           };
           const messages = await loadNotionConversation(conv.pageId, conv.name, conv.initials);
           setColumns(prev => [...prev, { id: colId, contact, messages }]);
