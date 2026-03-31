@@ -1017,7 +1017,7 @@ export default function DashboardPage() {
   ];
 
   const renderConversations = () => (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
       {/* Top Bar */}
       <div style={{
         height: 56, minHeight: 56, background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)',
@@ -1222,10 +1222,10 @@ export default function DashboardPage() {
       )}
 
       {/* Streams (Columns) View */}
-      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', padding: '16px 16px' }}>
+      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', padding: '16px 16px', minHeight: 0 }}>
         {columns.map(col => (
           <div key={col.id} style={{
-            width: 360, minWidth: 360, display: 'flex', flexDirection: 'column',
+            width: 360, minWidth: 360, height: '100%', display: 'flex', flexDirection: 'column',
             background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)',
             marginRight: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
           }}>
