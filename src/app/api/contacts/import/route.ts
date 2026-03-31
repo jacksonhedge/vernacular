@@ -30,6 +30,28 @@ export async function POST(request: Request) {
               .limit(1);
 
             if (existing && existing.length > 0) {
+              // If source is 'edit', update the existing contact
+              if (source === 'edit') {
+                const updateData: Record<string, unknown> = {};
+                const fullName = contact.fullName || contact.full_name;
+                if (fullName) {
+                  updateData.full_name = fullName;
+                  const parts = fullName.split(' ');
+                  updateData.first_name = parts[0] || null;
+                  updateData.last_name = parts.slice(1).join(' ') || null;
+                }
+                if (contact.email) updateData.email = contact.email;
+                if (contact.company) updateData.company = contact.company;
+                if (contact.jobTitle || contact.job_title) updateData.job_title = contact.jobTitle || contact.job_title;
+                if (contact.linkedinUrl || contact.linkedin_url) updateData.linkedin_url = contact.linkedinUrl || contact.linkedin_url;
+                if (Object.keys(updateData).length > 0) {
+                  await supabase.from('contacts').update(updateData).eq('id', existing[0].id);
+                  results.imported++;
+                } else {
+                  results.skipped++;
+                }
+                continue;
+              }
               results.skipped++;
               continue;
             }

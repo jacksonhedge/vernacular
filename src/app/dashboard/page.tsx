@@ -2214,12 +2214,40 @@ button:active { transform: scale(0.98); }`}</style>
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, fontFamily: "'JetBrains Mono', monospace", outline: 'none', boxSizing: 'border-box' as const }} />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => {
+              <button onClick={async () => {
                 const ec = editingContact;
                 const initials = ec.name ? ec.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
+                // Update locally
                 setColumns(prev => prev.map(c => c.id === ec.colId && c.contact ? {
                   ...c, contact: { ...c.contact, name: ec.name, initials, phone: ec.phone }
                 } : c));
+                // Also update in Supabase contacts table
+                try {
+                  const col = columns.find(c => c.id === ec.colId);
+                  const contactId = col?.contact?.id;
+                  if (contactId && !contactId.startsWith('notion-') && !contactId.startsWith('new-')) {
+                    await fetch('/api/contacts/import', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        organizationId: (user?.organizations as Record<string, unknown>)?.id,
+                        source: 'edit',
+                        contacts: [{ phone: ec.phone, fullName: ec.name, full_name: ec.name }],
+                      }),
+                    });
+                  } else {
+                    // For new/notion contacts, create via import API
+                    await fetch('/api/contacts/import', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        organizationId: (user?.organizations as Record<string, unknown>)?.id,
+                        source: 'edit',
+                        contacts: [{ phone: ec.phone, fullName: ec.name, full_name: ec.name }],
+                      }),
+                    });
+                  }
+                } catch { /* save locally even if API fails */ }
                 setEditingContact(null);
               }} style={{
                 flex: 1, padding: '12px', borderRadius: 10, border: 'none',
