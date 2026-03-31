@@ -101,12 +101,14 @@ interface ContactRecord {
 interface OrgIntegration {
   id: string;
   organization_id: string;
-  provider: 'notion' | 'slack';
+  provider: 'notion' | 'slack' | 'ai_providers';
   enabled: boolean;
   config: Record<string, unknown>;
   status: 'connected' | 'disconnected' | 'error';
   last_synced_at: string | null;
 }
+
+type ConversationViewMode = 'streams' | 'summary' | 'schedule';
 
 // ── Mock Data for Conversations View ────────────────────────────────────────
 
@@ -261,6 +263,12 @@ export default function DashboardPage() {
   const [notionConfig, setNotionConfig] = useState({ token: '', database_id: '', workspace_name: '', sync_contacts: true, sync_conversations: true });
   const [slackConfig, setSlackConfig] = useState({ webhook_url: '', channel: '', notify_inbound: true, notify_flagged: true, notify_signups: false, notify_station_offline: true });
   const [integrationStatus, setIntegrationStatus] = useState<Record<string, string>>({});
+  const [aiProvidersConfig, setAiProvidersConfig] = useState({ anthropic_key: '', openai_key: '', gemini_key: '' });
+  const [testingNotion, setTestingNotion] = useState(false);
+  const [testingSlack, setTestingSlack] = useState(false);
+
+  // Conversations view mode
+  const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>('streams');
 
   // Getting Started banner
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(true);
@@ -391,6 +399,15 @@ export default function DashboardPage() {
           notify_flagged: c.notify_flagged !== false,
           notify_signups: c.notify_signups === true,
           notify_station_offline: c.notify_station_offline !== false,
+        });
+      }
+      const aiIntg = intgs.find(i => i.provider === 'ai_providers');
+      if (aiIntg) {
+        const c = aiIntg.config as Record<string, unknown>;
+        setAiProvidersConfig({
+          anthropic_key: (c.anthropic_key as string) || '',
+          openai_key: (c.openai_key as string) || '',
+          gemini_key: (c.gemini_key as string) || '',
         });
       }
     };
@@ -982,6 +999,23 @@ export default function DashboardPage() {
 
   // ── Render: Conversations ─────────────────────────────────────────────────
 
+  // Mock data for Summary view
+  const SUMMARY_DATA = [
+    { name: 'Sarah Chen', phone: '+1 (415) 555-0121', lastMessage: "Perfect. Also, quick question -- is there SSO support? That's a requirement for us.", status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '92%', actionNeeded: true },
+    { name: 'Marcus Williams', phone: '+1 (212) 555-0198', lastMessage: 'Found it -- it was set to read-only. Switching to read-write now.', status: 'active' as const, lastStep: 'Onboarding support', responseRate: '88%', actionNeeded: false },
+    { name: 'David Kim', phone: '+1 (650) 555-0142', lastMessage: 'Tuesday works. Can you send a calendar invite?', status: 'pending' as const, lastStep: 'Proposal sent', responseRate: '75%', actionNeeded: true },
+    { name: 'Emily Rodriguez', phone: '+1 (305) 555-0177', lastMessage: 'Can you send me the pricing sheet?', status: 'active' as const, lastStep: 'Initial outreach', responseRate: '60%', actionNeeded: true },
+    { name: 'James Park', phone: '+1 (408) 555-0133', lastMessage: "Thanks, we'll review internally and get back to you.", status: 'pending' as const, lastStep: 'Awaiting reply', responseRate: '45%', actionNeeded: false },
+    { name: 'Lisa Chang', phone: '+1 (312) 555-0156', lastMessage: 'Looks good, let me loop in our CTO.', status: 'active' as const, lastStep: 'Follow-up sent', responseRate: '80%', actionNeeded: true },
+  ];
+
+  // Mock data for Schedule view
+  const SCHEDULED_BLASTS = [
+    { id: 'b1', name: 'Weekly Check-in', recipients: 24, scheduledTime: '2026-03-31T10:00:00', status: 'scheduled' as const },
+    { id: 'b2', name: 'Product Update Announcement', recipients: 156, scheduledTime: '2026-04-02T14:00:00', status: 'draft' as const },
+    { id: 'b3', name: 'Follow-up Sequence #3', recipients: 12, scheduledTime: '2026-03-28T09:00:00', status: 'sent' as const },
+  ];
+
   const renderConversations = () => (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Top Bar */}
@@ -993,23 +1027,202 @@ export default function DashboardPage() {
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', margin: 0 }}>
             Conversations
           </h2>
-          <span style={{
-            fontSize: 12, fontWeight: 600, color: '#8e8e93',
-            background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
-          }}>
-            {columns.length} streams
-          </span>
+          {/* View Mode Selector */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 2 }}>
+            {(['streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setConversationViewMode(mode)}
+                style={{
+                  padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+                  background: conversationViewMode === mode ? '#fff' : 'transparent',
+                  color: conversationViewMode === mode ? '#1c1c1e' : '#8e8e93',
+                  boxShadow: conversationViewMode === mode ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+          {conversationViewMode === 'streams' && (
+            <span style={{
+              fontSize: 12, fontWeight: 600, color: '#8e8e93',
+              background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
+            }}>
+              {columns.length} streams
+            </span>
+          )}
         </div>
-        <button onClick={addColumn} style={primaryBtnStyle}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add Column
-        </button>
+        {conversationViewMode === 'streams' && (
+          <button onClick={addColumn} style={primaryBtnStyle}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Column
+          </button>
+        )}
+        {conversationViewMode === 'schedule' && (
+          <button onClick={() => window.alert('New Scheduled Blast form coming soon.')} style={primaryBtnStyle}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Scheduled Blast
+          </button>
+        )}
       </div>
 
-      {/* Columns */}
-      <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', padding: '16px 16px' }}>
+      {/* Summary View */}
+      {conversationViewMode === 'summary' && (
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
+                {['Contact Name', 'Phone', 'Last Message', 'Status', 'Last Step', 'Response Rate', ''].map((h, i) => (
+                  <th key={i} style={{
+                    textAlign: 'left', padding: '14px 8px', fontSize: 11, fontWeight: 700,
+                    color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
+                    cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap',
+                  }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {h}
+                      {h && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2.5" strokeLinecap="round">
+                          <polyline points="7 10 12 5 17 10" /><polyline points="7 14 12 19 17 14" />
+                        </svg>
+                      )}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {SUMMARY_DATA.map((row, i) => (
+                <tr
+                  key={i}
+                  style={{ borderBottom: '1px solid rgba(0,0,0,0.04)', cursor: 'pointer', transition: 'background 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(55,138,221,0.03)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ padding: '12px 8px', fontWeight: 600, color: '#1c1c1e' }}>{row.name}</td>
+                  <td style={{ padding: '12px 8px', color: '#666', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{row.phone}</td>
+                  <td style={{ padding: '12px 8px', color: '#666', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.lastMessage}</td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <span style={badgeStyle(
+                      row.status === 'active' ? '#22C55E' : row.status === 'pending' ? '#F59E0B' : '#8e8e93',
+                      row.status === 'active' ? 'rgba(34,197,94,0.1)' : row.status === 'pending' ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.04)',
+                    )}>
+                      {row.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 8px', color: '#666', fontSize: 12 }}>{row.lastStep}</td>
+                  <td style={{ padding: '12px 8px', color: '#1c1c1e', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{row.responseRate}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                    {row.actionNeeded && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                      </svg>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Schedule View */}
+      {conversationViewMode === 'schedule' && (
+        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+          {/* New Blast Form */}
+          <div style={{ ...cardStyle, marginBottom: 24, maxWidth: 640 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', marginBottom: 16 }}>
+              Create Scheduled Blast
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e', display: 'block', marginBottom: 4 }}>Recipients</label>
+              <select style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="all">All contacts</option>
+                <option value="active">By status: Active</option>
+                <option value="pending">By status: Pending</option>
+                <option value="individual">Individual select</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e', display: 'block', marginBottom: 4 }}>Message Template</label>
+              <textarea
+                rows={4}
+                placeholder="Type your message template here..."
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e', display: 'block', marginBottom: 4 }}>Date</label>
+                <input type="date" style={inputStyle} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e', display: 'block', marginBottom: 4 }}>Time</label>
+                <input type="time" style={inputStyle} />
+              </div>
+            </div>
+            <button style={primaryBtnStyle}>Schedule Blast</button>
+          </div>
+
+          {/* Scheduled Blasts List */}
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', marginBottom: 12 }}>
+            Scheduled Blasts
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
+            {SCHEDULED_BLASTS.map(blast => (
+              <div key={blast.id} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  background: blast.status === 'sent' ? 'rgba(34,197,94,0.1)' : blast.status === 'scheduled' ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke={blast.status === 'sent' ? '#22C55E' : blast.status === 'scheduled' ? '#378ADD' : '#8e8e93'}
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 2 }}>{blast.name}</div>
+                  <div style={{ fontSize: 12, color: '#8e8e93' }}>
+                    {blast.recipients} recipients &middot; {new Date(blast.scheduledTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(blast.scheduledTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  </div>
+                </div>
+                <span style={badgeStyle(
+                  blast.status === 'sent' ? '#22C55E' : blast.status === 'scheduled' ? '#378ADD' : '#8e8e93',
+                  blast.status === 'sent' ? 'rgba(34,197,94,0.1)' : blast.status === 'scheduled' ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
+                )}>
+                  {blast.status}
+                </span>
+                {blast.status !== 'sent' && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button style={{
+                      background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 6,
+                      padding: '5px 10px', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                    }}>Edit</button>
+                    <button style={{
+                      background: 'none', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6,
+                      padding: '5px 10px', fontSize: 11, fontWeight: 600, color: '#EF4444', cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                    }}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Streams (Columns) View */}
+      {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', padding: '16px 16px' }}>
         {columns.map(col => (
           <div key={col.id} style={{
             width: 360, minWidth: 360, display: 'flex', flexDirection: 'column',
@@ -1032,8 +1245,13 @@ export default function DashboardPage() {
                     {col.contact.initials}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6 }}>
                       {col.contact.name}
+                      {col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming' && !col.messages[col.messages.length - 1].isAIDraft && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                      )}
                     </div>
                     <span style={{
                       fontSize: 10, fontWeight: 700, color: col.contact.tagColor,
@@ -1193,7 +1411,7 @@ export default function DashboardPage() {
             )}
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 
@@ -1668,7 +1886,7 @@ export default function DashboardPage() {
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Connected successfully!' }));
         setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + msg }));
       }
     };
@@ -1689,14 +1907,16 @@ export default function DashboardPage() {
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Disconnected.' }));
         setTimeout(() => setIntegrationStatus(prev => ({ ...prev, [provider]: '' })), 3000);
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : JSON.stringify(err);
+        const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
         setIntegrationStatus(prev => ({ ...prev, [provider]: 'Error: ' + msg }));
       }
     };
 
     const testNotion = async () => {
-      setIntegrationStatus(prev => ({ ...prev, notion: 'Testing connection...' }));
+      setTestingNotion(true);
+      setIntegrationStatus(prev => ({ ...prev, notion: '' }));
       setTimeout(() => {
+        setTestingNotion(false);
         setIntegrationStatus(prev => ({ ...prev, notion: 'Connection successful!' }));
         setTimeout(() => setIntegrationStatus(prev => ({ ...prev, notion: '' })), 3000);
       }, 1000);
@@ -1705,9 +1925,11 @@ export default function DashboardPage() {
     const testSlack = async () => {
       if (!slackConfig.webhook_url) {
         setIntegrationStatus(prev => ({ ...prev, slack: 'Please enter a webhook URL first.' }));
+        setTimeout(() => setIntegrationStatus(prev => ({ ...prev, slack: '' })), 3000);
         return;
       }
-      setIntegrationStatus(prev => ({ ...prev, slack: 'Sending test message...' }));
+      setTestingSlack(true);
+      setIntegrationStatus(prev => ({ ...prev, slack: '' }));
       try {
         await fetch(slackConfig.webhook_url, {
           method: 'POST',
@@ -1715,9 +1937,11 @@ export default function DashboardPage() {
           body: JSON.stringify({ text: 'Test message from Vernacular. Your Slack integration is working!' }),
         });
         setIntegrationStatus(prev => ({ ...prev, slack: 'Test message sent!' }));
-      } catch {
-        setIntegrationStatus(prev => ({ ...prev, slack: 'Failed to send. Check your webhook URL.' }));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+        setIntegrationStatus(prev => ({ ...prev, slack: 'Failed to send: ' + msg }));
       }
+      setTestingSlack(false);
       setTimeout(() => setIntegrationStatus(prev => ({ ...prev, slack: '' })), 3000);
     };
 
@@ -1881,15 +2105,24 @@ export default function DashboardPage() {
                         Disconnect
                       </button>
                     ) : (
-                      <button onClick={() => connectIntegration('notion')} style={primaryBtnStyle}>
-                        Connect
+                      <button
+                        onClick={() => connectIntegration('notion')}
+                        disabled={integrationStatus.notion === 'Connecting...'}
+                        style={{ ...primaryBtnStyle, opacity: integrationStatus.notion === 'Connecting...' ? 0.6 : 1 }}
+                      >
+                        {integrationStatus.notion === 'Connecting...' ? 'Connecting...' : 'Connect'}
                       </button>
                     )}
-                    <button onClick={testNotion} style={{
-                      ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
-                      border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
-                    }}>
-                      Test Connection
+                    <button
+                      onClick={testNotion}
+                      disabled={testingNotion}
+                      style={{
+                        ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
+                        border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
+                        opacity: testingNotion ? 0.6 : 1,
+                      }}
+                    >
+                      {testingNotion ? 'Testing...' : 'Test Connection'}
                     </button>
                   </div>
                 </div>
@@ -2010,15 +2243,145 @@ export default function DashboardPage() {
                         Disconnect
                       </button>
                     ) : (
-                      <button onClick={() => connectIntegration('slack')} style={primaryBtnStyle}>
-                        Connect
+                      <button
+                        onClick={() => connectIntegration('slack')}
+                        disabled={integrationStatus.slack === 'Connecting...'}
+                        style={{ ...primaryBtnStyle, opacity: integrationStatus.slack === 'Connecting...' ? 0.6 : 1 }}
+                      >
+                        {integrationStatus.slack === 'Connecting...' ? 'Connecting...' : 'Connect'}
                       </button>
                     )}
-                    <button onClick={testSlack} style={{
-                      ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
-                      border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
+                    <button
+                      onClick={testSlack}
+                      disabled={testingSlack}
+                      style={{
+                        ...primaryBtnStyle, background: 'transparent', color: '#378ADD',
+                        border: '1px solid rgba(55,138,221,0.3)', boxShadow: 'none',
+                        opacity: testingSlack ? 0.6 : 1,
+                      }}
+                    >
+                      {testingSlack ? 'Sending...' : 'Send Test Message'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── AI Providers Card ────────────────────────── */}
+            <div
+              style={integrationCardStyle}
+              onMouseEnter={e => integrationCardHoverStyle(e, true)}
+              onMouseLeave={e => integrationCardHoverStyle(e, false)}
+            >
+              <div
+                style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
+                onClick={() => setExpandedIntegration(expandedIntegration === 'ai_providers' ? null : 'ai_providers')}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 10, flexShrink: 0,
+                  background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L9 9l-7 1 5 5-1.5 7L12 18.5 18.5 22 17 15l5-5-7-1L12 2z" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em' }}>AI Providers</span>
+                    {(() => {
+                      const configuredProviders = [
+                        aiProvidersConfig.anthropic_key && 'Anthropic',
+                        aiProvidersConfig.openai_key && 'OpenAI',
+                        aiProvidersConfig.gemini_key && 'Gemini',
+                      ].filter(Boolean);
+                      return configuredProviders.length > 0 ? (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#22C55E' }}>
+                          {configuredProviders.join(', ')} configured
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#9CA3AF' }}>Not configured</span>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                    Configure API keys for AI-powered draft generation and conversation analysis.
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ flexShrink: 0, transform: expandedIntegration === 'ai_providers' ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+
+              {expandedIntegration === 'ai_providers' && (
+                <div style={configSectionStyle}>
+                  <label style={fieldLabelStyle}>Anthropic API Key</label>
+                  <input
+                    type="password"
+                    value={aiProvidersConfig.anthropic_key}
+                    onChange={e => setAiProvidersConfig(prev => ({ ...prev, anthropic_key: e.target.value }))}
+                    placeholder="sk-ant-..."
+                    style={inputStyle}
+                  />
+                  <label style={fieldLabelStyle}>OpenAI API Key</label>
+                  <input
+                    type="password"
+                    value={aiProvidersConfig.openai_key}
+                    onChange={e => setAiProvidersConfig(prev => ({ ...prev, openai_key: e.target.value }))}
+                    placeholder="sk-..."
+                    style={inputStyle}
+                  />
+                  <label style={fieldLabelStyle}>Google Gemini API Key</label>
+                  <input
+                    type="password"
+                    value={aiProvidersConfig.gemini_key}
+                    onChange={e => setAiProvidersConfig(prev => ({ ...prev, gemini_key: e.target.value }))}
+                    placeholder="AIza..."
+                    style={inputStyle}
+                  />
+
+                  {integrationStatus.ai_providers && (
+                    <div style={{
+                      marginTop: 12, padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: integrationStatus.ai_providers.includes('Error') || integrationStatus.ai_providers.includes('Failed')
+                        ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                      color: integrationStatus.ai_providers.includes('Error') || integrationStatus.ai_providers.includes('Failed')
+                        ? '#EF4444' : '#22C55E',
                     }}>
-                      Send Test Message
+                      {integrationStatus.ai_providers}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                    <button
+                      onClick={async () => {
+                        setIntegrationStatus(prev => ({ ...prev, ai_providers: 'Saving...' }));
+                        try {
+                          const res = await fetch('/api/integrations', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: 'connect', organizationId: orgId, provider: 'ai_providers', config: aiProvidersConfig }),
+                          });
+                          const result = await res.json();
+                          if (!res.ok) throw new Error(result.error || 'Failed to save');
+                          const existing = integrations.find(i => i.provider === 'ai_providers');
+                          if (existing) {
+                            setIntegrations(prev => prev.map(i => i.provider === 'ai_providers' ? { ...i, ...result.data, enabled: true, status: 'connected' as const } : i));
+                          } else {
+                            setIntegrations(prev => [...prev, result.data as OrgIntegration]);
+                          }
+                          setIntegrationStatus(prev => ({ ...prev, ai_providers: 'Keys saved successfully!' }));
+                          setTimeout(() => setIntegrationStatus(prev => ({ ...prev, ai_providers: '' })), 3000);
+                        } catch (err: unknown) {
+                          const msg = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+                          setIntegrationStatus(prev => ({ ...prev, ai_providers: 'Error: ' + msg }));
+                        }
+                      }}
+                      disabled={integrationStatus.ai_providers === 'Saving...'}
+                      style={{ ...primaryBtnStyle, opacity: integrationStatus.ai_providers === 'Saving...' ? 0.6 : 1 }}
+                    >
+                      {integrationStatus.ai_providers === 'Saving...' ? 'Saving...' : 'Save Keys'}
                     </button>
                   </div>
                 </div>

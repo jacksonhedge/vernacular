@@ -20,6 +20,7 @@ export async function POST(request: Request) {
         config,
         status: 'connected',
         updated_at: new Date().toISOString(),
+        last_synced_at: new Date().toISOString(),
       }, { onConflict: 'organization_id,provider' }).select().single();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
