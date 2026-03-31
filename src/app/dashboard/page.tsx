@@ -265,13 +265,24 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
   },
 ];
 
+// ── Hash Routing Helper ────────────────────────────────────────────────────
+
+const getInitialTab = (): NavTab => {
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash.replace('#', '') as NavTab;
+    const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'integrations', 'profile', 'settings'];
+    if (validTabs.includes(hash)) return hash;
+  }
+  return 'dashboard';
+};
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   // Auth / user state
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>(getInitialTab);
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
 
   // Dashboard metrics
@@ -305,6 +316,8 @@ export default function DashboardPage() {
   const [columns, setColumns] = useState<ConversationColumn[]>(MOCK_CONVERSATIONS);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [newConvPhone, setNewConvPhone] = useState('');
+  const [newConvName, setNewConvName] = useState('');
   const [hoveredColClose, setHoveredColClose] = useState<string | null>(null);
   const messageEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -368,6 +381,28 @@ export default function DashboardPage() {
       setLoading(false);
     };
     checkAuth();
+  }, []);
+
+  // ── Hash Routing ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (activeTab !== 'dashboard') {
+      window.location.hash = activeTab;
+    } else {
+      // Clean hash for dashboard home
+      if (window.location.hash) history.replaceState(null, '', '/dashboard');
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace('#', '') as NavTab;
+      const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'integrations', 'profile', 'settings'];
+      if (validTabs.includes(hash)) setActiveTab(hash);
+      else setActiveTab('dashboard');
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   // ── Data Fetching ─────────────────────────────────────────────────────────
@@ -616,6 +651,25 @@ export default function DashboardPage() {
   const pickContact = (colId: string, contact: Contact) => {
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
     setShowContactPicker(null);
+  };
+
+  const startNewConversation = (colId: string) => {
+    if (!newConvPhone) return;
+    const name = newConvName || newConvPhone;
+    const initials = newConvName ? newConvName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
+    const contact: Contact = {
+      id: `new-${Date.now()}`,
+      name,
+      initials,
+      tag: 'NEW',
+      tagColor: '#378ADD',
+      tagBg: 'rgba(55,138,221,0.1)',
+      phone: newConvPhone,
+    };
+    setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact, messages: [] } : c));
+    setShowContactPicker(null);
+    setNewConvPhone('');
+    setNewConvName('');
   };
 
   const sendMessage = async (colId: string) => {
@@ -1588,7 +1642,58 @@ export default function DashboardPage() {
 
             {/* Contact Picker */}
             {!col.contact && showContactPicker === col.id && (
-              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 280, overflow: 'auto' }}>
+              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 380, overflow: 'auto' }}>
+                {/* New Conversation */}
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase',
+                  letterSpacing: '0.06em', padding: '4px 10px 6px', marginTop: 2,
+                }}>
+                  New Conversation
+                </div>
+                <div style={{ padding: '4px 10px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <input
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    value={newConvPhone}
+                    onChange={e => setNewConvPhone(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 10px', borderRadius: 8,
+                      border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
+                      fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
+                      background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Contact name (optional)"
+                    value={newConvName}
+                    onChange={e => setNewConvName(e.target.value)}
+                    style={{
+                      width: '100%', padding: '6px 10px', borderRadius: 8,
+                      border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
+                      fontSize: 12, fontFamily: "'Inter', sans-serif",
+                      background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
+                  />
+                  <button
+                    onClick={() => startNewConversation(col.id)}
+                    disabled={!newConvPhone}
+                    style={{
+                      width: '100%', padding: '7px 0', borderRadius: 8, border: 'none',
+                      background: newConvPhone ? '#378ADD' : 'rgba(55,138,221,0.3)',
+                      color: '#fff', fontSize: 12, fontWeight: 600,
+                      fontFamily: "'Inter', sans-serif", cursor: newConvPhone ? 'pointer' : 'default',
+                      transition: 'background 0.15s ease',
+                    }}
+                  >
+                    Start Conversation
+                  </button>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
                 {/* Notion Conversations Group */}
                 {notionConversations.length > 0 && (
                   <>
