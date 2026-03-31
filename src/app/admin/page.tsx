@@ -99,7 +99,7 @@ export default function AdminPage() {
   if (!authed) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#0a0a1a',
+        minHeight: '100vh', background: '#0b0e14',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'Inter', -apple-system, sans-serif",
       }}>
@@ -117,7 +117,7 @@ export default function AdminPage() {
               boxShadow: '0 0 40px rgba(55,138,221,0.2)',
             }} />
             <h1 style={{ color: '#fff', fontSize: 28, fontWeight: 800, marginBottom: 4, letterSpacing: '-0.03em' }}>Vernacular</h1>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13, marginBottom: 40, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.05em' }}>ADMIN CONSOLE</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 40, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.05em' }}>ADMIN CONSOLE</p>
             {error && (
               <div style={{
                 padding: '12px 16px', borderRadius: 12, marginBottom: 16,
@@ -132,7 +132,7 @@ export default function AdminPage() {
               style={{
                 width: '100%', padding: '16px 20px', borderRadius: 14,
                 border: '1.5px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 15, outline: 'none',
+                background: '#161c2a', color: '#fff', fontSize: 15, outline: 'none',
                 fontFamily: "'Inter', sans-serif", marginBottom: 16, boxSizing: 'border-box',
                 transition: 'border-color 0.2s',
               }}
@@ -184,19 +184,19 @@ export default function AdminPage() {
   /* ──── KPI Card component ──── */
   const KPICard = ({ label, value, suffix, color, sub }: { label: string; value: string | number; suffix?: string; color: string; sub?: string }) => (
     <div style={{
-      background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+      background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
       padding: '20px', position: 'relative', overflow: 'hidden',
     }}>
       <div style={{
         position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%',
-        background: `radial-gradient(circle, ${color}10 0%, transparent 70%)`,
+        background: `radial-gradient(circle, ${color}18 0%, transparent 70%)`,
       }} />
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
         <span style={{ fontSize: 28, fontWeight: 800, color, letterSpacing: '-0.02em', fontFamily: "'JetBrains Mono', monospace" }}>{value}</span>
-        {suffix && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{suffix}</span>}
       </div>
-      {sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>{sub}</div>}
     </div>
   );
 
@@ -223,12 +223,12 @@ export default function AdminPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0a0a1a', color: '#fff',
+      minHeight: '100vh', background: '#0b0e14', color: '#fff',
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
       {/* ══════ Top Navigation Bar ══════ */}
       <div style={{
-        height: 56, background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.06)',
+        height: 56, background: '#111520', borderBottom: '1px solid rgba(255,255,255,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(12px)',
       }}>
@@ -245,8 +245,8 @@ export default function AdminPage() {
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: tab === t.id ? 'rgba(55,138,221,0.12)' : 'transparent',
-              color: tab === t.id ? '#378ADD' : 'rgba(255,255,255,0.4)',
+              background: tab === t.id ? 'rgba(55,138,221,0.15)' : 'transparent',
+              color: tab === t.id ? '#5EA3E8' : 'rgba(255,255,255,0.55)',
               fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
               transition: 'all 0.15s ease', display: 'flex', alignItems: 'center', gap: 6,
             }}>
@@ -261,7 +261,7 @@ export default function AdminPage() {
             background: onlineStations > 0 ? '#22C55E' : '#EF4444',
             boxShadow: onlineStations > 0 ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
           }} />
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'JetBrains Mono', monospace" }}>
             {onlineStations}/{stations.length} online
           </span>
         </div>
@@ -290,10 +290,10 @@ export default function AdminPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
               {/* Revenue Breakdown */}
               <div style={{
-                background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+                background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
                 padding: '24px', overflow: 'hidden',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>Revenue by Company</span>
                   <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{formatCurrency(totalMRR)}/mo</span>
                 </div>
@@ -316,25 +316,25 @@ export default function AdminPage() {
                         </div>
                         <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{formatCurrency(mrr)}</span>
                       </div>
-                      <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                      <div style={{ height: 6, borderRadius: 3, background: '#161c2a', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, borderRadius: 3, background: 'linear-gradient(90deg, #22C55E, #378ADD)', transition: 'width 0.5s ease' }} />
                       </div>
                       <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>{seats} seats × $29</span>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>{nums} numbers × $49</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{seats} seats × $29</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{nums} numbers × $49</span>
                       </div>
                     </div>
                   );
                 })}
-                {orgs.length === 0 && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)', textAlign: 'center', padding: 32 }}>No companies yet</div>}
+                {orgs.length === 0 && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: 32 }}>No companies yet</div>}
               </div>
 
               {/* Recent Activity Feed */}
               <div style={{
-                background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+                background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
                 padding: '24px', overflow: 'hidden',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginBottom: 20 }}>Recent Activity</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: 20 }}>Recent Activity</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {/* Mix signups and messages into activity feed */}
                   {(() => {
@@ -362,13 +362,13 @@ export default function AdminPage() {
                         borderBottom: i < 19 ? '1px solid rgba(255,255,255,0.03)' : 'none',
                       }}>
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', flex: 1 }}>{a.text}</span>
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>{timeAgo(a.time)}</span>
+                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', flex: 1 }}>{a.text}</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>{timeAgo(a.time)}</span>
                       </div>
                     ));
                   })()}
                   {recentMessages.length === 0 && signups.length === 0 && (
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.2)', textAlign: 'center', padding: 32 }}>No activity yet</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: 32 }}>No activity yet</div>
                   )}
                 </div>
               </div>
@@ -377,26 +377,26 @@ export default function AdminPage() {
             {/* Bottom health row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
               {/* Fleet Status */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', padding: '20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Station Fleet</div>
+              <div style={{ background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', padding: '20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Station Fleet</div>
                 <div style={{ display: 'flex', gap: 16 }}>
                   {[
                     { label: 'Online', value: onlineStations, color: '#22C55E' },
                     { label: 'Offline', value: offlineStations, color: '#EF4444' },
-                    { label: 'Never Connected', value: stations.filter(s => !s.last_heartbeat).length, color: 'rgba(255,255,255,0.2)' },
+                    { label: 'Never Connected', value: stations.filter(s => !s.last_heartbeat).length, color: 'rgba(255,255,255,0.5)' },
                   ].map(s => (
                     <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color }} />
                       <span style={{ fontSize: 20, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: s.color }}>{s.value}</span>
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{s.label}</span>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{s.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Integration Health */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', padding: '20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Integrations</div>
+              <div style={{ background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', padding: '20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Integrations</div>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   {(() => {
                     const providers = [...new Set(integrations.map(i => i.provider))];
@@ -405,30 +405,30 @@ export default function AdminPage() {
                       return (
                         <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: count > 0 ? '#22C55E' : 'rgba(255,255,255,0.1)' }} />
-                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize' }}>{p}</span>
-                          <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.3)' }}>×{count}</span>
+                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textTransform: 'capitalize' }}>{p}</span>
+                          <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.65)' }}>×{count}</span>
                         </div>
                       );
-                    }) : <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>No integrations configured</span>;
+                    }) : <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>No integrations configured</span>;
                   })()}
                 </div>
               </div>
 
               {/* Message Queue */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', padding: '20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Message Pipeline</div>
+              <div style={{ background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', padding: '20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>Message Pipeline</div>
                 <div style={{ display: 'flex', gap: 16 }}>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>{formatNumber(counts.outbound)}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Sent</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>Sent</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#F59E0B' }}>{formatNumber(counts.inbound)}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>Received</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>Received</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#A855F7' }}>{formatNumber(counts.aiGenerated)}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>AI Drafted</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>AI Drafted</div>
                   </div>
                 </div>
               </div>
@@ -441,8 +441,8 @@ export default function AdminPage() {
           <>
             {/* Topology View */}
             <div style={{
-              background: 'linear-gradient(180deg, #0d0d1f 0%, #0a0a1a 100%)',
-              borderRadius: 20, border: '1px solid rgba(255,255,255,0.06)',
+              background: 'linear-gradient(180deg, #111728 0%, #0e1320 100%)',
+              borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)',
               padding: '48px 32px', marginBottom: 28, position: 'relative', overflow: 'hidden',
               minHeight: 520,
             }}>
@@ -465,7 +465,7 @@ export default function AdminPage() {
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8, fontFamily: "'JetBrains Mono', monospace" }}>Network Topology</div>
                   <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>Station Fleet</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 6 }}>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 6 }}>
                     <span style={{ color: '#22C55E', fontWeight: 700 }}>{onlineStations}</span> online · <span style={{ color: '#EF4444', fontWeight: 700 }}>{offlineStations}</span> offline · {stations.length} total
                   </div>
                 </div>
@@ -516,7 +516,7 @@ export default function AdminPage() {
                           </div>
 
                           {/* Machine type */}
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>{station.machine_name || 'Unknown Machine'}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>{station.machine_name || 'Unknown Machine'}</div>
 
                           {/* Phone number */}
                           <div style={{
@@ -547,12 +547,12 @@ export default function AdminPage() {
                           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 14 }}>
                             <div style={{ textAlign: 'center' }}>
                               <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.8)' }}>{msgCount}</div>
-                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>msgs today</div>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>msgs today</div>
                             </div>
                             <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.06)' }} />
                             <div style={{ textAlign: 'center' }}>
                               <div style={{ fontSize: 11, fontWeight: 600, color: statusColor, textTransform: 'uppercase' }}>{station.status}</div>
-                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>{timeAgo(station.last_heartbeat)}</div>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)' }}>{timeAgo(station.last_heartbeat)}</div>
                             </div>
                           </div>
                         </div>
@@ -575,7 +575,7 @@ export default function AdminPage() {
                         <line x1="12" y1="8" x2="12" y2="16" />
                         <line x1="8" y1="12" x2="16" y2="12" />
                       </svg>
-                      <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.2)' }}>Add Machine</div>
+                      <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}>Add Machine</div>
                       <div style={{ marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.1)' }}>npx vernacular-agent setup</div>
                     </div>
                   </div>
@@ -590,27 +590,27 @@ export default function AdminPage() {
                 }}>
                   <img src="/logo.png" alt="" style={{ width: 24, height: 24, borderRadius: 6 }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#378ADD' }}>Vernacular Hub</span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>vernacular.chat</span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>vernacular.chat</span>
                 </div>
               </div>
             </div>
 
             {/* Station detail table */}
             <div style={{
-              background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+              background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
               overflow: 'hidden',
             }}>
-              <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>Station Details</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{stations.length} machines</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{stations.length} machines</span>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>{['Status', 'Name', 'Phone', 'Company', 'Machine', 'Apple ID', 'Last Heartbeat', 'Msgs Today', 'Auto-Reply'].map(h => (
                     <th key={h} style={{
                       textAlign: 'left', padding: '10px 16px', fontSize: 9, fontWeight: 700,
-                      color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
                     }}>{h}</th>
                   ))}</tr>
                 </thead>
@@ -619,7 +619,7 @@ export default function AdminPage() {
                     const isOnline = s.status === 'online';
                     const statusColor = isOnline ? '#22C55E' : s.status === 'syncing' ? '#F59E0B' : '#EF4444';
                     return (
-                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.15s' }}>
+                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', transition: 'background 0.15s' }}>
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, boxShadow: isOnline ? `0 0 6px ${statusColor}` : 'none' }} />
@@ -628,10 +628,10 @@ export default function AdminPage() {
                         </td>
                         <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600 }}>{s.name}</td>
                         <td style={{ padding: '12px 16px', fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD', fontWeight: 600 }}>{s.phone_number || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{getOrgName(s.organization_id)}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{s.machine_name || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{s.apple_id || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{timeAgo(s.last_heartbeat)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{getOrgName(s.organization_id)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{s.machine_name || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 10, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>{s.apple_id || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{timeAgo(s.last_heartbeat)}</td>
                         <td style={{ padding: '12px 16px', fontSize: 13, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{stationMsgToday[s.id] || 0}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
@@ -655,7 +655,7 @@ export default function AdminPage() {
           <>
             {/* Sort controls */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', alignSelf: 'center' }}>Sort by</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', alignSelf: 'center' }}>Sort by</span>
               {(['mrr', 'team', 'stations'] as const).map(s => (
                 <button key={s} onClick={() => setCompanySortBy(s)} style={{
                   padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
@@ -678,7 +678,7 @@ export default function AdminPage() {
 
                 return (
                   <div key={org.id} style={{
-                    background: 'rgba(255,255,255,0.03)', borderRadius: 16,
+                    background: '#141926', borderRadius: 16,
                     border: expanded ? '1px solid rgba(55,138,221,0.15)' : '1px solid rgba(255,255,255,0.06)',
                     overflow: 'hidden', transition: 'border-color 0.2s',
                   }}>
@@ -707,29 +707,29 @@ export default function AdminPage() {
                               fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
                             }}>{org.plan || 'starter'}</span>
                           </div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{org.slug}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{org.slug}</div>
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{formatCurrency(mrr)}</div>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>MRR</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>MRR</div>
                         </div>
                         <div style={{ display: 'flex', gap: 12 }}>
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>{orgUsers.length}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>seats</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>seats</div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>{orgStations.length}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>stations</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>stations</div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>{orgIntgs.filter(i => i.enabled).length}</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>integrations</div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' }}>integrations</div>
                           </div>
                         </div>
-                        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.2)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
+                        <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
                       </div>
                     </div>
 
@@ -739,7 +739,7 @@ export default function AdminPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
                           {/* Team */}
                           <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Team ({orgUsers.length})</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Team ({orgUsers.length})</div>
                             {orgUsers.map(u => (
                               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                 <div style={{
@@ -748,8 +748,8 @@ export default function AdminPage() {
                                   fontSize: 10, fontWeight: 700, color: '#378ADD',
                                 }}>{(u.full_name || u.email).charAt(0).toUpperCase()}</div>
                                 <div>
-                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{u.full_name || u.email}</div>
-                                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>{u.role}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{u.full_name || u.email}</div>
+                                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{u.role}</div>
                                 </div>
                               </div>
                             ))}
@@ -757,12 +757,12 @@ export default function AdminPage() {
 
                           {/* Stations */}
                           <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Stations ({orgStations.length})</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Stations ({orgStations.length})</div>
                             {orgStations.map(s => (
                               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'online' ? '#22C55E' : '#EF4444' }} />
                                 <div>
-                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>{s.name}</div>
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{s.name}</div>
                                   <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>{s.phone_number || '—'}</div>
                                 </div>
                               </div>
@@ -772,11 +772,11 @@ export default function AdminPage() {
 
                           {/* Integrations */}
                           <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Integrations</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Integrations</div>
                             {orgIntgs.map(ig => (
                               <div key={ig.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: ig.enabled ? '#22C55E' : 'rgba(255,255,255,0.1)' }} />
-                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textTransform: 'capitalize' }}>{ig.provider}</span>
+                                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textTransform: 'capitalize' }}>{ig.provider}</span>
                                 <span style={{
                                   fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 3,
                                   background: ig.enabled ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.03)',
@@ -788,7 +788,7 @@ export default function AdminPage() {
                             {orgIntgs.length === 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.15)' }}>None configured</div>}
                           </div>
                         </div>
-                        <div style={{ marginTop: 16, fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>
+                        <div style={{ marginTop: 16, fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
                           Created {new Date(org.created_at).toLocaleDateString()} · ID: {org.id.slice(0, 8)}...
                         </div>
                       </div>
@@ -806,35 +806,35 @@ export default function AdminPage() {
             {/* Stats bar */}
             <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
               <div style={{
-                background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)',
+                background: '#131825', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
                 padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
               }}>
                 <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>{signups.length}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Total Signups</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Total Signups</span>
               </div>
               <div style={{
-                background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)',
+                background: '#131825', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
                 padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
               }}>
                 <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>
                   {signups.length > 0 ? Math.round((orgs.length / signups.length) * 100) : 0}%
                 </span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Conversion Rate</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Conversion Rate</span>
               </div>
               <div style={{ flex: 1 }} />
               <input
                 type="text" placeholder="Search signups..."
                 value={signupFilter} onChange={e => setSignupFilter(e.target.value)}
                 style={{
-                  padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)',
-                  background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: 12, outline: 'none',
+                  padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#141926', color: '#fff', fontSize: 12, outline: 'none',
                   fontFamily: "'Inter', sans-serif", width: 220,
                 }}
               />
             </div>
 
             <div style={{
-              background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+              background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
               overflow: 'hidden',
             }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -842,8 +842,8 @@ export default function AdminPage() {
                   <tr>{['Company', 'Name', 'Email', 'Industry', 'Team Size', 'Use Case', 'Date', 'Status'].map(h => (
                     <th key={h} style={{
                       textAlign: 'left', padding: '12px 16px', fontSize: 9, fontWeight: 700,
-                      color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
                     }}>{h}</th>
                   ))}</tr>
                 </thead>
@@ -851,14 +851,14 @@ export default function AdminPage() {
                   {filteredSignups.map(s => {
                     const converted = orgs.some(o => o.name?.toLowerCase() === s.company_name?.toLowerCase());
                     return (
-                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                         <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600 }}>{s.company_name}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{s.full_name}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>{s.email}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{s.industry || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{s.team_size || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.4)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.use_case || '—'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(s.created_at).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>{s.full_name}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.75)', fontFamily: "'JetBrains Mono', monospace" }}>{s.email}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>{s.industry || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>{s.team_size || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 11, color: 'rgba(255,255,255,0.75)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.use_case || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace" }}>{new Date(s.created_at).toLocaleDateString()}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
                             fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
@@ -873,7 +873,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {filteredSignups.length === 0 && (
-                <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>No signups match your search</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No signups match your search</div>
               )}
             </div>
           </>
@@ -888,8 +888,8 @@ export default function AdminPage() {
                 value={msgFilter.company}
                 onChange={e => setMsgFilter(f => ({ ...f, company: e.target.value }))}
                 style={{
-                  padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)',
-                  background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: 12, outline: 'none',
+                  padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#141926', color: '#fff', fontSize: 12, outline: 'none',
                   fontFamily: "'Inter', sans-serif",
                 }}
               >
@@ -900,8 +900,8 @@ export default function AdminPage() {
                 value={msgFilter.direction}
                 onChange={e => setMsgFilter(f => ({ ...f, direction: e.target.value }))}
                 style={{
-                  padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)',
-                  background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: 12, outline: 'none',
+                  padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#141926', color: '#fff', fontSize: 12, outline: 'none',
                   fontFamily: "'Inter', sans-serif",
                 }}
               >
@@ -910,17 +910,17 @@ export default function AdminPage() {
                 <option value="inbound" style={{ background: '#1a1a2e' }}>Inbound</option>
               </select>
               <div style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace" }}>
                 {filteredMessages.length} messages
               </span>
             </div>
 
             {/* Volume bar chart - last 24h by hour */}
             <div style={{
-              background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+              background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
               padding: '20px 24px', marginBottom: 20,
             }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Message Volume (24h)</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>Message Volume (24h)</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
                 {(() => {
                   const now = Date.now();
@@ -949,7 +949,7 @@ export default function AdminPage() {
 
             {/* Messages table */}
             <div style={{
-              background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)',
+              background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
               overflow: 'hidden',
             }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -957,29 +957,29 @@ export default function AdminPage() {
                   <tr>{['Time', 'Company', '', 'Contact', 'Message', 'AI', 'Status'].map(h => (
                     <th key={h} style={{
                       textAlign: 'left', padding: '10px 14px', fontSize: 9, fontWeight: 700,
-                      color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em',
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
                     }}>{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody>
                   {filteredMessages.map(m => (
-                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                      <td style={{ padding: '10px 14px', fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 10, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
                         {m.sent_at ? new Date(m.sent_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{m.organization_id ? getOrgName(m.organization_id) : '—'}</td>
+                      <td style={{ padding: '10px 14px', fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>{m.organization_id ? getOrgName(m.organization_id) : '—'}</td>
                       <td style={{ padding: '10px 14px', width: 28 }}>
                         <span style={{
                           fontSize: 12, fontWeight: 700,
                           color: m.direction === 'outbound' ? '#378ADD' : '#F59E0B',
                         }}>{m.direction === 'outbound' ? '→' : '←'}</span>
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.5)' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.65)' }}>
                         {m.contact_name || m.contact_phone || '—'}
                       </td>
                       <td style={{
-                        padding: '10px 14px', fontSize: 12, color: 'rgba(255,255,255,0.6)',
+                        padding: '10px 14px', fontSize: 12, color: 'rgba(255,255,255,0.75)',
                         maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{m.body || '—'}</td>
                       <td style={{ padding: '10px 14px' }}>
@@ -1004,7 +1004,7 @@ export default function AdminPage() {
                 </tbody>
               </table>
               {filteredMessages.length === 0 && (
-                <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>No messages to show</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No messages to show</div>
               )}
             </div>
           </>
