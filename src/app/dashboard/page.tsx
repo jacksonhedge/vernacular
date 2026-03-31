@@ -146,7 +146,7 @@ const MOCK_CONTACTS: Contact[] = [
 
 // ── Nav Config ──────────────────────────────────────────────────────────────
 
-const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode }[] = [
+const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: string }[] = [
   {
     label: 'Dashboard',
     tab: 'dashboard',
