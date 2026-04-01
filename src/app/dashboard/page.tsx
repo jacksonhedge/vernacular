@@ -768,9 +768,25 @@ button:active { transform: scale(0.98); }`}</style>
     setShowContactPicker(null);
   };
 
+  // Format phone number to (XXX) XXX-XXXX
+  const formatPhoneNumber = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '');
+    // Strip leading 1 for US numbers
+    const d = digits.startsWith('1') && digits.length === 11 ? digits.slice(1) : digits;
+    if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+    return raw; // return as-is if can't format
+  };
+
+  // Check if a string looks like a phone number
+  const isPhoneNumber = (s: string): boolean => {
+    const digits = s.replace(/\D/g, '');
+    return digits.length >= 10;
+  };
+
   const startNewConversation = (colId: string) => {
     if (!newConvPhone) return;
-    const name = newConvName || newConvPhone;
+    const formattedPhone = formatPhoneNumber(newConvPhone);
+    const name = newConvName || formattedPhone;
     const initials = newConvName ? newConvName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
     const contact: Contact = {
       id: `new-${Date.now()}`,
@@ -779,7 +795,7 @@ button:active { transform: scale(0.98); }`}</style>
       tag: 'NEW',
       tagColor: '#378ADD',
       tagBg: 'rgba(55,138,221,0.1)',
-      phone: newConvPhone,
+      phone: formattedPhone,
     };
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact, messages: [] } : c));
     setShowContactPicker(null);
@@ -2641,7 +2657,7 @@ button:active { transform: scale(0.98); }`}</style>
               {col.contact ? (
                 <>
                   <div
-                    onClick={() => (() => { const n = col.contact!.name.split(' '); setEditingContact({ colId: col.id, firstName: n[0] || '', lastName: n.slice(1).join(' ') || '', name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
+                    onClick={() => (() => { const nm = col.contact!.name; const ph = col.contact!.phone || ''; const nameIsPhone = isPhoneNumber(nm); const n = nameIsPhone ? ['', ''] : nm.split(' '); setEditingContact({ colId: col.id, firstName: nameIsPhone ? '' : (n[0] || ''), lastName: nameIsPhone ? '' : (n.slice(1).join(' ') || ''), name: nameIsPhone ? '' : nm, phone: ph || (nameIsPhone ? formatPhoneNumber(nm) : ''), email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
                     style={{
                       width: 34, height: 34, borderRadius: 10,
                       background: 'rgba(0,0,0,0.04)',
@@ -2659,7 +2675,7 @@ button:active { transform: scale(0.98); }`}</style>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      onClick={() => (() => { const n = col.contact!.name.split(' '); setEditingContact({ colId: col.id, firstName: n[0] || '', lastName: n.slice(1).join(' ') || '', name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
+                      onClick={() => (() => { const nm = col.contact!.name; const ph = col.contact!.phone || ''; const nameIsPhone = isPhoneNumber(nm); const n = nameIsPhone ? ['', ''] : nm.split(' '); setEditingContact({ colId: col.id, firstName: nameIsPhone ? '' : (n[0] || ''), lastName: nameIsPhone ? '' : (n.slice(1).join(' ') || ''), name: nameIsPhone ? '' : nm, phone: ph || (nameIsPhone ? formatPhoneNumber(nm) : ''), email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
                       style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
                       title="Edit contact info"
                     >
