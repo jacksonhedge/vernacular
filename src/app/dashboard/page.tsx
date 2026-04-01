@@ -132,7 +132,7 @@ interface OrgIntegration {
   last_synced_at: string | null;
 }
 
-type ConversationViewMode = 'streams' | 'summary' | 'schedule';
+type ConversationViewMode = 'streams' | 'summary' | 'schedule' | 'matrix';
 
 // ── Mock Data for Conversations View ────────────────────────────────────────
 
@@ -275,6 +275,7 @@ export default function DashboardPage() {
   const [csvRows, setCsvRows] = useState<string[][]>([]);
   const [csvMapping, setCsvMapping] = useState<Record<string, string>>({});
   const [showImportDropdown, setShowImportDropdown] = useState(false);
+  const [contactsViewMode, setContactsViewMode] = useState<'list' | 'cards'>('list');
   const [addFormData, setAddFormData] = useState({ first_name: '', last_name: '', phone: '', email: '', company: '', job_title: '', linkedin_url: '', notes: '', tags: '' });
   const importDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -354,6 +355,7 @@ export default function DashboardPage() {
   const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>('streams');
   const [conversationSearch, setConversationSearch] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
 
   // Unread notification count
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1636,6 +1638,314 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
       )}
 
+      {/* Matrix View — Icon Rail + Dot Grid + Collapsible Threads */}
+      {conversationViewMode === 'matrix' && (() => {
+        // Build conversation items from columns + notion
+        const matrixItems = [
+          ...columns.filter(col => col.contact).map(col => {
+            const lastMsg = col.messages[col.messages.length - 1] || null;
+            const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+            const hasAiDraft = lastMsg?.isAIDraft;
+            const msgCount = col.messages.length;
+            return {
+              id: col.id,
+              name: col.contact!.name,
+              initials: col.contact!.initials,
+              phone: col.contact!.phone || '',
+              messages: col.messages,
+              hasUnread,
+              hasAiDraft: !!hasAiDraft,
+              msgCount,
+              lastMsg,
+              status: hasUnread ? 'unread' as const : hasAiDraft ? 'draft' as const : 'read' as const,
+            };
+          }),
+          ...notionConversations.filter(nc => !columns.some(col => col.contact?.name === nc.name)).map(nc => ({
+            id: `notion-${nc.pageId}`,
+            name: nc.name,
+            initials: nc.initials,
+            phone: nc.phone || '',
+            messages: [] as Message[],
+            hasUnread: false,
+            hasAiDraft: false,
+            msgCount: nc.messageCount || 0,
+            lastMsg: null as Message | null,
+            lastMessageText: nc.lastMessage || `${nc.messageCount || 0} messages`,
+            status: ((nc.status || '').toLowerCase() === 'onboarded' ? 'read' : 'unread') as 'unread' | 'draft' | 'read',
+          })),
+        ];
+
+        const getStatusColor = (status: string) => {
+          switch (status) {
+            case 'unread': return '#22C55E';
+            case 'draft': return '#F59E0B';
+            default: return 'rgba(255,255,255,0.15)';
+          }
+        };
+
+        const getStatusBorder = (status: string) => {
+          switch (status) {
+            case 'unread': return '2px solid #22C55E';
+            case 'draft': return '2px solid #F59E0B';
+            default: return '2px solid rgba(255,255,255,0.08)';
+          }
+        };
+
+        // Build dot grid data — 7 columns, fill rows
+        const DOT_COLS = 7;
+        const dotRows = Math.max(Math.ceil(matrixItems.length / DOT_COLS), 8);
+
+        return (
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            {/* Icon Rail */}
+            <div style={{
+              width: 72, minWidth: 72, background: '#1a1a2e', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', padding: '12px 0', overflowY: 'auto', gap: 6,
+              borderRight: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              {matrixItems.map(item => (
+                <button key={item.id} onClick={() => setExpandedMatrixId(expandedMatrixId === item.id ? null : item.id)} style={{
+                  width: 48, height: 48, borderRadius: 12, border: getStatusBorder(item.status),
+                  background: expandedMatrixId === item.id ? 'rgba(55,138,221,0.25)' : 'rgba(255,255,255,0.05)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  position: 'relative', transition: 'all 0.2s', flexShrink: 0,
+                  color: '#fff', fontSize: 14, fontWeight: 700,
+                }}>
+                  {item.initials}
+                  {item.hasUnread && (
+                    <div style={{
+                      position: 'absolute', top: -2, right: -2,
+                      width: 10, height: 10, borderRadius: 5,
+                      background: '#EF4444', border: '2px solid #1a1a2e',
+                    }} />
+                  )}
+                </button>
+              ))}
+              {/* Add new */}
+              <button onClick={addColumn} style={{
+                width: 48, height: 48, borderRadius: 12, border: '2px dashed rgba(255,255,255,0.15)',
+                background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 20, flexShrink: 0,
+              }}>+</button>
+            </div>
+
+            {/* Main Content Area */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8f9fa' }}>
+              {/* Dot Grid Header */}
+              <div style={{
+                background: '#16162a', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Conversation Matrix
+                  </span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {matrixItems.length} conversations
+                  </span>
+                  {/* Legend */}
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
+                    {[
+                      { label: 'Needs Reply', color: '#22C55E' },
+                      { label: 'AI Draft', color: '#F59E0B' },
+                      { label: 'Quiet', color: 'rgba(255,255,255,0.2)' },
+                    ].map(l => (
+                      <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: l.color, boxShadow: `0 0 6px ${l.color}40` }} />
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Dot Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${DOT_COLS}, 1fr)`,
+                  gap: '10px 16px',
+                  maxWidth: 300,
+                }}>
+                  {Array.from({ length: dotRows * DOT_COLS }).map((_, idx) => {
+                    const item = matrixItems[idx];
+                    const dotColor = item ? getStatusColor(item.status) : 'rgba(255,255,255,0.06)';
+                    const dotSize = item
+                      ? item.status === 'unread' ? 10 : item.status === 'draft' ? 8 : 5
+                      : 3;
+                    const isExpanded = item && expandedMatrixId === item.id;
+                    return (
+                      <button key={idx} onClick={() => {
+                        if (item) setExpandedMatrixId(expandedMatrixId === item.id ? null : item.id);
+                      }} style={{
+                        width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'none', border: 'none', cursor: item ? 'pointer' : 'default', padding: 0,
+                      }}
+                        title={item ? `${item.name} — ${item.msgCount} msgs` : ''}
+                      >
+                        <div style={{
+                          width: dotSize, height: dotSize, borderRadius: dotSize / 2,
+                          background: dotColor,
+                          boxShadow: item && item.status !== 'read' ? `0 0 ${dotSize}px ${dotColor}60` : 'none',
+                          transition: 'all 0.2s',
+                          outline: isExpanded ? `2px solid ${dotColor}` : 'none',
+                          outlineOffset: 3,
+                        }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Thread Area — Collapsible Conversation List */}
+              <div style={{ flex: 1, overflow: 'auto', padding: '0' }}>
+                {matrixItems.map(item => {
+                  const isExpanded = expandedMatrixId === item.id;
+                  const borderColor = getStatusColor(item.status);
+                  return (
+                    <div key={item.id}>
+                      {/* Conversation Row Header */}
+                      <button onClick={() => setExpandedMatrixId(isExpanded ? null : item.id)} style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 24px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                        background: isExpanded ? 'rgba(55,138,221,0.04)' : '#fff',
+                        borderBottom: '1px solid rgba(0,0,0,0.04)',
+                        borderLeft: `3px solid ${borderColor}`,
+                        transition: 'all 0.15s',
+                      }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 10,
+                          background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {item.initials}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', fontFamily: "'Inter', sans-serif" }}>
+                            {item.name}
+                          </div>
+                          <div style={{
+                            fontSize: 12, color: '#8e8e93', overflow: 'hidden', textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif", marginTop: 1,
+                          }}>
+                            {item.lastMsg?.text || (item.messages.length > 0 ? item.messages[item.messages.length - 1]?.text : 'No messages')}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          {item.phone && (
+                            <span style={{ fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>
+                              {item.phone}
+                            </span>
+                          )}
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, color: '#8e8e93',
+                            background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: 4,
+                            fontFamily: "'JetBrains Mono', monospace",
+                          }}>
+                            {item.msgCount}
+                          </span>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2.5" strokeLinecap="round"
+                            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </div>
+                      </button>
+
+                      {/* Expanded Thread */}
+                      {isExpanded && (
+                        <div style={{
+                          background: '#f8f9fa', borderBottom: '2px solid rgba(55,138,221,0.15)',
+                          borderLeft: `3px solid ${borderColor}`,
+                        }}>
+                          <div style={{ padding: '16px 24px 8px', maxHeight: 400, overflow: 'auto' }}>
+                            {item.messages.map((msg, msgIdx) => (
+                              <div key={msg.id || msgIdx} style={{
+                                display: 'flex', gap: 10, marginBottom: 10,
+                                flexDirection: msg.direction === 'outgoing' ? 'row-reverse' : 'row',
+                              }}>
+                                {/* Avatar */}
+                                <div style={{
+                                  width: 28, height: 28, borderRadius: 14, flexShrink: 0,
+                                  background: msg.direction === 'outgoing'
+                                    ? 'linear-gradient(135deg, #378ADD, #2B6CB0)'
+                                    : 'linear-gradient(135deg, #e5e7eb, #d1d5db)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  color: msg.direction === 'outgoing' ? '#fff' : '#666',
+                                  fontSize: 10, fontWeight: 700,
+                                }}>
+                                  {msg.direction === 'outgoing' ? 'You' : item.initials}
+                                </div>
+                                {/* Bubble */}
+                                <div style={{
+                                  maxWidth: '70%',
+                                  padding: '8px 14px',
+                                  borderRadius: msg.direction === 'outgoing' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                  background: msg.isAIDraft
+                                    ? 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06))'
+                                    : msg.direction === 'outgoing' ? '#378ADD' : '#fff',
+                                  color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
+                                  fontSize: 13, lineHeight: 1.5,
+                                  border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                }}>
+                                  {msg.isAIDraft && (
+                                    <div style={{
+                                      fontSize: 9, fontWeight: 700, color: '#F59E0B', marginBottom: 4,
+                                      fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
+                                    }}>AI DRAFT</div>
+                                  )}
+                                  {msg.text}
+                                </div>
+                              </div>
+                            ))}
+                            {item.messages.length === 0 && (
+                              <div style={{ textAlign: 'center', color: '#8e8e93', fontSize: 13, padding: '20px 0' }}>
+                                No messages yet
+                              </div>
+                            )}
+                          </div>
+                          {/* Inline Quick Reply */}
+                          <div style={{
+                            padding: '8px 24px 12px', display: 'flex', gap: 8, alignItems: 'center',
+                            borderTop: '1px solid rgba(0,0,0,0.04)',
+                          }}>
+                            <input
+                              value={inputValues[item.id] || ''}
+                              onChange={e => setInputValues(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') sendMessage(item.id); }}
+                              placeholder={`Reply to ${item.name}...`}
+                              style={{
+                                flex: 1, padding: '9px 14px', borderRadius: 20,
+                                border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
+                                fontFamily: "'Inter', sans-serif", outline: 'none', background: '#fff',
+                              }}
+                            />
+                            <button
+                              onClick={() => sendMessage(item.id)}
+                              style={{
+                                width: 34, height: 34, borderRadius: 17, border: 'none',
+                                background: '#378ADD', color: '#fff', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                              }}
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {matrixItems.length === 0 && (
+                  <div style={{ textAlign: 'center', color: '#8e8e93', fontSize: 14, padding: '60px 0' }}>
+                    No conversations yet. Add a column in Streams view to start messaging.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Streams (Columns) View */}
       {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         {/* Contact List Panel */}
@@ -1659,79 +1969,116 @@ button:active { transform: scale(0.98); }`}</style>
               />
             </div>
           </div>
-          {/* Pinned Contacts Grid */}
-          <div style={{ padding: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {/* AI Agent Pin */}
+          {/* Icon Column + Dot Grid */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+            {/* Single-column icon rail */}
+            <div style={{
+              width: 56, minWidth: 56, background: '#16162a', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', padding: '8px 0', overflowY: 'auto', gap: 4,
+              maxHeight: 280,
+            }}>
+              {/* AI Agent */}
               <button onClick={() => setShowAiAgentPanel(true)} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'transparent',
-              }}>
-                <div style={{
-                  width: 56, height: 56, borderRadius: 28,
-                  background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
-                }}>🤖</div>
-                <span style={{ fontSize: 11, color: '#D97706', fontWeight: 600, textAlign: 'center' }}>AI Agent</span>
-              </button>
+                width: 40, height: 40, borderRadius: 10, border: '2px solid rgba(245,158,11,0.5)',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.1))',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                fontSize: 16, flexShrink: 0,
+              }} title="AI Agent">🤖</button>
               {columns
                 .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
-                .slice(0, 8)
                 .map(col => {
-                  const hasUnread = col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming';
+                  const lastMsg = col.messages[col.messages.length - 1] || null;
+                  const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+                  const hasAiDraft = lastMsg?.isAIDraft;
+                  const isSelected = selectedConversationId === col.id;
+                  const borderColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.1)';
                   return (
                     <button key={col.id} onClick={() => {
                       setSelectedConversationId(col.id);
                       const el = document.getElementById(`stream-col-${col.id}`);
                       if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
                     }} style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                      padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                      background: selectedConversationId === col.id ? 'rgba(55,138,221,0.08)' : 'transparent',
-                    }}>
-                      <div style={{ position: 'relative' }}>
+                      width: 40, height: 40, borderRadius: 10, border: `2px solid ${borderColor}`,
+                      background: isSelected ? 'rgba(55,138,221,0.3)' : 'rgba(255,255,255,0.05)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      position: 'relative', transition: 'all 0.2s', flexShrink: 0,
+                      color: '#fff', fontSize: 12, fontWeight: 700,
+                    }} title={col.contact?.name || ''}>
+                      {col.contact?.initials || '##'}
+                      {hasUnread && (
                         <div style={{
-                          width: 56, height: 56, borderRadius: 28,
-                          background: 'linear-gradient(135deg, #378ADD, #6366F1)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
-                        }}>
-                          {col.contact?.initials || '##'}
-                        </div>
-                        {hasUnread && (
-                          <div style={{
-                            position: 'absolute', top: 0, right: 0,
-                            width: 12, height: 12, borderRadius: 6,
-                            background: '#378ADD', border: '2px solid #fff',
-                          }} />
-                        )}
-                      </div>
-                      <span style={{
-                        fontSize: 11, color: '#1c1c1e', fontWeight: 500, textAlign: 'center',
-                        maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        fontFamily: "'Inter', sans-serif",
-                      }}>
-                        {col.contact?.name.split(' ')[0] || 'Unknown'}
-                      </span>
+                          position: 'absolute', top: -2, right: -2,
+                          width: 8, height: 8, borderRadius: 4,
+                          background: '#EF4444', border: '1.5px solid #16162a',
+                        }} />
+                      )}
                     </button>
                   );
                 })}
             </div>
-          </div>
-          {/* Color Key */}
-          <div style={{ display: 'flex', gap: 10, padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)', background: '#fafbfc' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(34,197,94,0.3)' }} />
-              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Unread</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(245,158,11,0.3)' }} />
-              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Awaiting Approval</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(0,0,0,0.04)' }} />
-              <span style={{ fontSize: 9, color: '#8e8e93', fontWeight: 600 }}>Read</span>
+            {/* Dot Grid */}
+            <div style={{ flex: 1, background: '#16162a', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {[
+                  { label: 'Reply', color: '#22C55E' },
+                  { label: 'Draft', color: '#F59E0B' },
+                  { label: 'Read', color: 'rgba(255,255,255,0.2)' },
+                ].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: 3, background: l.color }} />
+                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: '6px 8px',
+              }}>
+                {(() => {
+                  const filteredCols = columns.filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+                  const totalDots = Math.max(filteredCols.length, 14) + (14 - (filteredCols.length % 7 || 7));
+                  return Array.from({ length: Math.min(totalDots, 98) }).map((_, idx) => {
+                    const col = filteredCols[idx];
+                    if (!col) {
+                      return (
+                        <div key={idx} style={{
+                          width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <div style={{ width: 3, height: 3, borderRadius: 1.5, background: 'rgba(255,255,255,0.06)' }} />
+                        </div>
+                      );
+                    }
+                    const lastMsg = col.messages[col.messages.length - 1] || null;
+                    const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+                    const hasAiDraft = lastMsg?.isAIDraft;
+                    const dotColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.2)';
+                    const dotSize = hasUnread ? 8 : hasAiDraft ? 7 : 4;
+                    const isSelected = selectedConversationId === col.id;
+                    return (
+                      <button key={idx} onClick={() => {
+                        setSelectedConversationId(col.id);
+                        const el = document.getElementById(`stream-col-${col.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                      }} style={{
+                        width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                      }} title={`${col.contact?.name} — ${col.messages.length} msgs`}>
+                        <div style={{
+                          width: dotSize, height: dotSize, borderRadius: dotSize / 2,
+                          background: dotColor,
+                          boxShadow: hasUnread || hasAiDraft ? `0 0 ${dotSize}px ${dotColor}60` : 'none',
+                          outline: isSelected ? `2px solid ${dotColor}` : 'none',
+                          outlineOffset: 2,
+                          transition: 'all 0.2s',
+                        }} />
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
             </div>
           </div>
           {/* Conversation List */}
@@ -2721,6 +3068,33 @@ button:active { transform: scale(0.98); }`}</style>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* View Toggle */}
+          <div style={{
+            display: 'flex', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', overflow: 'hidden',
+          }}>
+            <button onClick={() => setContactsViewMode('list')} style={{
+              padding: '6px 10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+              background: contactsViewMode === 'list' ? '#378ADD' : '#fff',
+              color: contactsViewMode === 'list' ? '#fff' : '#8e8e93',
+              transition: 'all 0.15s',
+            }} title="List view">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+            <button onClick={() => setContactsViewMode('cards')} style={{
+              padding: '6px 10px', border: 'none', borderLeft: '1px solid rgba(0,0,0,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center',
+              background: contactsViewMode === 'cards' ? '#378ADD' : '#fff',
+              color: contactsViewMode === 'cards' ? '#fff' : '#8e8e93',
+              transition: 'all 0.15s',
+            }} title="Card view">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+          </div>
           <button onClick={() => setShowAddForm(!showAddForm)} style={{ ...primaryBtnStyle, background: '#22C55E', boxShadow: '0 1px 3px rgba(34,197,94,0.3)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -2805,34 +3179,32 @@ button:active { transform: scale(0.98); }`}</style>
       )}
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Table */}
+        {/* List / Cards View */}
         <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
-          <table style={{
-            width: '100%', borderCollapse: 'collapse', fontSize: 13,
-            fontFamily: "'Inter', sans-serif",
-          }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
-                {['', 'Name', 'Phone', 'Email', 'Company / School', 'Tags', 'Status', 'Last Contacted', ''].map((h, i) => (
-                  <th key={`${h}-${i}`} style={{
-                    textAlign: 'left', padding: '12px 8px', fontSize: 11, fontWeight: 700,
-                    color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
-                    ...(i === 0 ? { width: 40 } : {}),
-                  }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredContacts.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
-                    {contacts.length === 0 ? 'No contacts yet. Add a contact or import to get started.' : 'No contacts match your search.'}
-                  </td>
+          {filteredContacts.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: '#8e8e93', fontSize: 13 }}>
+              {contacts.length === 0 ? 'No contacts yet. Add a contact or import to get started.' : 'No contacts match your search.'}
+            </div>
+          ) : contactsViewMode === 'list' ? (
+            <table style={{
+              width: '100%', borderCollapse: 'collapse', fontSize: 13,
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
+                  {['', 'Name', 'Phone', 'Email', 'Company / School', 'Tags', 'Status', 'Last Contacted', ''].map((h, i) => (
+                    <th key={`${h}-${i}`} style={{
+                      textAlign: 'left', padding: '12px 8px', fontSize: 11, fontWeight: 700,
+                      color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
+                      ...(i === 0 ? { width: 40 } : {}),
+                    }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ) : (
-                filteredContacts.map(c => {
+              </thead>
+              <tbody>
+                {filteredContacts.map(c => {
                   const name = getDisplayName(c);
                   const initials = getInitials(c);
                   const st = statusColors[c.campaign_status] || statusColors['prospect'];
@@ -2884,10 +3256,106 @@ button:active { transform: scale(0.98); }`}</style>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          ) : (
+            /* ── Profile Cards Grid ── */
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 16, paddingTop: 16,
+            }}>
+              {filteredContacts.map(c => {
+                const name = getDisplayName(c);
+                const initials = getInitials(c);
+                const st = statusColors[c.campaign_status] || statusColors['prospect'];
+                const isSelected = selectedContact?.id === c.id;
+                return (
+                  <div key={c.id} onClick={() => setSelectedContact(c)} style={{
+                    background: '#fff', borderRadius: 14, border: isSelected ? '2px solid #378ADD' : '1px solid rgba(0,0,0,0.08)',
+                    padding: 20, cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: isSelected ? '0 4px 20px rgba(55,138,221,0.15)' : '0 1px 4px rgba(0,0,0,0.04)',
+                  }}>
+                    {/* Card Header */}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+                      <div style={{
+                        width: 48, height: 48, borderRadius: 24, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        color: '#fff', fontSize: 16, fontWeight: 700, letterSpacing: '0.02em',
+                      }}>
+                        {initials}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {name}
+                        </div>
+                        {(c.job_title || c.company) && (
+                          <div style={{ fontSize: 12, color: '#8e8e93', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {[c.job_title, c.company].filter(Boolean).join(' at ')}
+                          </div>
+                        )}
+                        {!c.job_title && !c.company && (c.school || c.greek_org) && (
+                          <div style={{ fontSize: 12, color: '#8e8e93', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {[c.greek_org, c.school].filter(Boolean).join(' — ')}
+                          </div>
+                        )}
+                      </div>
+                      {c.campaign_status && (
+                        <span style={{ ...badgeStyle(st.color, st.bg), flexShrink: 0 }}>{c.campaign_status}</span>
+                      )}
+                    </div>
+
+                    {/* Contact Details */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                      {c.phone && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{c.phone}</span>
+                        </div>
+                      )}
+                      {c.email && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666', overflow: 'hidden' }}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Tags */}
+                    {(c.tags || []).length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
+                        {(c.tags || []).slice(0, 4).map(tag => (
+                          <span key={tag} style={{
+                            fontSize: 10, fontWeight: 600, color: getTagColor(tag),
+                            background: `${getTagColor(tag)}15`, padding: '2px 8px', borderRadius: 4,
+                          }}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Footer Stats */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: 12, marginTop: 'auto',
+                    }}>
+                      <div style={{ display: 'flex', gap: 16 }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>{c.total_messages || 0}</div>
+                          <div style={{ fontSize: 9, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.05em' }}>msgs</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>{c.response_rate || 0}%</div>
+                          <div style={{ fontSize: 9, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.05em' }}>rate</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#8e8e93' }}>{relativeTime(c.last_contacted_at)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Contact Detail Panel */}
@@ -5566,7 +6034,7 @@ button:active { transform: scale(0.98); }`}</style>
                 </button>
                 {item.tab === 'conversations' && activeTab === 'conversations' && !sidebarCollapsed && (
                   <div style={{ paddingLeft: 32, marginBottom: 4 }}>
-                    {(['streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
+                    {(['matrix', 'streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
                       <button key={mode} onClick={() => setConversationViewMode(mode)} style={{
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
