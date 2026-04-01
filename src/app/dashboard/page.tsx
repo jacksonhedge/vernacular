@@ -607,7 +607,14 @@ export default function DashboardPage() {
             })),
           };
         });
-        setColumns(realColumns);
+        // Filter out columns the user previously closed
+        try {
+          const closed = JSON.parse(localStorage.getItem('vernacular_closed_columns') || '[]') as string[];
+          const filtered = realColumns.filter(c => !closed.includes(c.id));
+          setColumns(filtered);
+        } catch {
+          setColumns(realColumns);
+        }
       }
     }).catch(() => {});
   }, [user]);
@@ -730,6 +737,13 @@ button:active { transform: scale(0.98); }`}</style>
   };
 
   const removeColumn = (colId: string) => {
+    // Save closed column to localStorage so it stays closed on reload
+    try {
+      const closed = JSON.parse(localStorage.getItem('vernacular_closed_columns') || '[]') as string[];
+      if (!closed.includes(colId)) {
+        localStorage.setItem('vernacular_closed_columns', JSON.stringify([...closed, colId]));
+      }
+    } catch { /* silent */ }
     setColumns(prev => prev.filter(c => c.id !== colId));
     setShowContactPicker(null);
   };
@@ -1555,9 +1569,8 @@ button:active { transform: scale(0.98); }`}</style>
               transition: 'all 0.2s',
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
-                <path d="M12 12v4" /><circle cx="12" cy="19" r="2" />
-                <path d="M6 8h-2a2 2 0 0 0-2 2v2" /><path d="M18 8h2a2 2 0 0 1 2 2v2" />
+                <path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" />
+                <path d="M17.8 11.8L22 8l-4-4-14 14 4 4 9.8-9.8" />
               </svg>
               AI Mode {aiModeEnabled ? 'ON' : 'OFF'}
               {aiModeEnabled && (
@@ -1600,7 +1613,7 @@ button:active { transform: scale(0.98); }`}</style>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              Add Column
+              Start Conversation
             </button>
           </div>
         )}
@@ -1628,9 +1641,9 @@ button:active { transform: scale(0.98); }`}</style>
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#fff', fontSize: 14,
               }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
-                  <path d="M12 12v4" /><circle cx="12" cy="19" r="2" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" />
+                  <path d="M17.8 11.8L22 8l-4-4-14 14 4 4 9.8-9.8" />
                 </svg>
               </div>
               <div>
