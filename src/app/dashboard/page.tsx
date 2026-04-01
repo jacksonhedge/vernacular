@@ -614,11 +614,13 @@ export default function DashboardPage() {
             })),
           };
         });
-        // Filter out columns the user previously closed
+        // Merge with any locally-saved columns (from Start Conversation)
         try {
-          const closed = JSON.parse(localStorage.getItem('vernacular_closed_columns') || '[]') as string[];
-          const filtered = realColumns.filter(c => !closed.includes(c.id));
-          setColumns(filtered);
+          const saved = JSON.parse(localStorage.getItem('vernacular_open_columns') || '[]') as ConversationColumn[];
+          // Add any saved columns that aren't already in the API results
+          const apiIds = new Set(realColumns.map(c => c.id));
+          const extraCols = saved.filter(s => !apiIds.has(s.id) && s.contact);
+          setColumns([...realColumns, ...extraCols]);
         } catch {
           setColumns(realColumns);
         }
@@ -653,6 +655,15 @@ export default function DashboardPage() {
     }, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Persist open columns to localStorage
+  useEffect(() => {
+    if (columns.length > 0) {
+      try {
+        localStorage.setItem('vernacular_open_columns', JSON.stringify(columns));
+      } catch { /* silent */ }
+    }
+  }, [columns]);
 
   // Auto-scroll conversation columns
   useEffect(() => {
@@ -747,15 +758,9 @@ button:active { transform: scale(0.98); }`}</style>
   };
 
   const removeColumn = (colId: string) => {
-    // Save closed column to localStorage so it stays closed on reload
-    try {
-      const closed = JSON.parse(localStorage.getItem('vernacular_closed_columns') || '[]') as string[];
-      if (!closed.includes(colId)) {
-        localStorage.setItem('vernacular_closed_columns', JSON.stringify([...closed, colId]));
-      }
-    } catch { /* silent */ }
     setColumns(prev => prev.filter(c => c.id !== colId));
     setShowContactPicker(null);
+    // useEffect will auto-persist the updated columns list
   };
 
   const pickContact = (colId: string, contact: Contact) => {
