@@ -3293,44 +3293,26 @@ button:active { transform: scale(0.98); }`}</style>
                 borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
               }}>
-                Upgrade to Pro
+                Add Seats
               </button>
             </div>
-            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>Free plan with basic features</div>
+            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>Each seat includes a dedicated iMessage phone line, AI drafts, and unlimited conversations.</div>
 
-            {/* Team Seats */}
+            {/* Seats + Lines */}
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Team Seats</span>
-                <span style={{ fontSize: 13, color: '#8e8e93' }}>$29/seat/month</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Seats (includes dedicated phone line)</span>
+                <span style={{ fontSize: 13, color: '#8e8e93', fontWeight: 600 }}>$2,000/seat/month</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{teamMembers.length} / 5 seats</span>
+                <span style={{ fontSize: 13, color: '#6b7280' }}>{teamMembers.length} seat{teamMembers.length !== 1 ? 's' : ''} &middot; {stations.filter(s => s.phone_number !== 'TBD').length} phone line{stations.filter(s => s.phone_number !== 'TBD').length !== 1 ? 's' : ''}</span>
                 <button style={{
                   background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
                   padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#2563EB', cursor: 'pointer',
                 }}>Add Seat</button>
               </div>
               <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)' }}>
-                <div style={{ width: `${Math.min((teamMembers.length / 5) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
-              </div>
-            </div>
-
-            {/* Phone Numbers */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Phone Numbers</span>
-                <span style={{ fontSize: 13, color: '#8e8e93' }}>$49/number/month</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{stations.length} / 1 number</span>
-                <button style={{
-                  background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
-                  padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#2563EB', cursor: 'pointer',
-                }}>Add Number</button>
-              </div>
-              <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)' }}>
-                <div style={{ width: `${Math.min((stations.length / 1) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
+                <div style={{ width: `${Math.min((teamMembers.length / 3) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
               </div>
             </div>
 
@@ -3340,27 +3322,30 @@ button:active { transform: scale(0.98); }`}</style>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
-                    {['Feature', 'Starter', 'Pro', 'Enterprise'].map(h => (
+                    {['Feature', 'Professional', 'Business', 'Enterprise'].map(h => (
                       <th key={h} style={{
                         padding: '8px 12px', textAlign: h === 'Feature' ? 'left' : 'center', fontWeight: 600, color: '#1c1c1e', fontSize: 12,
-                        ...(h === 'Starter' ? { borderTop: '3px solid #22C55E', background: 'rgba(34,197,94,0.06)' } : {}),
-                      }}>{h}{h === 'Starter' && <span style={{ display: 'block', fontSize: 9, color: '#22C55E', fontWeight: 700, letterSpacing: '0.04em' }}>CURRENT</span>}</th>
+                        ...(h === 'Professional' ? { borderTop: '3px solid #378ADD', background: 'rgba(55,138,221,0.06)' } : {}),
+                      }}>{h}{h === 'Professional' && <span style={{ display: 'block', fontSize: 9, color: '#378ADD', fontWeight: 700, letterSpacing: '0.04em' }}>CURRENT</span>}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ['Team Seats', '5', '25', 'Unlimited'],
-                    ['Phone Numbers', '1', '5', 'Unlimited'],
-                    ['AI Drafts/day', '200', '2,000', 'Unlimited'],
-                    ['Messages/day', '500', '5,000', 'Unlimited'],
+                    ['Seats', '1-3', '4-15', 'Unlimited'],
+                    ['Dedicated Phone Lines', '1-3', '4-15', 'Unlimited'],
+                    ['AI Drafts', '\u2713', '\u2713', '\u2713'],
+                    ['AI Auto-Respond', '\u2014', '\u2713', '\u2713'],
+                    ['Messages/day', '1,000', '10,000', 'Unlimited'],
                     ['Campaigns', '\u2014', '\u2713', '\u2713'],
-                    ['Analytics', 'Basic', 'Advanced', 'Custom'],
-                    ['Price', 'Free', '$99/mo', 'Contact Us'],
+                    ['Analytics', 'Standard', 'Advanced', 'Custom'],
+                    ['Integrations', 'Notion, Slack', 'All', 'All + Custom'],
+                    ['Support', 'Email', 'Priority', 'Dedicated CSM'],
+                    ['Price/seat', '$2,000/mo', '$1,800/mo', 'Custom'],
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280', background: 'rgba(34,197,94,0.04)' }}>{row[1]}</td>
+                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#378ADD', fontWeight: 600, background: 'rgba(55,138,221,0.04)' }}>{row[1]}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#2563EB', fontWeight: 600 }}>{row[2]}</td>
                       <td style={{ padding: '8px 12px', textAlign: 'center', color: '#7C3AED', fontWeight: 600 }}>{row[3]}</td>
                     </tr>
