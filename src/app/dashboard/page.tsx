@@ -4009,6 +4009,66 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             </div>
 
+            {/* AI Add-ons */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>AI Add-ons</span>
+                  <span style={{ fontSize: 12, color: '#8e8e93', marginLeft: 8 }}>$1,000/mo each</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[
+                  { name: 'AI Mode (Autonomous Responder)', desc: '24/7 autonomous iMessage responses, up to 1,000 contacts', icon: '🤖', active: false },
+                  { name: 'AI Drafts', desc: 'Smart reply suggestions for every inbound message', icon: '✍️', active: true },
+                  { name: 'AI Sentiment Analysis', desc: 'Real-time mood detection, escalation alerts, intent scoring', icon: '🧠', active: false },
+                  { name: 'AI Campaign Writer', desc: 'Generate outreach sequences, A/B test copy, optimize timing', icon: '📝', active: false },
+                  { name: 'AI Contact Enrichment', desc: 'Auto-fill profiles from LinkedIn, social, and public data', icon: '🔍', active: false },
+                  { name: 'AI Conversation Summary', desc: 'Auto-generate CRM notes, action items, and follow-up tasks', icon: '📋', active: false },
+                ].map((addon, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                    borderRadius: 10, border: addon.active ? '1.5px solid rgba(124,58,237,0.3)' : '1px solid rgba(0,0,0,0.06)',
+                    background: addon.active ? 'rgba(124,58,237,0.03)' : '#fff',
+                  }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                      background: addon.active ? 'linear-gradient(135deg, #7C3AED, #6D28D9)' : 'rgba(0,0,0,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                    }}>{addon.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{addon.name}</div>
+                      <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 1 }}>{addon.desc}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#7C3AED', fontFamily: "'JetBrains Mono', monospace" }}>$1,000/mo</span>
+                      <button style={{
+                        padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        fontSize: 11, fontWeight: 700,
+                        background: addon.active ? 'rgba(124,58,237,0.1)' : 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+                        color: addon.active ? '#7C3AED' : '#fff',
+                        fontFamily: "'Inter', sans-serif",
+                      }}>
+                        {addon.active ? 'Active' : 'Add'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                marginTop: 12, padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(124,58,237,0.04)', border: '1px solid rgba(124,58,237,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600 }}>
+                  Monthly AI total: 1 add-on active
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#7C3AED', fontFamily: "'JetBrains Mono', monospace" }}>
+                  $1,000/mo
+                </span>
+              </div>
+            </div>
+
             {/* Plan Comparison Table */}
             <div style={{ marginTop: 8 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>Plan Comparison</div>
@@ -4027,14 +4087,14 @@ button:active { transform: scale(0.98); }`}</style>
                   {[
                     ['Seats', '1-3', '4-15', 'Unlimited'],
                     ['Dedicated Phone Lines', '1-3', '4-15', 'Unlimited'],
-                    ['AI Drafts', '\u2713', '\u2713', '\u2713'],
-                    ['AI Auto-Respond', '\u2014', '\u2713', '\u2713'],
                     ['Messages/day', '1,000', '10,000', 'Unlimited'],
                     ['Campaigns', '\u2014', '\u2713', '\u2713'],
                     ['Analytics', 'Standard', 'Advanced', 'Custom'],
                     ['Integrations', 'Notion, Slack', 'All', 'All + Custom'],
                     ['Support', 'Email', 'Priority', 'Dedicated CSM'],
                     ['Price/seat', '$2,000/mo', '$1,800/mo', 'Custom'],
+                    ['AI Add-ons', '$1,000/ea', '$1,000/ea', 'Included'],
+                    ['AI Tools Available', '6', '6', '6 + Custom'],
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
