@@ -1,37 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { formatPhone, phoneOrFilter } from '@/lib/phone';
-
-const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
-const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
+import { queryDatabase, NOTION_DBS, getTitle, getRichText, getSelect, getPhone } from '@/lib/notion';
 
 // GET /api/engine/poll-inbound — Check Notion Message Queue for new inbound messages
 export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    // Query Notion REST API directly (SDK v5 dataSources.query has issues)
-    const notionRes = await fetch(`https://api.notion.com/v1/databases/${MESSAGE_QUEUE_DB}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        filter: { property: 'Direction', select: { equals: 'Inbound' } },
-        sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-        page_size: 20,
-      }),
+    const queryResult = await queryDatabase(NOTION_DBS.MESSAGE_QUEUE, {
+      filter: { property: 'Direction', select: { equals: 'Inbound' } },
+      sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+      page_size: 20,
     });
 
-    if (!notionRes.ok) {
-      const errData = await notionRes.json();
-      console.error('[poll-inbound] Notion API error:', errData);
-      return NextResponse.json({ ok: false, error: errData.message || 'Notion query failed' }, { status: 500 });
+    if (!queryResult.ok) {
+      return NextResponse.json({ ok: false, error: queryResult.error }, { status: 500 });
     }
 
-    const response = await notionRes.json();
+    const response = { results: queryResult.results };
 
     const inboundMessages: Array<{
       notionId: string;
@@ -43,8 +30,9 @@ export async function GET() {
     }> = [];
 
     for (const page of response.results) {
-      if (!('properties' in page)) continue;
-      const props = page.properties;
+      const p = page as Record<string, unknown>;
+      if (!p.properties) continue;
+      const props = p.properties as Record<string, unknown>;
 
       const message = getTitle(props['Message']);
       const phone = getPhone(props['Contact Phone']) || getRichText(props['Contact Phone']);
@@ -55,12 +43,12 @@ export async function GET() {
       if (direction !== 'Inbound' || !message || !phone) continue;
 
       inboundMessages.push({
-        notionId: page.id,
+        notionId: p.id as string,
         phone,
         message,
         contactName,
         station,
-        createdAt: (page as Record<string, unknown>).created_time as string || new Date().toISOString(),
+        createdAt: (p.created_time as string) || new Date().toISOString(),
       });
     }
 
@@ -174,28 +162,4 @@ export async function GET() {
   }
 }
 
-// Notion property helpers
-function getTitle(prop: unknown): string {
-  if (!prop || typeof prop !== 'object') return '';
-  const p = prop as Record<string, unknown>;
-  if (p.type === 'title' && Array.isArray(p.title)) return (p.title as Array<{ plain_text: string }>).map(t => t.plain_text).join('');
-  return '';
-}
-function getRichText(prop: unknown): string {
-  if (!prop || typeof prop !== 'object') return '';
-  const p = prop as Record<string, unknown>;
-  if (p.type === 'rich_text' && Array.isArray(p.rich_text)) return (p.rich_text as Array<{ plain_text: string }>).map(t => t.plain_text).join('');
-  return '';
-}
-function getSelect(prop: unknown): string {
-  if (!prop || typeof prop !== 'object') return '';
-  const p = prop as Record<string, unknown>;
-  if (p.type === 'select' && p.select && typeof p.select === 'object') return (p.select as { name: string }).name || '';
-  return '';
-}
-function getPhone(prop: unknown): string {
-  if (!prop || typeof prop !== 'object') return '';
-  const p = prop as Record<string, unknown>;
-  if (p.type === 'phone_number') return (p.phone_number as string) || '';
-  return '';
-}
+// Property helpers imported from @/lib/notion

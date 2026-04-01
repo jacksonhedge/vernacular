@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { Client } from '@notionhq/client';
 import { stripPhone, normalize10, formatPhone, phoneOrFilter } from '@/lib/phone';
+import { createPage, NOTION_DBS } from '@/lib/notion';
 
-const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
-const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
+// Notion config now in @/lib/notion
 
 export async function POST(request: Request) {
   try {
@@ -46,20 +45,16 @@ export async function POST(request: Request) {
     // 1. Write to Notion Message Queue
     let notionPageId: string | null = null;
     try {
-      const notion = new Client({ auth: NOTION_TOKEN });
-      const page = await notion.pages.create({
-        parent: { database_id: MESSAGE_QUEUE_DB },
-        properties: {
-          'Message': { title: [{ text: { content: message } }] },
-          'Contact Phone': { phone_number: `+1${n10}` },
-          'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
-          'Station': { select: { name: station.name } },
-          'Status': { select: { name: 'Queued' } },
-          'Direction': { select: { name: 'Outbound' } },
-          'Company': { rich_text: [{ text: { content: 'FraternityBase' } }] },
-        },
+      const result = await createPage(NOTION_DBS.MESSAGE_QUEUE, {
+        'Message': { title: [{ text: { content: message } }] },
+        'Contact Phone': { phone_number: `+1${n10}` },
+        'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
+        'Station': { select: { name: station.name } },
+        'Status': { select: { name: 'Queued' } },
+        'Direction': { select: { name: 'Outbound' } },
+        'Company': { rich_text: [{ text: { content: 'FraternityBase' } }] },
       });
-      notionPageId = page.id;
+      if (result.ok) notionPageId = result.pageId;
     } catch (err) {
       console.error('Notion write failed:', err instanceof Error ? err.message : err);
     }
