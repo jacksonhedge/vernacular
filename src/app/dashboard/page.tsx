@@ -2350,52 +2350,90 @@ button:active { transform: scale(0.98); }`}</style>
                 display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                 fontSize: 16, flexShrink: 0,
               }} title="AI Agent">🤖</button>
-              {columns
-                .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
-                .sort((a, b) => {
-                  // Sort by priority: unread first, then AI drafts, then read
-                  const getPriority = (col: ConversationColumn) => {
-                    const last = col.messages[col.messages.length - 1];
-                    if (last?.direction === 'incoming' && !last?.isAIDraft) return 0; // unread
-                    if (last?.isAIDraft) return 1; // AI draft
-                    return 2; // read
-                  };
-                  return getPriority(a) - getPriority(b);
-                })
-                .map(col => {
-                  const lastMsg = col.messages[col.messages.length - 1] || null;
-                  const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
-                  const hasAiDraft = lastMsg?.isAIDraft;
-                  const isSelected = selectedConversationId === col.id;
-                  const borderColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.15)';
+              {(() => {
+                const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                const sortedCols = columns
+                  .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+                  .sort((a, b) => {
+                    const getPriority = (col: ConversationColumn) => {
+                      const last = col.messages[col.messages.length - 1];
+                      if (last?.direction === 'incoming' && !last?.isAIDraft) return 0;
+                      if (last?.isAIDraft) return 1;
+                      return 2;
+                    };
+                    return getPriority(a) - getPriority(b);
+                  });
+                const MAX_SLOTS = 12;
+                const totalContacts = sortedCols.length;
+                const visibleSlots = Math.min(totalContacts, MAX_SLOTS - 1); // leave room for "X More"
+                const extraCount = totalContacts > MAX_SLOTS - 1 ? totalContacts - (MAX_SLOTS - 1) : 0;
+                const slots = Array.from({ length: MAX_SLOTS });
+
+                return slots.map((_, slotIdx) => {
+                  const col = slotIdx < visibleSlots ? sortedCols[slotIdx] : null;
+                  const isMoreButton = extraCount > 0 && slotIdx === MAX_SLOTS - 1;
+
+                  // "X More" button at the bottom
+                  if (isMoreButton) {
+                    return (
+                      <div key="more" style={{
+                        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                        border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 700,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}>
+                        +{extraCount}
+                      </div>
+                    );
+                  }
+
+                  // Active contact slot
+                  if (col) {
+                    const lastMsg = col.messages[col.messages.length - 1] || null;
+                    const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+                    const hasAiDraft = lastMsg?.isAIDraft;
+                    const isSelected = selectedConversationId === col.id;
+                    const borderColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.15)';
+                    const fruitIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                    return (
+                      <button key={col.id} onClick={() => {
+                        setSelectedConversationId(col.id);
+                        const el = document.getElementById(`stream-col-${col.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                      }} style={{
+                        width: 40, height: 40, borderRadius: 10, border: `2px solid ${borderColor}`,
+                        background: isSelected ? 'rgba(55,138,221,0.3)' : 'rgba(255,255,255,0.05)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        position: 'relative', transition: 'all 0.2s', flexShrink: 0,
+                        color: '#fff', fontSize: 12, fontWeight: 700, gap: 0, padding: 0,
+                      }} title={`${col.contact?.name || 'Unknown'} — ${col.contact?.phone || ''}`}>
+                        <span style={{ fontSize: 14, lineHeight: 1 }}>{fruits[fruitIdx % fruits.length]}</span>
+                        {col.contact?.phone && (
+                          <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginTop: 1 }}>
+                            {col.contact.phone.replace(/.*(\d{4})$/, '•$1')}
+                          </span>
+                        )}
+                        {hasUnread && (
+                          <div style={{
+                            position: 'absolute', top: -2, right: -2,
+                            width: 8, height: 8, borderRadius: 4,
+                            background: '#EF4444', border: '1.5px solid #16162a',
+                          }} />
+                        )}
+                      </button>
+                    );
+                  }
+
+                  // Empty slot — dim, no color
                   return (
-                    <button key={col.id} onClick={() => {
-                      setSelectedConversationId(col.id);
-                      const el = document.getElementById(`stream-col-${col.id}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
-                    }} style={{
-                      width: 40, height: 40, borderRadius: 10, border: `2px solid ${borderColor}`,
-                      background: isSelected ? 'rgba(55,138,221,0.3)' : 'rgba(255,255,255,0.05)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                      position: 'relative', transition: 'all 0.2s', flexShrink: 0,
-                      color: '#fff', fontSize: 12, fontWeight: 700,
-                    }} title={col.contact?.name || ''}>
-                      {/* Pac-Man fruits for contact icons */}
-                      {(() => {
-                        const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
-                        const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
-                        return <span style={{ fontSize: 16 }}>{fruits[idx % fruits.length]}</span>;
-                      })()}
-                      {hasUnread && (
-                        <div style={{
-                          position: 'absolute', top: -2, right: -2,
-                          width: 8, height: 8, borderRadius: 4,
-                          background: '#EF4444', border: '1.5px solid #16162a',
-                        }} />
-                      )}
-                    </button>
+                    <div key={`empty-${slotIdx}`} style={{
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      border: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)',
+                    }} />
                   );
-                })}
+                });
+              })()}
             </div>
             {/* Right side: dot grid on top, conversation list below */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
