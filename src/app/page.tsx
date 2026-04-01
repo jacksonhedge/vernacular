@@ -515,9 +515,9 @@ export default function LandingPage() {
                 height: 40, background: 'rgba(20,25,20,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)',
                 display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
               }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#4ade80' }}>OUTREACH BOARD</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: '#4ade80' }}>CONVERSATIONS</span>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                  {['ALL', 'iMESSAGE', 'AI SENT', 'MANUAL'].map((f, i) => (
+                  {['ALL', 'SALES', 'SUPPORT', 'AI SENT'].map((f, i) => (
                     <span key={f} style={{
                       fontFamily: "'JetBrains Mono', monospace", fontSize: 8, fontWeight: 600,
                       padding: '3px 8px', borderRadius: 3,
@@ -531,102 +531,31 @@ export default function LandingPage() {
 
               {/* Columns */}
               <div style={{ display: 'flex', overflow: 'hidden' }}>
-                {/* Column 1 — Austin (AI + Manual) */}
+                {/* Column 1 — Sales Outreach */}
                 <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Austin Sarvis</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Rachel Torres</span>
                       <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
                     </div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>UofSC · Sigma Chi</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>VP Sales · Meridian Co</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>CONFIRMED</span>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>UNDER 21</span>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>ACTIVE</span>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(124,58,237,0.1)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>VIP</span>
                     </div>
                   </div>
                   <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Yo Austin whats up man, this is Jackson</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        What&apos;s your Venmo? I&apos;ll send the deposit
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>It is austin5922</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Sending the Venmo now!</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>I got it 🙏</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%' }}>
-                      <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: 8, fontSize: 8, fontFamily: "'JetBrains Mono', monospace" }}>ogmarketslimited.pxf.io/hedge</span>
-                    </div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 2 — Colby (mostly manual) */}
-                <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Colby Resh</span>
-                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>UofSC · Sigma Chi</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>CONFIRMED</span>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>RESTRICTED</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Yo Colby whats up man</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Hey it&apos;s Colby-Resh</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Sweet, sending in a sec</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>I got the Venmo</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Sounds good</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%' }}>
-                      <span style={{ display: 'inline-block', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: 8, fontSize: 8, fontFamily: "'JetBrains Mono', monospace" }}>ogmarketslimited.pxf.io/hedge</span>
-                    </div></div>
-                  </div>
-                  <div style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Column 3 — Jack (AI heavy) */}
-                <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Jack Robinson</span>
-                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>UofSC · Sigma Chi</div>
-                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>CONFIRMED</span>
-                    </div>
-                  </div>
-                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflow: 'hidden' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Yo Jack whats up man</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>What&apos;s this for again, lowkey forgot</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Hi Rachel, loved your talk at SaaStr — would love to show you what we&apos;re building</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Thanks! What&apos;s the product?</div></div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
                         <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Oh my bad — Derby Days sponsorship from OG + Crypto.com. First 25 guys get a free deposit.
+                        It&apos;s an iMessage CRM — your team can manage all customer texts from one dashboard
                       </div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Nvm just talked to him 🙏</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>
-                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        Sweet, ill get the Venmo over to you
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Just got it mane appreciate it</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>That&apos;s exactly what we need</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Let&apos;s do a 15-min demo Thursday?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Thursday 2pm works 🙌</div></div>
                   </div>
                   <div style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <div style={{ flex: 1, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
@@ -636,22 +565,88 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Column 4 — Andy (no response, follow-up) */}
+                {/* Column 2 — Customer Support */}
+                <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Mike Chen</span>
+                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
+                    </div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Customer · Pro Plan</div>
+                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>OPEN TICKET</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Hey, my billing page isn&apos;t loading</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
+                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
+                        Sorry about that! Can you try clearing your cache and refreshing?
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>That fixed it, thanks!</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px' }}>Great! Anything else I can help with?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Actually yes — how do I add a team member?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Settings → Team → Invite Member. They&apos;ll get a link via text</div></div>
+                  </div>
+                  <div style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3 — CRM / Account Management */}
+                <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Sarah Kim</span>
+                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
+                    </div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>CEO · Bolt Studios</div>
+                    <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>ENTERPRISE</span>
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Hi Sarah — your Q2 renewal is coming up. Wanted to check in</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Hey! Yes, we want to renew but need more seats</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>How many are you thinking? I can get you the volume pricing</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>We&apos;d need 12 seats total</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
+                        <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
+                        For 12 seats on Business, that&apos;s $2,500/seat — I can lock in $2,200 if you sign by Friday
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Deal. Send over the contract 🤝</div></div>
+                  </div>
+                  <div style={{ padding: '6px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ flex: 1, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 4 — Follow-up / No Response */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Andy Rapp</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>James Park</span>
                       <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>💬</span>
                     </div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>UofSC · Sigma Chi</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>Director · NovaTech</div>
                     <div style={{ display: 'flex', gap: 4, marginTop: 5 }}>
                       <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(56,138,221,0.12)', color: '#60a5fa', border: '1px solid rgba(56,138,221,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>CONTACTED</span>
-                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>RESTRICTED</span>
+                      <span style={{ fontSize: 7, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(248,113,113,0.1)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)', fontFamily: "'JetBrains Mono', monospace" }}>NO REPLY</span>
                     </div>
                   </div>
                   <div style={{ padding: '10px 8px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Yo Andy whats up man, this is Jackson</div></div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>Saw you filled out the form — what&apos;s your Venmo?</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '80%', lineHeight: 1.4 }}>Hi James — saw you downloaded our whitepaper. Happy to walk you through it</div></div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}><div style={{ background: '#378ADD', color: '#fff', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>We&apos;re offering early access to teams under 20 people</div></div>
                     <div style={{ textAlign: 'center', marginTop: 16 }}>
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, fontWeight: 600, color: '#fbbf24', opacity: 0.6, letterSpacing: '0.03em' }}>FOLLOW-UP NEEDED</span>
                     </div>
@@ -659,7 +654,7 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
                       <div style={{ position: 'relative', background: 'rgba(55,138,221,0.1)', border: '1px dashed rgba(55,138,221,0.25)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
                         <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI DRAFT</span>
-                        Hey Andy, just following up — still want that free deposit?
+                        Hey James, just circling back — would a quick 10-min call work this week?
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4, marginTop: 2 }}>
