@@ -69,15 +69,20 @@ export async function GET() {
 
       // Find or create contact
       let contactId: string | null = null;
-      const { data: contacts } = await supabase
+      const { data: contacts, error: contactErr } = await supabase
         .from('contacts').select('id, full_name')
         .or(phoneOrFilter(msg.phone))
         .limit(1);
 
+      if (contactErr) {
+        console.error(`[poll-inbound] Contact lookup error for ${msg.phone}:`, contactErr.message);
+        errors++; continue;
+      }
+
       if (contacts && contacts.length > 0) {
         contactId = contacts[0].id;
       } else if (msg.phone) {
-        const { data: newContact } = await supabase
+        const { data: newContact, error: newContactErr } = await supabase
           .from('contacts')
           .insert({
             phone: formatPhone(msg.phone),
@@ -86,10 +91,14 @@ export async function GET() {
             import_source: 'imessage',
           })
           .select('id').single();
+        if (newContactErr) {
+          console.error(`[poll-inbound] Contact create error:`, newContactErr.message);
+          errors++; continue;
+        }
         contactId = newContact?.id || null;
       }
 
-      if (!contactId) continue;
+      if (!contactId) { console.error(`[poll-inbound] No contactId for ${msg.phone}`); errors++; continue; }
 
       // Find or create conversation
       const { data: station } = await supabase
