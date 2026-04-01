@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { Client } from '@notionhq/client';
+import { stripPhone, normalize10, formatPhone, phoneOrFilter } from '@/lib/phone';
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
 const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
@@ -13,10 +14,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'phoneNumber and message are required' }, { status: 400 });
     }
 
-    const normalized = phoneNumber.replace(/\D/g, '');
+    const normalized = stripPhone(phoneNumber);
     if (normalized.length < 10) {
       return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
     }
+    const n10 = normalize10(phoneNumber);
+    const formattedPhone = formatPhone(phoneNumber);
 
     const supabase = createServiceClient();
 
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
         parent: { database_id: MESSAGE_QUEUE_DB },
         properties: {
           'Message': { title: [{ text: { content: message } }] },
-          'Contact Phone': { phone_number: normalized.length === 10 ? `+1${normalized}` : `+${normalized}` },
+          'Contact Phone': { phone_number: `+1${n10}` },
           'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
           'Station': { select: { name: station.name } },
           'Status': { select: { name: 'Queued' } },
@@ -63,16 +66,9 @@ export async function POST(request: Request) {
 
     // 2. Find or create contact in Supabase
     let contactId: string | null = null;
-    // Normalize: try raw, digits-only, +1 prefix, and formatted variants
-    const n10 = normalized.length === 11 && normalized.startsWith('1') ? normalized.slice(1) : normalized;
-    const formatted = n10.length === 10 ? `(${n10.slice(0,3)}) ${n10.slice(3,6)}-${n10.slice(6)}` : '';
-    const searchVariants = [
-      phoneNumber, normalized, `+1${n10}`, `+1 ${formatted}`,
-      formatted, `1${n10}`, `+${normalized}`,
-    ].filter(Boolean);
     const { data: existingContacts } = await supabase
       .from('contacts').select('id, full_name')
-      .or(searchVariants.map(v => `phone.eq.${v}`).join(','))
+      .or(phoneOrFilter(phoneNumber))
       .limit(1);
 
     if (existingContacts && existingContacts.length > 0) {
@@ -81,7 +77,7 @@ export async function POST(request: Request) {
       const { data: newContact } = await supabase
         .from('contacts')
         .insert({
-          phone: formatted || phoneNumber,
+          phone: formattedPhone,
           full_name: contactName || null,
           source: 'conversation',
           import_source: 'conversation',

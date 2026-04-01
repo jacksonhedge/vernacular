@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { stripPhone, formatPhone, phoneOrFilter } from '@/lib/phone';
 
 export async function POST(request: Request) {
   try {
@@ -10,12 +11,13 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceClient();
-    const normalized = phoneNumber.replace(/\D/g, '');
+    const normalized = stripPhone(phoneNumber);
+    void normalized; // used by phoneOrFilter internally
 
     // Find contact by phone number
     const { data: contacts } = await supabase
       .from('contacts').select('id, full_name')
-      .or(`phone.eq.${phoneNumber},phone.eq.${normalized},phone.eq.+1${normalized},phone.ilike.%${normalized.slice(-7)}%`)
+      .or(phoneOrFilter(phoneNumber))
       .limit(1);
 
     let contactId = contacts?.[0]?.id;
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
       // Create new contact
       const { data: newContact } = await supabase
         .from('contacts')
-        .insert({ phone: phoneNumber, source: 'inbound', import_source: 'imessage' })
+        .insert({ phone: formatPhone(phoneNumber), source: 'inbound', import_source: 'imessage' })
         .select('id').single();
       contactId = newContact?.id;
     }

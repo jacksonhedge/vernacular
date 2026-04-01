@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { formatPhone, phoneOrFilter } from '@/lib/phone';
 
 // GET /api/contacts — List contacts for the org
 // Query params: search, limit, offset
@@ -62,15 +63,14 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Normalize phone number (basic: strip non-digits, ensure +1 prefix)
-    const normalized = normalizePhone(phone);
+    const normalized = formatPhone(phone);
 
-    // Check if contact exists
+    // Check if contact exists (try all phone format variants)
     const { data: existing } = await supabase
       .from('contacts')
       .select('*')
-      .eq('phone', normalized)
-      .eq('org_id', user.org_id)
+      .or(phoneOrFilter(phone))
+      .limit(1)
       .maybeSingle();
 
     if (existing) {
@@ -127,10 +127,4 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  if (phone.startsWith('+')) return phone;
-  return `+${digits}`;
-}
+// normalizePhone removed — using shared formatPhone from @/lib/phone

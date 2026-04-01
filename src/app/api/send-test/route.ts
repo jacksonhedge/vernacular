@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { Client } from '@notionhq/client';
+import { stripPhone, normalize10, formatPhone, phoneOrFilter } from '@/lib/phone';
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
 const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
@@ -13,7 +14,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    const normalized = phoneNumber.replace(/\D/g, '');
+    const normalized = stripPhone(phoneNumber);
+    const n10 = normalize10(phoneNumber);
+    const formattedPhone = formatPhone(phoneNumber);
     if (normalized.length < 10) {
       return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
     }
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
         parent: { database_id: MESSAGE_QUEUE_DB },
         properties: {
           'Message': { title: [{ text: { content: testMessage } }] },
-          'Contact Phone': { phone_number: normalized.length === 10 ? `+1${normalized}` : `+${normalized}` },
+          'Contact Phone': { phone_number: `+1${n10}` },
           'Contact Name': { rich_text: [{ text: { content: contactName || 'Test User' } }] },
           'Station': { select: { name: station.name } },
           'Status': { select: { name: 'Queued' } },
@@ -67,14 +70,14 @@ export async function POST(request: Request) {
     // 2. Also write to Supabase (for dashboard tracking)
     let contactId: string | null = null;
     const { data: existingContact } = await supabase
-      .from('contacts').select('id').eq('phone', phoneNumber).limit(1);
+      .from('contacts').select('id').or(phoneOrFilter(phoneNumber)).limit(1);
 
     if (existingContact && existingContact.length > 0) {
       contactId = existingContact[0].id;
     } else {
       const { data: newContact } = await supabase
         .from('contacts')
-        .insert({ phone: phoneNumber, full_name: contactName || null, source: 'test-message', import_source: 'test' })
+        .insert({ phone: formattedPhone, full_name: contactName || null, source: 'test-message', import_source: 'test' })
         .select('id').single();
       contactId = newContact?.id || null;
     }
