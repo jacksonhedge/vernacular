@@ -1969,13 +1969,12 @@ button:active { transform: scale(0.98); }`}</style>
               />
             </div>
           </div>
-          {/* Icon Column + Dot Grid */}
-          <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-            {/* Single-column icon rail */}
+          {/* Icon Rail + Right Content (dot grid + conversation list) */}
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            {/* Icon rail — spans full height */}
             <div style={{
               width: 56, minWidth: 56, background: '#16162a', display: 'flex', flexDirection: 'column',
               alignItems: 'center', padding: '8px 0', overflowY: 'auto', gap: 4,
-              maxHeight: 280,
             }}>
               {/* AI Agent */}
               <button onClick={() => setShowAiAgentPanel(true)} style={{
@@ -1991,7 +1990,7 @@ button:active { transform: scale(0.98); }`}</style>
                   const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
                   const hasAiDraft = lastMsg?.isAIDraft;
                   const isSelected = selectedConversationId === col.id;
-                  const borderColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.1)';
+                  const borderColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.15)';
                   return (
                     <button key={col.id} onClick={() => {
                       setSelectedConversationId(col.id);
@@ -2016,73 +2015,74 @@ button:active { transform: scale(0.98); }`}</style>
                   );
                 })}
             </div>
-            {/* Dot Grid */}
-            <div style={{ flex: 1, background: '#16162a', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Legend */}
-              <div style={{ display: 'flex', gap: 10 }}>
-                {[
-                  { label: 'Reply', color: '#22C55E' },
-                  { label: 'Draft', color: '#F59E0B' },
-                  { label: 'Read', color: 'rgba(255,255,255,0.2)' },
-                ].map(l => (
-                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: 3, background: l.color }} />
-                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{l.label}</span>
-                  </div>
-                ))}
-              </div>
-              {/* Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: '6px 8px',
-              }}>
-                {(() => {
-                  const filteredCols = columns.filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
-                  const totalDots = Math.max(filteredCols.length, 14) + (14 - (filteredCols.length % 7 || 7));
-                  return Array.from({ length: Math.min(totalDots, 98) }).map((_, idx) => {
-                    const col = filteredCols[idx];
-                    if (!col) {
+            {/* Right side: dot grid on top, conversation list below */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* Dot Grid */}
+              <div style={{ background: '#16162a', padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Legend */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
+                  {[
+                    { label: 'Reply', color: '#22C55E' },
+                    { label: 'Draft', color: '#F59E0B' },
+                    { label: 'Read', color: 'rgba(255,255,255,0.7)' },
+                  ].map(l => (
+                    <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: 3, background: l.color }} />
+                      <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{l.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '6px 8px',
+                }}>
+                  {(() => {
+                    const filteredCols = columns.filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+                    const totalDots = Math.max(filteredCols.length, 14) + (14 - (filteredCols.length % 7 || 7));
+                    return Array.from({ length: Math.min(totalDots, 98) }).map((_, idx) => {
+                      const col = filteredCols[idx];
+                      if (!col) {
+                        return (
+                          <div key={idx} style={{
+                            width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <div style={{ width: 3, height: 3, borderRadius: 1.5, background: 'rgba(255,255,255,0.1)' }} />
+                          </div>
+                        );
+                      }
+                      const lastMsg = col.messages[col.messages.length - 1] || null;
+                      const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+                      const hasAiDraft = lastMsg?.isAIDraft;
+                      const dotColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.7)';
+                      const dotSize = hasUnread ? 8 : hasAiDraft ? 7 : 5;
+                      const isSelected = selectedConversationId === col.id;
                       return (
-                        <div key={idx} style={{
+                        <button key={idx} onClick={() => {
+                          setSelectedConversationId(col.id);
+                          const el = document.getElementById(`stream-col-${col.id}`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                        }} style={{
                           width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <div style={{ width: 3, height: 3, borderRadius: 1.5, background: 'rgba(255,255,255,0.06)' }} />
-                        </div>
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                        }} title={`${col.contact?.name} — ${col.messages.length} msgs`}>
+                          <div style={{
+                            width: dotSize, height: dotSize, borderRadius: dotSize / 2,
+                            background: dotColor,
+                            boxShadow: hasUnread || hasAiDraft ? `0 0 ${dotSize}px ${dotColor}60` : 'none',
+                            outline: isSelected ? `2px solid ${dotColor}` : 'none',
+                            outlineOffset: 2,
+                            transition: 'all 0.2s',
+                          }} />
+                        </button>
                       );
-                    }
-                    const lastMsg = col.messages[col.messages.length - 1] || null;
-                    const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
-                    const hasAiDraft = lastMsg?.isAIDraft;
-                    const dotColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.2)';
-                    const dotSize = hasUnread ? 8 : hasAiDraft ? 7 : 4;
-                    const isSelected = selectedConversationId === col.id;
-                    return (
-                      <button key={idx} onClick={() => {
-                        setSelectedConversationId(col.id);
-                        const el = document.getElementById(`stream-col-${col.id}`);
-                        if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
-                      }} style={{
-                        width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                      }} title={`${col.contact?.name} — ${col.messages.length} msgs`}>
-                        <div style={{
-                          width: dotSize, height: dotSize, borderRadius: dotSize / 2,
-                          background: dotColor,
-                          boxShadow: hasUnread || hasAiDraft ? `0 0 ${dotSize}px ${dotColor}60` : 'none',
-                          outline: isSelected ? `2px solid ${dotColor}` : 'none',
-                          outlineOffset: 2,
-                          transition: 'all 0.2s',
-                        }} />
-                      </button>
-                    );
-                  });
-                })()}
+                    });
+                  })()}
+                </div>
               </div>
-            </div>
-          </div>
-          {/* Conversation List */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+              {/* Conversation List */}
+              <div style={{ flex: 1, overflowY: 'auto' }}>
             {columns
               .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
               .map(col => {
@@ -2183,7 +2183,9 @@ button:active { transform: scale(0.98); }`}</style>
                 );
               })}
           </div>
-        </div>
+          </div>{/* end right side (dot grid + list) */}
+        </div>{/* end icon rail + right content */}
+        </div>{/* end Contact List Panel */}
         {/* Stream Columns */}
         <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '16px 16px', minHeight: 0 }}>
         {columns.map(col => (
