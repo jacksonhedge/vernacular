@@ -818,24 +818,45 @@ button:active { transform: scale(0.98); }`}</style>
     const col = columns.find(c => c.id === colId);
     const contactPhone = col?.contact?.phone;
     const contactName = col?.contact?.name;
+    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
 
-    // If contact has a phone number, send via the real pipeline
-    if (contactPhone && contactPhone !== 'TBD') {
-      try {
-        await fetch('/api/messages/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phoneNumber: contactPhone,
-            message: text,
-            contactName: contactName || '',
-            organizationId: (user?.organizations as Record<string, unknown>)?.id,
-          }),
-        });
-      } catch {
-        // Message shown in UI already — log silently
-        console.error('Failed to queue message via API');
+    console.log(`[Vernacular] 📤 Sending message...`);
+    console.log(`[Vernacular]   Column: ${colId}`);
+    console.log(`[Vernacular]   To: ${contactName || 'Unknown'} (${contactPhone || 'NO PHONE'})`);
+    console.log(`[Vernacular]   Text: "${text.slice(0, 50)}${text.length > 50 ? '...' : ''}"`);
+    console.log(`[Vernacular]   Org ID: ${orgId || 'MISSING'}`);
+
+    if (!contactPhone || contactPhone === 'TBD') {
+      console.warn(`[Vernacular] ⚠️ No phone number for contact — message shown in UI only, NOT sent`);
+      return;
+    }
+
+    const payload = {
+      phoneNumber: contactPhone,
+      message: text,
+      contactName: contactName || '',
+      organizationId: orgId,
+    };
+    console.log(`[Vernacular] 📨 POST /api/messages/send`, JSON.stringify(payload, null, 2));
+
+    try {
+      const res = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`[Vernacular] ✅ Message queued successfully`, data);
+        console.log(`[Vernacular]   → Notion Page: ${data.notionPageId || 'N/A'}`);
+        console.log(`[Vernacular]   → Station: ${data.stationName || 'N/A'} (${data.stationPhone || 'N/A'})`);
+        console.log(`[Vernacular]   → Message ID: ${data.messageId || 'N/A'}`);
+        console.log(`[Vernacular]   → Conversation ID: ${data.conversationId || 'N/A'}`);
+      } else {
+        console.error(`[Vernacular] ❌ Send failed (${res.status}):`, data.error || data);
       }
+    } catch (err) {
+      console.error(`[Vernacular] ❌ Network error sending message:`, err);
     }
   };
 
