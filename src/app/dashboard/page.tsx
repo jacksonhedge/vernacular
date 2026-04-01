@@ -335,6 +335,10 @@ export default function DashboardPage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveStatus, setProfileSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [passwordError, setPasswordError] = useState('');
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
   const [testSendStatus, setTestSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -6144,15 +6148,104 @@ button:active { transform: scale(0.98); }`}</style>
           {/* Section 6: Security */}
           <div id="profile-security" style={{ ...sectionStyle, marginBottom: 40 }}>
             <div style={sectionTitleStyle}>Security</div>
-            <div style={fieldRowStyle}>
-              <div>
-                <div style={labelStyle}>Password</div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2, letterSpacing: '0.1em' }}>••••••••</div>
+            <div style={{ ...fieldRowStyle, flexDirection: 'column', alignItems: 'stretch', gap: 12, borderBottom: showPasswordChange ? 'none' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={labelStyle}>Password</div>
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2, letterSpacing: '0.1em' }}>••••••••</div>
+                </div>
+                <button onClick={() => { setShowPasswordChange(!showPasswordChange); setPasswordStatus('idle'); setPasswordError(''); setPasswordForm({ current: '', new: '', confirm: '' }); }} style={{
+                  background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
+                  padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+                }}>{showPasswordChange ? 'Cancel' : 'Change Password'}</button>
               </div>
-              <button onClick={() => window.alert('Password change flow coming soon. Use "Forgot Password" on login for now.')} style={{
-                background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
-                padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
-              }}>Change Password</button>
+              {showPasswordChange && (
+                <div style={{
+                  padding: '16px', borderRadius: 12, background: '#fafbfc',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                }}>
+                  {passwordStatus === 'saved' ? (
+                    <div style={{
+                      padding: '14px 18px', borderRadius: 10,
+                      background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+                      color: '#16A34A', fontSize: 13, fontWeight: 600, textAlign: 'center',
+                    }}>
+                      Password updated successfully
+                    </div>
+                  ) : (
+                    <>
+                      {passwordError && (
+                        <div style={{
+                          padding: '10px 14px', borderRadius: 8, marginBottom: 12,
+                          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                          color: '#DC2626', fontSize: 12, fontWeight: 500,
+                        }}>{passwordError}</div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 4 }}>Current Password</label>
+                          <input type="password" value={passwordForm.current}
+                            onChange={e => setPasswordForm(p => ({ ...p, current: e.target.value }))}
+                            placeholder="Enter current password"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, fontFamily: "'Inter', sans-serif" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 4 }}>New Password</label>
+                          <input type="password" value={passwordForm.new}
+                            onChange={e => setPasswordForm(p => ({ ...p, new: e.target.value }))}
+                            placeholder="At least 8 characters"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, fontFamily: "'Inter', sans-serif" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 4 }}>Confirm New Password</label>
+                          <input type="password" value={passwordForm.confirm}
+                            onChange={e => setPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                            placeholder="Re-enter new password"
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, fontFamily: "'Inter', sans-serif" }}
+                          />
+                        </div>
+                        <button
+                          onClick={async () => {
+                            setPasswordError('');
+                            if (!passwordForm.current) { setPasswordError('Enter your current password'); return; }
+                            if (passwordForm.new.length < 8) { setPasswordError('New password must be at least 8 characters'); return; }
+                            if (passwordForm.new !== passwordForm.confirm) { setPasswordError('Passwords do not match'); return; }
+                            setPasswordStatus('saving');
+                            try {
+                              // Verify current password by signing in
+                              const { error: signInError } = await supabase.auth.signInWithPassword({
+                                email: (user?.email as string) || '',
+                                password: passwordForm.current,
+                              });
+                              if (signInError) { setPasswordError('Current password is incorrect'); setPasswordStatus('error'); return; }
+                              // Update to new password
+                              const { error: updateError } = await supabase.auth.updateUser({ password: passwordForm.new });
+                              if (updateError) { setPasswordError(updateError.message); setPasswordStatus('error'); return; }
+                              setPasswordStatus('saved');
+                              setPasswordForm({ current: '', new: '', confirm: '' });
+                              setTimeout(() => setShowPasswordChange(false), 2000);
+                            } catch (err) {
+                              setPasswordError(err instanceof Error ? err.message : 'Failed to update password');
+                              setPasswordStatus('error');
+                            }
+                          }}
+                          disabled={passwordStatus === 'saving'}
+                          style={{
+                            padding: '10px 0', borderRadius: 8, border: 'none',
+                            background: passwordStatus === 'saving' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                            color: '#fff', fontSize: 13, fontWeight: 700, cursor: passwordStatus === 'saving' ? 'default' : 'pointer',
+                            fontFamily: "'Inter', sans-serif", marginTop: 4,
+                          }}
+                        >
+                          {passwordStatus === 'saving' ? 'Updating...' : 'Update Password'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div style={fieldRowStyle}>
               <div>
