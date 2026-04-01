@@ -2633,29 +2633,85 @@ button:active { transform: scale(0.98); }`}</style>
 
             {/* Contact Picker */}
             {!col.contact && showContactPicker === col.id && (
-              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 380, overflow: 'auto' }}>
-                {/* New Conversation */}
+              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 420, overflow: 'auto' }}>
+                {/* Existing Contacts — shown first */}
+                {contacts.length > 0 && (
+                  <>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
+                      letterSpacing: '0.06em', padding: '4px 10px 6px',
+                    }}>
+                      Your Contacts
+                    </div>
+                    {contacts.slice(0, 10).map(c => {
+                      const name = c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+                      const initials = ((c.first_name?.[0] || '') + (c.last_name?.[0] || '')).toUpperCase() || '?';
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            const contact: Contact = {
+                              id: c.id, name, initials,
+                              tag: 'ACTIVE', tagColor: '#22C55E', tagBg: 'rgba(34,197,94,0.1)',
+                              phone: c.phone || '',
+                            };
+                            pickContact(col.id, contact);
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                            padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent',
+                            cursor: 'pointer', fontFamily: "'Inter', sans-serif", textAlign: 'left',
+                            transition: 'background 0.1s',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div style={{
+                            width: 30, height: 30, borderRadius: 15,
+                            background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontSize: 11, fontWeight: 700,
+                          }}>
+                            {initials}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{name}</div>
+                            {c.phone && <div style={{ fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>{c.phone}</div>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
+                  </>
+                )}
+                {/* New Conversation by Phone */}
                 <div style={{
                   fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase',
                   letterSpacing: '0.06em', padding: '4px 10px 6px', marginTop: 2,
                 }}>
-                  New Conversation
+                  New Number
                 </div>
                 <div style={{ padding: '4px 10px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <input
-                    type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={newConvPhone}
-                    onChange={e => setNewConvPhone(e.target.value)}
-                    style={{
-                      width: '100%', padding: '8px 10px', borderRadius: 8,
-                      border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
-                      fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
-                      background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
-                    }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
-                  />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{
+                      fontSize: 15, fontWeight: 700, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace",
+                      padding: '8px 0', flexShrink: 0,
+                    }}>+1</span>
+                    <input
+                      type="tel"
+                      placeholder="(***) ***-****"
+                      value={newConvPhone}
+                      onChange={e => setNewConvPhone(e.target.value)}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 8,
+                        border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
+                        fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
+                        background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
+                      }}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
+                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
+                    />
+                  </div>
                   <input
                     type="text"
                     placeholder="Contact name (optional)"
