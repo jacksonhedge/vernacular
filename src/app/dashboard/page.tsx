@@ -340,6 +340,13 @@ export default function DashboardPage() {
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
+  const [editingGhost, setEditingGhost] = useState<number | null>(null);
+  const [ghostConfig, setGhostConfig] = useState([
+    { name: 'Blinky', color: '#FF0000', role: 'Lead Generator', purpose: 'Finds and qualifies new prospects from inbound leads' },
+    { name: 'Pinky', color: '#FFB8FF', role: 'Tone Specialist', purpose: 'Matches your brand voice perfectly across all messages' },
+    { name: 'Inky', color: '#00FFFF', role: 'Follow-Up Engine', purpose: 'Never lets a conversation go cold — auto-follows up' },
+    { name: 'Clyde', color: '#FFB852', role: 'Support Agent', purpose: 'Handles FAQs, troubleshooting, and common questions' },
+  ]);
   const [stationOverride, setStationOverride] = useState<'auto' | 'dnd' | 'offline'>('auto');
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
@@ -719,7 +726,8 @@ export default function DashboardPage() {
         </div>
         <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 @keyframes ghostBlink { 0% { opacity:1; } 50% { opacity:0.4; filter: brightness(2); } 100% { opacity:1; } }
-@keyframes pacChomp { 0%,100% { d: path("M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 4l6 6-6 6"); } 50% { d: path("M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 8l3 2-3 2"); } }
+@keyframes pacChomp { 0%,100% { clip-path: polygon(100% 0%, 100% 100%, 50% 50%, 0% 100%, 0% 0%); } 50% { clip-path: polygon(100% 0%, 100% 100%, 50% 50%, 0% 60%, 0% 40%); } }
+@keyframes pacChompCircle { 0%,100% { opacity: 1; } 50% { opacity: 0.95; } }
 button:hover { opacity: 0.9; }
 button:active { transform: scale(0.98); }`}</style>
       </div>
@@ -1599,33 +1607,39 @@ button:active { transform: scale(0.98); }`}</style>
                 const last = col.messages[col.messages.length - 1];
                 return last?.isAIDraft;
               }).length;
-              const ghosts = [
-                { name: 'Blinky', color: '#FF0000', role: 'Lead Generator', desc: 'Finds and qualifies new prospects' },
-                { name: 'Pinky', color: '#FFB8FF', role: 'Tone Specialist', desc: 'Matches your brand voice perfectly' },
-                { name: 'Inky', color: '#00FFFF', role: 'Follow-Up Engine', desc: 'Never lets a conversation go cold' },
-                { name: 'Clyde', color: '#FFB852', role: 'Support Agent', desc: 'Handles FAQs and troubleshooting' },
-              ];
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 8px' }}>
-                  {/* Pac-Man */}
-                  <svg width="24" height="24" viewBox="0 0 20 20">
-                    <path d={aiModeEnabled
-                      ? "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 3l7 7-7 7"
-                      : "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 4l6 6-6 6"
-                    } fill="#FFE000" />
-                    <circle cx="8" cy="6" r="1.2" fill="#1a1a1a" />
-                  </svg>
+                  {/* Pac-Man — chomping */}
+                  <div style={{ cursor: 'pointer', transition: 'transform 0.15s' }}
+                    title="Vernacular AI — Your messaging autopilot"
+                    onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
+                    onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    <svg width="26" height="26" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                      <g style={{ animation: 'pacChompCircle 0.4s ease-in-out infinite' }}>
+                        <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                        <circle cx="10" cy="7" r="1.5" fill="#1a1a1a" />
+                        {/* Mouth — animating wedge */}
+                        <path d="M12 12 L24 6 L24 18 Z" fill="#fff">
+                          <animate attributeName="d" values="M12 12 L24 4 L24 20 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 4 L24 20 Z" dur="0.4s" repeatCount="indefinite" />
+                        </path>
+                      </g>
+                    </svg>
+                  </div>
                   {/* Pac-dots between */}
                   <div style={{ display: 'flex', gap: 3, alignItems: 'center', margin: '0 3px' }}>
                     <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
                     <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
                     <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
                   </div>
-                  {/* 4 Ghosts */}
-                  {ghosts.map((ghost, i) => {
+                  {/* 4 Ghosts — clickable to edit */}
+                  {ghostConfig.map((ghost, i) => {
                     const isBlinking = awaitingApproval > i;
                     return (
-                      <div key={i} style={{ position: 'relative', cursor: 'pointer' }} title={`${ghost.name} — ${ghost.role}: ${ghost.desc}`}>
+                      <div key={i} style={{ position: 'relative', cursor: 'pointer' }}
+                        title={`${ghost.name} — ${ghost.role}: ${ghost.purpose}`}
+                        onClick={() => setEditingGhost(i)}
+                      >
                         <svg width="26" height="26" viewBox="0 0 14 16" style={{
                           animation: isBlinking ? 'ghostBlink 0.8s ease-in-out infinite alternate' : 'none',
                           transition: 'transform 0.15s',
@@ -2406,10 +2420,20 @@ button:active { transform: scale(0.98); }`}</style>
                   gridTemplateColumns: 'repeat(7, 1fr)',
                   gap: '6px 8px',
                 }}>
+                  {/* Mini Pac-Man in grid — first cell */}
+                  <div style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                      <circle cx="12" cy="12" r="10" fill="#FFE000" />
+                      <circle cx="10" cy="8" r="1.2" fill="#1a1a2e" />
+                      <path d="M12 12 L23 5 L23 19 Z" fill="#16162a">
+                        <animate attributeName="d" values="M12 12 L23 4 L23 20 Z;M12 12 L23 10 L23 14 Z;M12 12 L23 4 L23 20 Z" dur="0.5s" repeatCount="indefinite" />
+                      </path>
+                    </svg>
+                  </div>
                   {(() => {
                     const filteredCols = columns.filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
-                    // 12 rows x 7 columns = 84 dots (capacity for ~100 contacts)
-                    return Array.from({ length: 84 }).map((_, idx) => {
+                    // 12 rows x 7 columns = 84 dots minus 1 for pac-man = 83
+                    return Array.from({ length: 83 }).map((_, idx) => {
                       const col = filteredCols[idx];
                       if (!col) {
                         return (
@@ -2971,6 +2995,90 @@ button:active { transform: scale(0.98); }`}</style>
         ))}
       </div>
       </div>}
+
+      {/* Ghost Edit Modal */}
+      {editingGhost !== null && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }} onClick={() => setEditingGhost(null)}>
+          <div style={{
+            background: '#1a1a2e', borderRadius: 20, padding: 0, width: 360,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Ghost header */}
+            <div style={{ padding: '24px 24px 16px', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <svg width="48" height="48" viewBox="0 0 14 16" style={{ margin: '0 auto 12px' }}>
+                <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z" fill={ghostConfig[editingGhost].color} />
+                <circle cx="5" cy="7" r="1.5" fill="#fff" />
+                <circle cx="9" cy="7" r="1.5" fill="#fff" />
+                <circle cx={5.5} cy="7" r="0.8" fill="#1a1a2e" />
+                <circle cx={9.5} cy="7" r="0.8" fill="#1a1a2e" />
+              </svg>
+              <input
+                value={ghostConfig[editingGhost].name}
+                onChange={e => setGhostConfig(prev => prev.map((g, i) => i === editingGhost ? { ...g, name: e.target.value } : g))}
+                style={{
+                  width: '80%', padding: '6px', borderRadius: 8, border: 'none',
+                  fontSize: 20, fontWeight: 800, textAlign: 'center', outline: 'none',
+                  color: '#fff', background: 'transparent', fontFamily: "'Inter', sans-serif",
+                }}
+                placeholder="Ghost name"
+              />
+            </div>
+            {/* Fields */}
+            <div style={{ padding: '16px 24px 24px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: ghostConfig[editingGhost].color, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Role</label>
+                <input
+                  value={ghostConfig[editingGhost].role}
+                  onChange={e => setGhostConfig(prev => prev.map((g, i) => i === editingGhost ? { ...g, role: e.target.value } : g))}
+                  placeholder="e.g., Lead Generator, Support Agent"
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 8,
+                    border: `1px solid ${ghostConfig[editingGhost].color}30`,
+                    fontSize: 13, outline: 'none', background: 'rgba(255,255,255,0.05)',
+                    color: '#fff', fontFamily: "'Inter', sans-serif", boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: ghostConfig[editingGhost].color, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Purpose</label>
+                <textarea
+                  value={ghostConfig[editingGhost].purpose}
+                  onChange={e => setGhostConfig(prev => prev.map((g, i) => i === editingGhost ? { ...g, purpose: e.target.value } : g))}
+                  placeholder="Describe what this AI agent does — its goals, personality, and when it should activate..."
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 8,
+                    border: `1px solid ${ghostConfig[editingGhost].color}30`,
+                    fontSize: 13, outline: 'none', background: 'rgba(255,255,255,0.05)',
+                    color: '#fff', fontFamily: "'Inter', sans-serif", resize: 'vertical',
+                    lineHeight: 1.5, boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: ghostConfig[editingGhost].color, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Color</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852', '#22C55E', '#7C3AED', '#3B82F6', '#F59E0B'].map(c => (
+                    <button key={c} onClick={() => setGhostConfig(prev => prev.map((g, i) => i === editingGhost ? { ...g, color: c } : g))} style={{
+                      width: 28, height: 28, borderRadius: 8, border: ghostConfig[editingGhost].color === c ? '2px solid #fff' : '2px solid transparent',
+                      background: c, cursor: 'pointer', transition: 'border 0.15s',
+                    }} />
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => setEditingGhost(null)} style={{
+                width: '100%', padding: '10px', borderRadius: 10, border: 'none',
+                background: `linear-gradient(135deg, ${ghostConfig[editingGhost].color}, ${ghostConfig[editingGhost].color}CC)`,
+                color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Contact Edit Modal — iMessage Contact Card */}
       {editingContact && (
