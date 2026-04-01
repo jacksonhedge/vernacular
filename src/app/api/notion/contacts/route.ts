@@ -70,7 +70,9 @@ export async function GET() {
     return NextResponse.json({ contacts });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch contacts';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Vernacular] /api/notion/contacts error:', msg);
+    // Return empty contacts instead of 500 — dashboard shouldn't break
+    return NextResponse.json({ contacts: [], error: msg });
   }
 }
 
