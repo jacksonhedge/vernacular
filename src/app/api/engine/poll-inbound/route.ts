@@ -54,15 +54,18 @@ export async function GET() {
 
     // Sync each inbound message to Supabase (if not already there)
     let synced = 0;
+    let skipped = 0;
+    let errors = 0;
     for (const msg of inboundMessages) {
       // Check if we already have this Notion page synced
       const { data: existing } = await supabase
         .from('messages')
         .select('id')
+        .not('notion_page_id', 'is', null)
         .eq('notion_page_id', msg.notionId)
         .limit(1);
 
-      if (existing && existing.length > 0) continue; // already synced
+      if (existing && existing.length > 0) { skipped++; continue; }
 
       // Find or create contact
       let contactId: string | null = null;
@@ -123,10 +126,10 @@ export async function GET() {
         convId = newConv?.id || null;
       }
 
-      if (!convId) continue;
+      if (!convId) { console.error(`[poll-inbound] No convId for ${msg.phone}`); errors++; continue; }
 
       // Create message record
-      await supabase.from('messages').insert({
+      const { error: msgErr } = await supabase.from('messages').insert({
         conversation_id: convId,
         direction: 'inbound',
         body: msg.message,
@@ -134,6 +137,7 @@ export async function GET() {
         ai_generated: false,
         notion_page_id: msg.notionId,
       });
+      if (msgErr) { console.error(`[poll-inbound] Insert failed:`, msgErr.message); errors++; continue; }
 
       // Update conversation
       await supabase.from('conversations').update({
@@ -149,6 +153,8 @@ export async function GET() {
       ok: true,
       found: inboundMessages.length,
       synced,
+      skipped,
+      errors,
       messages: inboundMessages.map(m => ({
         phone: m.phone,
         contactName: m.contactName,
