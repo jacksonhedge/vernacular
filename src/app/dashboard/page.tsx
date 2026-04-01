@@ -356,6 +356,21 @@ export default function DashboardPage() {
   const [conversationSearch, setConversationSearch] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
+  const [aiModeEnabled, setAiModeEnabled] = useState(false);
+  const [showAiModePanel, setShowAiModePanel] = useState(false);
+  const [aiModeRules, setAiModeRules] = useState({
+    maxContacts: 1000,
+    responseDelay: '30', // seconds
+    activeHours: 'always' as 'always' | 'business' | 'custom',
+    customStart: '08:00',
+    customEnd: '22:00',
+    tone: 'professional' as 'professional' | 'casual' | 'friendly' | 'formal',
+    systemPrompt: '',
+    autoEscalate: true,
+    escalateKeywords: 'urgent, cancel, refund, complaint, manager',
+    maxRepliesPerConvo: '10',
+    doNotReplyTags: '',
+  });
 
   // Unread notification count
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1455,7 +1470,46 @@ button:active { transform: scale(0.98); }`}</style>
           )}
         </div>
         {conversationViewMode === 'streams' && (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* AI Mode Toggle */}
+            <button onClick={() => {
+              if (!aiModeEnabled) { setShowAiModePanel(true); } else { setAiModeEnabled(false); setShowAiModePanel(false); }
+            }} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: aiModeEnabled
+                ? 'linear-gradient(135deg, #7C3AED, #6D28D9)'
+                : 'rgba(0,0,0,0.06)',
+              color: aiModeEnabled ? '#fff' : '#1c1c1e',
+              fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif",
+              boxShadow: aiModeEnabled ? '0 2px 8px rgba(124,58,237,0.35)' : 'none',
+              transition: 'all 0.2s',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                <path d="M12 12v4" /><circle cx="12" cy="19" r="2" />
+                <path d="M6 8h-2a2 2 0 0 0-2 2v2" /><path d="M18 8h2a2 2 0 0 1 2 2v2" />
+              </svg>
+              AI Mode {aiModeEnabled ? 'ON' : 'OFF'}
+              {aiModeEnabled && (
+                <div style={{
+                  width: 6, height: 6, borderRadius: 3, background: '#22C55E',
+                  boxShadow: '0 0 6px rgba(34,197,94,0.6)',
+                }} />
+              )}
+            </button>
+            {aiModeEnabled && (
+              <button onClick={() => setShowAiModePanel(!showAiModePanel)} style={{
+                padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: showAiModePanel ? 'rgba(124,58,237,0.1)' : 'rgba(0,0,0,0.04)',
+                color: '#7C3AED', fontSize: 11, fontWeight: 600,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              </button>
+            )}
+            <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.08)' }} />
             <button onClick={loadAllNotionConversations} disabled={loadingNotion} style={{
               ...primaryBtnStyle,
               background: loadingNotion ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.06)',
@@ -1490,6 +1544,165 @@ button:active { transform: scale(0.98); }`}</style>
           </button>
         )}
       </div>
+
+      {/* AI Mode Rules Panel */}
+      {showAiModePanel && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', borderBottom: '2px solid rgba(124,58,237,0.15)',
+          padding: '16px 24px', overflow: 'auto', maxHeight: 320,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 14,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                  <path d="M12 12v4" /><circle cx="12" cy="19" r="2" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>AI Mode Rules</div>
+                <div style={{ fontSize: 11, color: '#8e8e93' }}>Configure autonomous responses &middot; Up to 1,000 contacts</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!aiModeEnabled && (
+                <button onClick={() => { setAiModeEnabled(true); }} style={{
+                  padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+                  color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif",
+                  boxShadow: '0 2px 8px rgba(124,58,237,0.35)',
+                }}>
+                  Activate AI Mode
+                </button>
+              )}
+              <button onClick={() => setShowAiModePanel(false)} style={{
+                padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                background: '#fff', cursor: 'pointer', color: '#8e8e93', fontSize: 14,
+              }}>x</button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            {/* Tone */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Tone</label>
+              <select value={aiModeRules.tone} onChange={e => setAiModeRules(p => ({ ...p, tone: e.target.value as typeof p.tone }))} style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box' as const,
+              }}>
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="friendly">Friendly</option>
+                <option value="formal">Formal</option>
+              </select>
+            </div>
+            {/* Response Delay */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Response Delay</label>
+              <select value={aiModeRules.responseDelay} onChange={e => setAiModeRules(p => ({ ...p, responseDelay: e.target.value }))} style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box' as const,
+              }}>
+                <option value="0">Instant</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="120">2 minutes</option>
+                <option value="300">5 minutes</option>
+              </select>
+            </div>
+            {/* Active Hours */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Active Hours</label>
+              <select value={aiModeRules.activeHours} onChange={e => setAiModeRules(p => ({ ...p, activeHours: e.target.value as typeof p.activeHours }))} style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box' as const,
+              }}>
+                <option value="always">24/7</option>
+                <option value="business">Business Hours (9-5)</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            {/* Max Replies */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Max Replies / Convo</label>
+              <input value={aiModeRules.maxRepliesPerConvo} onChange={e => setAiModeRules(p => ({ ...p, maxRepliesPerConvo: e.target.value }))} type="number" style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'JetBrains Mono', monospace",
+                boxSizing: 'border-box' as const,
+              }} />
+            </div>
+            {/* Max Contacts */}
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Max Contacts</label>
+              <input value={aiModeRules.maxContacts} onChange={e => setAiModeRules(p => ({ ...p, maxContacts: Number(e.target.value) }))} type="number" style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'JetBrains Mono', monospace",
+                boxSizing: 'border-box' as const,
+              }} />
+            </div>
+            {/* Auto-Escalate */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 18 }}>
+              <button onClick={() => setAiModeRules(p => ({ ...p, autoEscalate: !p.autoEscalate }))} style={{
+                width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', padding: 0,
+                background: aiModeRules.autoEscalate ? '#7C3AED' : 'rgba(0,0,0,0.12)',
+                position: 'relative', transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: 8, background: '#fff',
+                  position: 'absolute', top: 2,
+                  left: aiModeRules.autoEscalate ? 18 : 2,
+                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                }} />
+              </button>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#1c1c1e' }}>Auto-Escalate</span>
+            </div>
+          </div>
+
+          {/* System Prompt */}
+          <div style={{ marginTop: 12 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>System Prompt</label>
+            <textarea
+              value={aiModeRules.systemPrompt}
+              onChange={e => setAiModeRules(p => ({ ...p, systemPrompt: e.target.value }))}
+              placeholder="You are a helpful assistant for FraternityBase. Answer questions about our platform, help with onboarding, and schedule demo calls when appropriate..."
+              rows={2}
+              style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                resize: 'vertical' as const, lineHeight: 1.5, boxSizing: 'border-box' as const,
+              }}
+            />
+          </div>
+
+          {/* Escalation Keywords + Do Not Reply */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Escalation Keywords</label>
+              <input value={aiModeRules.escalateKeywords} onChange={e => setAiModeRules(p => ({ ...p, escalateKeywords: e.target.value }))} placeholder="urgent, cancel, refund..." style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box' as const,
+              }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Do Not Reply (tags)</label>
+              <input value={aiModeRules.doNotReplyTags} onChange={e => setAiModeRules(p => ({ ...p, doNotReplyTags: e.target.value }))} placeholder="opted-out, competitor, internal..." style={{
+                width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)',
+                fontSize: 12, outline: 'none', background: '#fff', fontFamily: "'Inter', sans-serif",
+                boxSizing: 'border-box' as const,
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary View */}
       {conversationViewMode === 'summary' && (
@@ -1985,6 +2198,16 @@ button:active { transform: scale(0.98); }`}</style>
               }} title="AI Agent">🤖</button>
               {columns
                 .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+                .sort((a, b) => {
+                  // Sort by priority: unread first, then AI drafts, then read
+                  const getPriority = (col: ConversationColumn) => {
+                    const last = col.messages[col.messages.length - 1];
+                    if (last?.direction === 'incoming' && !last?.isAIDraft) return 0; // unread
+                    if (last?.isAIDraft) return 1; // AI draft
+                    return 2; // read
+                  };
+                  return getPriority(a) - getPriority(b);
+                })
                 .map(col => {
                   const lastMsg = col.messages[col.messages.length - 1] || null;
                   const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
@@ -2040,8 +2263,8 @@ button:active { transform: scale(0.98); }`}</style>
                 }}>
                   {(() => {
                     const filteredCols = columns.filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
-                    const totalDots = Math.max(filteredCols.length, 14) + (14 - (filteredCols.length % 7 || 7));
-                    return Array.from({ length: Math.min(totalDots, 98) }).map((_, idx) => {
+                    // 12 rows x 7 columns = 84 dots (capacity for ~100 contacts)
+                    return Array.from({ length: 84 }).map((_, idx) => {
                       const col = filteredCols[idx];
                       if (!col) {
                         return (
