@@ -63,9 +63,16 @@ export async function POST(request: Request) {
 
     // 2. Find or create contact in Supabase
     let contactId: string | null = null;
+    // Normalize: try raw, digits-only, +1 prefix, and formatted variants
+    const n10 = normalized.length === 11 && normalized.startsWith('1') ? normalized.slice(1) : normalized;
+    const formatted = n10.length === 10 ? `(${n10.slice(0,3)}) ${n10.slice(3,6)}-${n10.slice(6)}` : '';
+    const searchVariants = [
+      phoneNumber, normalized, `+1${n10}`, `+1 ${formatted}`,
+      formatted, `1${n10}`, `+${normalized}`,
+    ].filter(Boolean);
     const { data: existingContacts } = await supabase
       .from('contacts').select('id, full_name')
-      .or(`phone.eq.${phoneNumber},phone.eq.${normalized},phone.eq.+1${normalized}`)
+      .or(searchVariants.map(v => `phone.eq.${v}`).join(','))
       .limit(1);
 
     if (existingContacts && existingContacts.length > 0) {
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
       const { data: newContact } = await supabase
         .from('contacts')
         .insert({
-          phone: phoneNumber,
+          phone: formatted || phoneNumber,
           full_name: contactName || null,
           source: 'conversation',
           import_source: 'conversation',
