@@ -718,6 +718,8 @@ export default function DashboardPage() {
           <p style={{ color: '#8e8e93', fontSize: 15, fontWeight: 500 }}>Loading workspace...</p>
         </div>
         <style>{`@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+@keyframes ghostBlink { 0% { opacity:1; } 50% { opacity:0.4; filter: brightness(2); } 100% { opacity:1; } }
+@keyframes pacChomp { 0%,100% { d: path("M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 4l6 6-6 6"); } 50% { d: path("M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 8l3 2-3 2"); } }
 button:hover { opacity: 0.9; }
 button:active { transform: scale(0.98); }`}</style>
       </div>
@@ -1591,6 +1593,50 @@ button:active { transform: scale(0.98); }`}</style>
                 </svg>
               </button>
             )}
+            {/* Pac-Man + Ghosts */}
+            {(() => {
+              const awaitingApproval = columns.filter(col => {
+                const last = col.messages[col.messages.length - 1];
+                return last?.isAIDraft;
+              }).length;
+              const ghostColors = ['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852']; // Blinky, Pinky, Inky, Clyde
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '0 8px' }}>
+                  {/* Pac-Man */}
+                  <svg width="20" height="20" viewBox="0 0 20 20" style={{ animation: aiModeEnabled ? 'none' : 'none' }}>
+                    <path d={aiModeEnabled
+                      ? "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 3l7 7-7 7"
+                      : "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 4l6 6-6 6"
+                    } fill="#FFE000" />
+                    <circle cx="8" cy="6" r="1.2" fill="#1a1a1a" />
+                  </svg>
+                  {/* Pac-dots between */}
+                  <div style={{ display: 'flex', gap: 3, alignItems: 'center', margin: '0 2px' }}>
+                    <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#FFE000' }} />
+                    <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#FFE000' }} />
+                  </div>
+                  {/* 4 Ghosts */}
+                  {ghostColors.map((color, i) => {
+                    const isBlinking = awaitingApproval > i;
+                    return (
+                      <svg key={i} width="18" height="18" viewBox="0 0 14 16" style={{
+                        animation: isBlinking ? 'ghostBlink 0.8s ease-in-out infinite alternate' : 'none',
+                      }}>
+                        <path d={`M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z`}
+                          fill={isBlinking ? '#2222FF' : color}
+                          stroke={isBlinking ? '#fff' : 'none'}
+                          strokeWidth={isBlinking ? 0.5 : 0}
+                        />
+                        <circle cx="5" cy="7" r="1.5" fill="#fff" />
+                        <circle cx="9" cy="7" r="1.5" fill="#fff" />
+                        <circle cx={5.5} cy="7" r="0.8" fill="#1a1a2e" />
+                        <circle cx={9.5} cy="7" r="0.8" fill="#1a1a2e" />
+                      </svg>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.08)' }} />
             <button onClick={loadAllNotionConversations} disabled={loadingNotion} style={{
               ...primaryBtnStyle,
@@ -2308,7 +2354,12 @@ button:active { transform: scale(0.98); }`}</style>
                       position: 'relative', transition: 'all 0.2s', flexShrink: 0,
                       color: '#fff', fontSize: 12, fontWeight: 700,
                     }} title={col.contact?.name || ''}>
-                      {col.contact?.initials || '##'}
+                      {/* Pac-Man fruits for contact icons */}
+                      {(() => {
+                        const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                        const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                        return <span style={{ fontSize: 16 }}>{fruits[idx % fruits.length]}</span>;
+                      })()}
                       {hasUnread && (
                         <div style={{
                           position: 'absolute', top: -2, right: -2,
@@ -2324,15 +2375,15 @@ button:active { transform: scale(0.98); }`}</style>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {/* Dot Grid */}
               <div style={{ background: '#16162a', padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {/* Legend */}
+                {/* Legend — Pac-Man style */}
                 <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
                   {[
-                    { label: 'Reply', color: '#22C55E' },
-                    { label: 'Draft', color: '#F59E0B' },
-                    { label: 'Read', color: 'rgba(255,255,255,0.7)' },
+                    { label: 'Power', color: '#FFE000' },
+                    { label: 'Draft', color: '#FFB8FF' },
+                    { label: 'Dot', color: '#FFE000', small: true },
                   ].map(l => (
                     <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: 3, background: l.color }} />
+                      <div style={{ width: l.small ? 4 : 6, height: l.small ? 4 : 6, borderRadius: '50%', background: l.color }} />
                       <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{l.label}</span>
                     </div>
                   ))}
@@ -2353,15 +2404,16 @@ button:active { transform: scale(0.98); }`}</style>
                           <div key={idx} style={{
                             width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            <div style={{ width: 3, height: 3, borderRadius: 1.5, background: 'rgba(255,255,255,0.1)' }} />
+                            <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,224,0,0.2)' }} />
                           </div>
                         );
                       }
                       const lastMsg = col.messages[col.messages.length - 1] || null;
                       const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
                       const hasAiDraft = lastMsg?.isAIDraft;
-                      const dotColor = hasUnread ? '#22C55E' : hasAiDraft ? '#F59E0B' : 'rgba(255,255,255,0.7)';
-                      const dotSize = hasUnread ? 8 : hasAiDraft ? 7 : 5;
+                      // Pac-Man dots: power pellet (big yellow) for unread, pink for draft, small yellow for read
+                      const dotColor = hasUnread ? '#FFE000' : hasAiDraft ? '#FFB8FF' : '#FFE000';
+                      const dotSize = hasUnread ? 9 : hasAiDraft ? 7 : 4;
                       const isSelected = selectedConversationId === col.id;
                       return (
                         <button key={idx} onClick={() => {
