@@ -341,6 +341,48 @@ export default function DashboardPage() {
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
   const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Sound effects using Web Audio API
+  const playSound = (type: 'send' | 'receive' | 'click') => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'send') {
+        // iMessage "swoosh" — ascending tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.15);
+      } else if (type === 'receive') {
+        // iMessage "tri-tone" incoming
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1046, ctx.currentTime);       // C6
+        osc.frequency.setValueAtTime(1318, ctx.currentTime + 0.1); // E6
+        osc.frequency.setValueAtTime(1568, ctx.currentTime + 0.2); // G6
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+      } else {
+        // Soft click
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(600, ctx.currentTime);
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+      }
+    } catch { /* Web Audio not supported */ }
+  };
   const [editingGhost, setEditingGhost] = useState<number | null>(null);
   const [ghostConfig, setGhostConfig] = useState([
     { name: 'Blinky', color: '#FF0000', role: 'Lead Generator', purpose: 'Finds and qualifies new prospects from inbound leads' },
@@ -821,6 +863,7 @@ button:active { transform: scale(0.98); }`}</style>
     const contactName = col?.contact?.name;
     const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
 
+    playSound('send');
     console.log(`[Vernacular] 📤 Sending message...`);
     console.log(`[Vernacular]   Column: ${colId}`);
     console.log(`[Vernacular]   To: ${contactName || 'Unknown'} (${contactPhone || 'NO PHONE'})`);
@@ -2583,6 +2626,7 @@ button:active { transform: scale(0.98); }`}</style>
                       : 'transparent';
                 return (
                   <button key={col.id} onClick={() => {
+                    playSound('click');
                     setSelectedConversationId(col.id);
                     setReadConversations(prev => new Set(prev).add(col.id));
                     const el = document.getElementById(`stream-col-${col.id}`);
@@ -6748,6 +6792,23 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             </div>
           )}
+          {/* Sound Toggle */}
+          <button onClick={() => { setSoundEnabled(!soundEnabled); playSound('click'); }} style={{
+            width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
+            background: soundEnabled ? 'rgba(55,138,221,0.15)' : 'rgba(255,255,255,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'all 0.15s',
+          }} title={soundEnabled ? 'Sound ON — click to mute' : 'Sound OFF — click to unmute'}>
+            {soundEnabled ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Phone Line Status */}
