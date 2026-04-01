@@ -2413,12 +2413,7 @@ button:active { transform: scale(0.98); }`}</style>
                         position: 'relative', transition: 'all 0.2s', flexShrink: 0,
                         color: '#fff', fontSize: 12, fontWeight: 700, gap: 0, padding: 0,
                       }} title={`${col.contact?.name || 'Unknown'} — ${col.contact?.phone || ''}`}>
-                        <span style={{ fontSize: 14, lineHeight: 1 }}>{fruits[fruitIdx % fruits.length]}</span>
-                        {col.contact?.phone && (
-                          <span style={{ fontSize: 6, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginTop: 1 }}>
-                            {col.contact.phone.replace(/.*(\d{4})$/, '•$1')}
-                          </span>
-                        )}
+                        <span style={{ fontSize: 18, lineHeight: 1 }}>{fruits[fruitIdx % fruits.length]}</span>
                         {hasUnread && (
                           <div style={{
                             position: 'absolute', top: -2, right: -2,
@@ -2555,13 +2550,8 @@ button:active { transform: scale(0.98); }`}</style>
                       {(() => {
                         const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
                         const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
-                        return <span style={{ fontSize: 16, lineHeight: 1 }}>{fruits[Math.max(0, idx) % fruits.length]}</span>;
+                        return <span style={{ fontSize: 20, lineHeight: 1 }}>{fruits[Math.max(0, idx) % fruits.length]}</span>;
                       })()}
-                      {col.contact?.phone && (
-                        <span style={{ fontSize: 7, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginTop: 1 }}>
-                          {col.contact.phone.replace(/.*(\d{4})$/, '•$1')}
-                        </span>
-                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
@@ -2653,15 +2643,19 @@ button:active { transform: scale(0.98); }`}</style>
                   <div
                     onClick={() => (() => { const n = col.contact!.name.split(' '); setEditingContact({ colId: col.id, firstName: n[0] || '', lastName: n.slice(1).join(' ') || '', name: col.contact!.name, phone: col.contact!.phone || '', email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
                     style={{
-                      width: 34, height: 34, borderRadius: 17,
-                      background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      width: 34, height: 34, borderRadius: 10,
+                      background: 'rgba(0,0,0,0.04)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em',
+                      fontSize: 20, flexShrink: 0,
                       cursor: 'pointer',
                     }}
                     title="Edit contact info"
                   >
-                    {col.contact.initials}
+                    {(() => {
+                      const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                      const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                      return fruits[Math.max(0, idx) % fruits.length];
+                    })()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
