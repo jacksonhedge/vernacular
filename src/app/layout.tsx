@@ -3,8 +3,8 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Vernacular — Make all messages iMessages",
-  description: "Make all messages iMessages",
+  title: "Vernacular — Business outreach in Blue iMessage",
+  description: "Business outreach in Blue iMessage",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
   metadataBase: new URL("https://vernacular.chat"),
   openGraph: {
-    title: "Vernacular — Make all messages iMessages",
-    description: "Make all messages iMessages",
+    title: "Vernacular — Business outreach in Blue iMessage",
+    description: "Business outreach in Blue iMessage",
     url: "https://vernacular.chat",
     siteName: "Vernacular",
     images: [
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
         url: "https://vernacular.chat/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Vernacular — Make all messages iMessages",
+        alt: "Vernacular — Business outreach in Blue iMessage",
         type: "image/png",
       },
     ],
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vernacular — Make all messages iMessages",
-    description: "Make all messages iMessages",
+    title: "Vernacular — Business outreach in Blue iMessage",
+    description: "Business outreach in Blue iMessage",
     images: ["https://vernacular.chat/og-image.png"],
   },
 };
