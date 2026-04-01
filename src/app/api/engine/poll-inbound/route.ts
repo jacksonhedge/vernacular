@@ -1,29 +1,37 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { Client } from '@notionhq/client';
 import { formatPhone, phoneOrFilter } from '@/lib/phone';
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
 const MESSAGE_QUEUE_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
 
 // GET /api/engine/poll-inbound — Check Notion Message Queue for new inbound messages
-// Called by the dashboard polling loop every 30 seconds
 export async function GET() {
   try {
-    const notion = new Client({ auth: NOTION_TOKEN });
     const supabase = createServiceClient();
 
-    // Query Notion for recent Inbound messages
-    const response = await notion.dataSources.query({
-      data_source_id: MESSAGE_QUEUE_DB,
-      filter: {
-        and: [
-          { property: 'Direction', select: { equals: 'Inbound' } },
-        ],
+    // Query Notion REST API directly (SDK v5 dataSources.query has issues)
+    const notionRes = await fetch(`https://api.notion.com/v1/databases/${MESSAGE_QUEUE_DB}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
       },
-      sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-      page_size: 20,
+      body: JSON.stringify({
+        filter: { property: 'Direction', select: { equals: 'Inbound' } },
+        sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+        page_size: 20,
+      }),
     });
+
+    if (!notionRes.ok) {
+      const errData = await notionRes.json();
+      console.error('[poll-inbound] Notion API error:', errData);
+      return NextResponse.json({ ok: false, error: errData.message || 'Notion query failed' }, { status: 500 });
+    }
+
+    const response = await notionRes.json();
 
     const inboundMessages: Array<{
       notionId: string;
