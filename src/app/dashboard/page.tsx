@@ -339,6 +339,8 @@ export default function DashboardPage() {
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [passwordError, setPasswordError] = useState('');
+  const [showStationMenu, setShowStationMenu] = useState(false);
+  const [stationOverride, setStationOverride] = useState<'auto' | 'dnd' | 'offline'>('auto');
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [testMessageText, setTestMessageText] = useState('Hey! This is a test from Vernacular. 💬');
   const [testSendStatus, setTestSendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -889,7 +891,10 @@ button:active { transform: scale(0.98); }`}</style>
   };
 
   // Derive station status from heartbeat — don't trust the DB status field alone
-  const getStationStatus = (station: Station): 'online' | 'idle' | 'offline' => {
+  const getStationStatus = (station: Station): 'online' | 'idle' | 'dnd' | 'offline' => {
+    // Manual overrides take priority
+    if (stationOverride === 'offline') return 'offline';
+    if (stationOverride === 'dnd') return 'dnd';
     if (!station.last_heartbeat) return 'offline';
     if (station.phone_number === 'TBD') return 'offline';
     const d = new Date(station.last_heartbeat);
@@ -903,16 +908,17 @@ button:active { transform: scale(0.98); }`}</style>
 
   const getStationDotColor = (station: Station) => {
     const s = getStationStatus(station);
-    return s === 'online' ? '#22C55E' : s === 'idle' ? '#F59E0B' : '#EF4444';
+    return s === 'online' ? '#22C55E' : s === 'dnd' ? '#7C3AED' : s === 'idle' ? '#F59E0B' : '#EF4444';
   };
 
   const getStationDotShadow = (station: Station) => {
-    return getStationStatus(station) === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : 'none';
+    const s = getStationStatus(station);
+    return s === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : s === 'dnd' ? '0 0 6px rgba(124,58,237,0.4)' : 'none';
   };
 
   const getStationLabel = (station: Station) => {
     const s = getStationStatus(station);
-    return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline';
+    return s === 'online' ? 'Online' : s === 'dnd' ? 'Do Not Disturb' : s === 'idle' ? 'Idle' : 'Offline';
   };
 
   // Settings save
@@ -5297,11 +5303,13 @@ button:active { transform: scale(0.98); }`}</style>
   const renderStations = () => {
     const getStatusColor = (status: string) => {
       if (status === 'online') return '#22C55E';
+      if (status === 'dnd') return '#7C3AED';
       if (status === 'idle' || status === 'syncing') return '#F59E0B';
       return '#EF4444';
     };
     const getStatusLabelText = (status: string) => {
       if (status === 'online') return 'ONLINE';
+      if (status === 'dnd') return 'DO NOT DISTURB';
       if (status === 'idle') return 'IDLE';
       if (status === 'syncing') return 'SYNCING';
       return 'OFFLINE';
@@ -6397,49 +6405,86 @@ button:active { transform: scale(0.98); }`}</style>
         {(() => {
           const primaryStation = stations.find(s => s.phone_number && s.phone_number !== 'TBD') || stations[0];
           if (!primaryStation) return null;
-          const lastBeatTime = primaryStation.last_heartbeat ? new Date(primaryStation.last_heartbeat).getTime() : 0;
-          const minutesSinceHeartbeat = lastBeatTime ? (Date.now() - lastBeatTime) / 60000 : Infinity;
-          // Online = status is 'online' OR heartbeat within 2 minutes (Cowork pings every ~60s)
-          const isOnline = primaryStation.status === 'online' || minutesSinceHeartbeat < 2;
-          // Active = heartbeat within 10 minutes (Cowork may be between pings)
-          const isActive = !isOnline && minutesSinceHeartbeat < 10;
-          const statusColor = isOnline ? '#22C55E' : isActive ? '#3B82F6' : '#EF4444';
-          const statusLabel = isOnline ? 'Online' : isActive ? 'Active' : 'Offline';
+          const derivedStatus = getStationStatus(primaryStation);
+          const statusColor = getStationDotColor(primaryStation);
+          const statusLabel = getStationLabel(primaryStation);
           return (
-            <div
-              onClick={() => setActiveTab('stations')}
-              style={{
-                padding: sidebarCollapsed ? '12px 0' : '12px 18px',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: statusColor,
-                    boxShadow: isOnline ? '0 0 8px rgba(34,197,94,0.5)' : 'none',
-                    animation: isOnline ? 'pulse 2s ease infinite' : 'none',
-                    flexShrink: 0,
-                  }} />
+            <div style={{ position: 'relative', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <button
+                onClick={() => setShowStationMenu(!showStationMenu)}
+                style={{
+                  width: '100%', border: 'none', background: 'none', cursor: 'pointer',
+                  padding: sidebarCollapsed ? '12px 0' : '12px 18px',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: statusColor,
+                      boxShadow: derivedStatus === 'online' ? '0 0 8px rgba(34,197,94,0.5)' : derivedStatus === 'dnd' ? '0 0 8px rgba(124,58,237,0.5)' : 'none',
+                      flexShrink: 0,
+                    }} />
+                    {!sidebarCollapsed && (
+                      <span style={{
+                        fontSize: 13, fontWeight: 700, color: '#378ADD',
+                        fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
+                      }}>
+                        {primaryStation.phone_number}
+                      </span>
+                    )}
+                    {!sidebarCollapsed && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" style={{ marginLeft: 'auto' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    )}
+                  </div>
                   {!sidebarCollapsed && (
-                    <span style={{
-                      fontSize: 13, fontWeight: 700, color: '#378ADD',
-                      fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em',
-                    }}>
-                      {primaryStation.phone_number}
-                    </span>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
+                      {statusLabel}
+                    </div>
                   )}
                 </div>
-                {!sidebarCollapsed && (
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3, marginLeft: 16 }}>
-                    {statusLabel}
-                  </div>
-                )}
-              </div>
+              </button>
+              {/* Status dropdown menu */}
+              {showStationMenu && !sidebarCollapsed && (
+                <div style={{
+                  position: 'absolute', left: 12, right: 12, top: '100%', zIndex: 100,
+                  background: '#1e1e3a', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden',
+                }}>
+                  {[
+                    { key: 'auto' as const, label: 'Online', desc: 'Auto-detect from heartbeat', color: '#22C55E', icon: '●' },
+                    { key: 'dnd' as const, label: 'Do Not Disturb', desc: 'Silence notifications, pause AI', color: '#7C3AED', icon: '🌙' },
+                    { key: 'offline' as const, label: 'Offline', desc: 'Stop sending & receiving', color: '#EF4444', icon: '⏸' },
+                  ].map(opt => (
+                    <button key={opt.key} onClick={() => { setStationOverride(opt.key); setShowStationMenu(false); }} style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '10px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                      background: stationOverride === opt.key ? 'rgba(55,138,221,0.1)' : 'transparent',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      transition: 'background 0.15s',
+                    }}
+                      onMouseEnter={e => { if (stationOverride !== opt.key) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseLeave={e => { if (stationOverride !== opt.key) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <div style={{
+                        width: 8, height: 8, borderRadius: 4, background: opt.color, flexShrink: 0,
+                        boxShadow: `0 0 6px ${opt.color}40`,
+                      }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{opt.label}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{opt.desc}</div>
+                      </div>
+                      {stationOverride === opt.key && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })()}
