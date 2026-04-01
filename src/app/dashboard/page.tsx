@@ -852,11 +852,25 @@ button:active { transform: scale(0.98); }`}</style>
         console.log(`[Vernacular]   → Station: ${data.stationName || 'N/A'} (${data.stationPhone || 'N/A'})`);
         console.log(`[Vernacular]   → Message ID: ${data.messageId || 'N/A'}`);
         console.log(`[Vernacular]   → Conversation ID: ${data.conversationId || 'N/A'}`);
+        // Update message ID to mark as delivered (removes "Delivering..." state)
+        setColumns(prev => prev.map(c => c.id === colId ? {
+          ...c,
+          messages: c.messages.map(m => m.id === msg.id ? { ...m, id: data.messageId || `sent-${Date.now()}` } : m),
+        } : c));
       } else {
         console.error(`[Vernacular] ❌ Send failed (${res.status}):`, data.error || data);
+        // Mark as failed — update message to show error
+        setColumns(prev => prev.map(c => c.id === colId ? {
+          ...c,
+          messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}` } : m),
+        } : c));
       }
     } catch (err) {
       console.error(`[Vernacular] ❌ Network error sending message:`, err);
+      setColumns(prev => prev.map(c => c.id === colId ? {
+        ...c,
+        messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}` } : m),
+      } : c));
     }
   };
 
