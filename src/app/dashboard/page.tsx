@@ -2960,8 +2960,8 @@ button:active { transform: scale(0.98); }`}</style>
                         : msg.direction === 'outgoing' ? '#378ADD' : '#fff',
                       color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
                       fontSize: 13, lineHeight: 1.5, fontWeight: 400,
-                      border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : (isLastOutgoing && isRecent) ? '2px solid rgba(124,58,237,0.5)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                      boxShadow: (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
                     }}>
                       {msg.isAIDraft && (
                         <div style={{
@@ -2981,7 +2981,14 @@ button:active { transform: scale(0.98); }`}</style>
                         <span style={{ fontSize: 10, color: '#8e8e93' }}>{msg.timestamp}</span>
                       )}
                       {isLastOutgoing && (
-                        <span style={{ fontSize: 10, color: '#8e8e93' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isRecent ? '#7C3AED' : '#8e8e93' }}>
+                          {isRecent && (
+                            <svg width="14" height="14" viewBox="0 0 14 16" style={{ animation: 'ghostBlink 0.6s ease-in-out infinite alternate' }}>
+                              <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z" fill="#7C3AED" />
+                              <circle cx="5" cy="7" r="1.2" fill="#fff" /><circle cx="9" cy="7" r="1.2" fill="#fff" />
+                              <circle cx="5.4" cy="7" r="0.6" fill="#1a1a2e" /><circle cx="9.4" cy="7" r="0.6" fill="#1a1a2e" />
+                            </svg>
+                          )}
                           {isRecent ? 'Delivering...' : 'Delivered'}
                         </span>
                       )}
