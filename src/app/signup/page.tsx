@@ -3,13 +3,17 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Step = 'info' | 'verify' | 'test';
+type Step = 'info' | 'verify' | 'test' | 'number';
 
 export default function SignupPage() {
   const [step, setStep] = useState<Step>('info');
   const [testPhone, setTestPhone] = useState('');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; stationPhone?: string; message?: string; note?: string; error?: string } | null>(null);
+  const [numberChoice, setNumberChoice] = useState<'new' | 'bring' | null>(null);
+  const [areaCode, setAreaCode] = useState('');
+  const [existingNumber, setExistingNumber] = useState('');
+  const [numberSubmitted, setNumberSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusField, setFocusField] = useState('');
@@ -414,11 +418,202 @@ export default function SignupPage() {
               {testSending ? 'Sending...' : 'Send Test iMessage'}
             </button>
 
+            <button onClick={() => setStep('number')} style={{
+              width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+              background: 'transparent', color: '#8e8e93', cursor: 'pointer',
+              fontSize: 14, fontWeight: 500,
+            }}>Next: Set Up Your Number &rarr;</button>
+          </div>
+        )}
+
+        {/* Step 4: Choose your number */}
+        {step === 'number' && (
+          <div style={{
+            background: '#fff', borderRadius: 24,
+            border: '1px solid rgba(0,0,0,0.06)',
+            padding: '40px 36px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
+          }}>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1c1c1e', marginBottom: 4, letterSpacing: '-0.02em' }}>
+              Set up your Vernacular number
+            </h2>
+            <p style={{ fontSize: 14, color: '#8e8e93', marginBottom: 28, lineHeight: 1.5 }}>
+              Every seat gets a dedicated iMessage number. Choose how you&apos;d like to get started.
+            </p>
+
+            {!numberSubmitted ? (
+              <>
+                {/* Option cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                  {/* Get a new number */}
+                  <button onClick={() => setNumberChoice('new')} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px',
+                    borderRadius: 16, cursor: 'pointer', textAlign: 'left',
+                    border: numberChoice === 'new' ? '2px solid #378ADD' : '1.5px solid rgba(0,0,0,0.08)',
+                    background: numberChoice === 'new' ? 'rgba(55,138,221,0.04)' : '#fff',
+                    transition: 'all 0.2s',
+                  }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                      background: numberChoice === 'new' ? 'linear-gradient(135deg, #378ADD, #2B6CB0)' : 'rgba(0,0,0,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 20, transition: 'all 0.2s',
+                    }}>
+                      {numberChoice === 'new' ? '📱' : '📱'}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 2 }}>Get a new number</div>
+                      <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                        We&apos;ll provision a fresh iMessage number for your business. Pick your area code.
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Bring your own */}
+                  <button onClick={() => setNumberChoice('bring')} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 14, padding: '18px 20px',
+                    borderRadius: 16, cursor: 'pointer', textAlign: 'left',
+                    border: numberChoice === 'bring' ? '2px solid #378ADD' : '1.5px solid rgba(0,0,0,0.08)',
+                    background: numberChoice === 'bring' ? 'rgba(55,138,221,0.04)' : '#fff',
+                    transition: 'all 0.2s',
+                  }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                      background: numberChoice === 'bring' ? 'linear-gradient(135deg, #378ADD, #2B6CB0)' : 'rgba(0,0,0,0.04)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 20, transition: 'all 0.2s',
+                    }}>
+                      {numberChoice === 'bring' ? '🔄' : '🔄'}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 2 }}>Bring your own number</div>
+                      <div style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                        Already have an iMessage-enabled number on a Mac? Connect it to Vernacular.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* New number: area code picker */}
+                {numberChoice === 'new' && (
+                  <div style={{
+                    padding: '20px', borderRadius: 14,
+                    background: 'linear-gradient(135deg, #EBF5FF, #E0EDFF)',
+                    border: '1px solid rgba(55,138,221,0.15)', marginBottom: 20,
+                  }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 8 }}>
+                      Preferred area code
+                    </label>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <input
+                        type="tel" placeholder="412" maxLength={3}
+                        value={areaCode}
+                        onChange={e => setAreaCode(e.target.value.replace(/\D/g, ''))}
+                        style={{
+                          width: 100, padding: '12px 16px', borderRadius: 12,
+                          border: '1.5px solid rgba(55,138,221,0.2)', background: '#fff',
+                          fontSize: 22, fontWeight: 700, color: '#1c1c1e', outline: 'none',
+                          fontFamily: "'JetBrains Mono', monospace", textAlign: 'center',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: '#8e8e93', lineHeight: 1.4 }}>
+                          We&apos;ll find an available number with this area code and get back to you within 24 hours.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bring your own: enter number */}
+                {numberChoice === 'bring' && (
+                  <div style={{
+                    padding: '20px', borderRadius: 14,
+                    background: 'linear-gradient(135deg, #EBF5FF, #E0EDFF)',
+                    border: '1px solid rgba(55,138,221,0.15)', marginBottom: 20,
+                  }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 8 }}>
+                      Your iMessage phone number
+                    </label>
+                    <input
+                      type="tel" placeholder="(555) 123-4567"
+                      value={existingNumber}
+                      onChange={e => setExistingNumber(e.target.value)}
+                      style={{
+                        width: '100%', padding: '12px 16px', borderRadius: 12,
+                        border: '1.5px solid rgba(55,138,221,0.2)', background: '#fff',
+                        fontSize: 16, fontWeight: 600, color: '#1c1c1e', outline: 'none',
+                        fontFamily: "'JetBrains Mono', monospace", textAlign: 'center',
+                        boxSizing: 'border-box', marginBottom: 8,
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: '#8e8e93', lineHeight: 1.4 }}>
+                      This must be an iMessage-enabled number on a Mac you control. We&apos;ll walk you through connecting it.
+                    </span>
+                  </div>
+                )}
+
+                {/* Submit */}
+                {numberChoice && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/signup', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            email: form.workEmail,
+                            companyName: form.companyName,
+                            numberChoice,
+                            areaCode: numberChoice === 'new' ? areaCode : undefined,
+                            existingNumber: numberChoice === 'bring' ? existingNumber : undefined,
+                          }),
+                        });
+                      } catch { /* best effort */ }
+                      setNumberSubmitted(true);
+                    }}
+                    disabled={numberChoice === 'new' ? !areaCode : !existingNumber}
+                    style={{
+                      width: '100%', padding: '15px', borderRadius: 14, border: 'none',
+                      background: (numberChoice === 'new' ? !areaCode : !existingNumber)
+                        ? '#9fc5eb'
+                        : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                      color: '#fff', fontSize: 16, fontWeight: 700,
+                      cursor: (numberChoice === 'new' ? !areaCode : !existingNumber) ? 'default' : 'pointer',
+                      boxShadow: (numberChoice === 'new' ? !areaCode : !existingNumber) ? 'none' : '0 4px 16px rgba(55,138,221,0.3)',
+                      marginBottom: 12,
+                    }}
+                  >
+                    {numberChoice === 'new' ? 'Request Number' : 'Connect My Number'}
+                  </button>
+                )}
+              </>
+            ) : (
+              /* Submitted confirmation */
+              <div style={{
+                padding: '28px', borderRadius: 16, textAlign: 'center',
+                background: 'linear-gradient(135deg, rgba(34,197,94,0.08), rgba(34,197,94,0.04))',
+                border: '1px solid rgba(34,197,94,0.2)', marginBottom: 20,
+              }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>{numberChoice === 'new' ? '🎉' : '🔗'}</div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1c1c1e', marginBottom: 6 }}>
+                  {numberChoice === 'new' ? 'Number request received!' : 'Connection request received!'}
+                </h3>
+                <p style={{ fontSize: 13, color: '#8e8e93', lineHeight: 1.5 }}>
+                  {numberChoice === 'new'
+                    ? `We're finding an available (${areaCode}) number for you. We'll reach out to ${form.workEmail} within 24 hours with your new Vernacular number.`
+                    : `We'll send setup instructions to ${form.workEmail} within 24 hours to connect ${existingNumber} to your Vernacular dashboard.`
+                  }
+                </p>
+              </div>
+            )}
+
             <button onClick={() => window.location.href = '/login'} style={{
               width: '100%', padding: '12px', borderRadius: 12, border: 'none',
               background: 'transparent', color: '#8e8e93', cursor: 'pointer',
               fontSize: 14, fontWeight: 500,
-            }}>Continue to Login &rarr;</button>
+            }}>{numberSubmitted ? 'Go to Dashboard →' : 'Skip for now →'}</button>
           </div>
         )}
 

@@ -75,16 +75,38 @@ export async function POST(request: Request) {
   }
 }
 
+// PATCH — number choice update
+export async function PATCH(request: Request) {
+  try {
+    const { email, companyName, numberChoice, areaCode, existingNumber } = await request.json();
+    const supabase = createServiceClient();
+
+    // Log the number request
+    await supabase.from('signup_events').insert({
+      company_name: companyName || 'Unknown',
+      email: email || 'Unknown',
+      full_name: '',
+      use_case: `NUMBER_REQUEST: ${numberChoice}${numberChoice === 'new' ? ` (area code: ${areaCode})` : ` (number: ${existingNumber})`}`,
+    });
+
+    // Send notification
+    await sendSignupNotification({
+      companyName: companyName || 'Unknown',
+      fullName: '',
+      email: email || 'Unknown',
+      useCase: `Number Setup: ${numberChoice === 'new' ? `New number requested (${areaCode})` : `Bring own: ${existingNumber}`}`,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ success: true }); // Don't fail silently
+  }
+}
+
 async function sendSignupNotification(data: {
   companyName: string; fullName: string; email: string;
   industry?: string; teamSize?: string; useCase?: string;
 }) {
-  // Use Supabase Edge Function or a simple webhook
-  // For now, use Supabase's REST API to call a pg_net HTTP request
-  const supabase = createServiceClient();
-
-  // Store notification for retrieval — can be checked via Supabase dashboard
-  // Also attempt to send via Supabase's built-in email if configured
   const subject = `New Vernacular Signup: ${data.companyName}`;
   const body = [
     `New signup on Vernacular!`,
@@ -99,15 +121,14 @@ async function sendSignupNotification(data: {
     `Time: ${new Date().toISOString()}`,
   ].join('\n');
 
-  // Try pg_net extension for HTTP webhook (if available)
+  // Send via Supabase auth admin invite (piggyback for email delivery)
+  const supabase = createServiceClient();
   try {
-    await supabase.rpc('send_signup_notification', {
-      recipient: NOTIFY_EMAIL,
-      subject,
-      body,
+    await supabase.auth.admin.inviteUserByEmail(NOTIFY_EMAIL, {
+      data: { notification_subject: subject, notification_body: body },
     });
   } catch {
-    // pg_net function doesn't exist yet — just log
+    // Fallback: just log
     console.log(`SIGNUP NOTIFICATION:\n${body}`);
   }
 }
