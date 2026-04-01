@@ -356,6 +356,7 @@ export default function DashboardPage() {
   const [conversationSearch, setConversationSearch] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
+  const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null);
   const [aiModeEnabled, setAiModeEnabled] = useState(false);
   const [showAiModePanel, setShowAiModePanel] = useState(false);
   const [aiModeRules, setAiModeRules] = useState({
@@ -850,6 +851,7 @@ button:active { transform: scale(0.98); }`}</style>
       }
     } catch { /* silent */ }
     setLoadingNotion(false);
+    setLastReloadTime(new Date());
   };
 
   // Format time
@@ -957,6 +959,7 @@ button:active { transform: scale(0.98); }`}</style>
     border: '1px solid rgba(0,0,0,0.06)',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     padding: '20px 24px',
+    transition: 'box-shadow 0.2s, transform 0.2s',
   };
 
   const panelHeaderStyle: React.CSSProperties = {
@@ -1041,7 +1044,7 @@ button:active { transform: scale(0.98); }`}</style>
   const renderDashboard = () => (
     <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
       {/* Getting Started Banner */}
-      {showWelcomeBanner && allMetricsZero && (
+      {showWelcomeBanner && (
         <div style={{
           background: 'linear-gradient(135deg, #378ADD 0%, #2B6CB0 60%, #1E4D8C 100%)',
           borderRadius: 16, padding: '24px 28px', marginBottom: 24, position: 'relative',
@@ -1050,21 +1053,33 @@ button:active { transform: scale(0.98); }`}</style>
           <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: '100%', background: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div>
-              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>Welcome to Vernacular!</h2>
-              <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 16px', opacity: 0.9 }}>Get started in 3 easy steps:</p>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
+                {allMetricsZero ? 'Welcome to Vernacular!' : 'Getting Started'}
+              </h2>
+              <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 16px', opacity: 0.9 }}>
+                {(() => {
+                  const stepsComplete = [
+                    stations.some(s => s.phone_number !== 'TBD' && s.status !== 'offline'),
+                    contacts.length > 0,
+                    metrics.messagesAllTime > 0,
+                  ].filter(Boolean).length;
+                  return `${stepsComplete}/3 complete`;
+                })()}
+              </p>
               <div style={{ display: 'flex', gap: 24 }}>
                 {[
-                  { num: '1', text: 'Connect a phone line' },
-                  { num: '2', text: 'Import contacts' },
-                  { num: '3', text: 'Send your first message' },
+                  { num: '1', text: 'Connect a phone line', done: stations.some(s => s.phone_number !== 'TBD' && s.status !== 'offline') },
+                  { num: '2', text: 'Import contacts', done: contacts.length > 0 },
+                  { num: '3', text: 'Send your first message', done: metrics.messagesAllTime > 0 },
                 ].map(step => (
-                  <div key={step.num} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div key={step.num} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: step.done ? 0.6 : 1 }}>
                     <div style={{
-                      width: 24, height: 24, borderRadius: 12, background: 'rgba(255,255,255,0.2)',
+                      width: 24, height: 24, borderRadius: 12,
+                      background: step.done ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.2)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 12, fontWeight: 700, flexShrink: 0,
-                    }}>{step.num}</div>
-                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>{step.text}</span>
+                    }}>{step.done ? '\u2713' : step.num}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', textDecoration: step.done ? 'line-through' : 'none' }}>{step.text}</span>
                   </div>
                 ))}
               </div>
@@ -1088,7 +1103,7 @@ button:active { transform: scale(0.98); }`}</style>
       {/* Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Messages Sent */}
-        <div style={cardStyle}>
+        <div style={cardStyle} onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -1109,7 +1124,7 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
 
         {/* Response Rate */}
-        <div style={cardStyle}>
+        <div style={cardStyle} onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -1130,7 +1145,7 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
 
         {/* Active Conversations */}
-        <div style={cardStyle}>
+        <div style={cardStyle} onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -1151,7 +1166,7 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
 
         {/* AI Drafts */}
-        <div style={cardStyle}>
+        <div style={cardStyle} onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
@@ -1337,12 +1352,23 @@ button:active { transform: scale(0.98); }`}</style>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>AI Auto-Draft</div>
                 <div style={{ fontSize: 12, color: '#8e8e93' }}>Generate reply drafts automatically</div>
               </div>
-              <div style={{
+              <button onClick={async () => {
+                if (!orgSettings) return;
+                const newVal = !orgSettings.ai_auto_draft;
+                setOrgSettings({ ...orgSettings, ai_auto_draft: newVal });
+                try {
+                  await fetch('/api/orgs', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ai_auto_draft: newVal }),
+                  });
+                } catch { /* silent */ }
+              }} style={{
                 ...toggleStyle(orgSettings?.ai_auto_draft || false),
-                display: 'flex', alignItems: 'center',
+                display: 'flex', alignItems: 'center', cursor: 'pointer', border: 'none',
               }}>
                 <div style={toggleDotStyle(orgSettings?.ai_auto_draft || false)} />
-              </div>
+              </button>
             </div>
             {/* AI Model */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
@@ -1462,9 +1488,11 @@ button:active { transform: scale(0.98); }`}</style>
               <span style={{
                 fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace",
               }}>
-                Updated Last: {stations.length > 0 && stations[0].last_heartbeat
-                  ? new Date(stations[0].last_heartbeat).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                  : 'N/A'}
+                Updated Last: {lastReloadTime
+                  ? lastReloadTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                  : stations.length > 0 && stations[0].last_heartbeat
+                    ? new Date(stations[0].last_heartbeat).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    : 'N/A'}
               </span>
             </>
           )}
@@ -2361,7 +2389,10 @@ button:active { transform: scale(0.98); }`}</style>
                         fontSize: 11, color: '#8e8e93', fontFamily: "'Inter', sans-serif",
                         whiteSpace: 'nowrap',
                       }}>
-                        {lastMsg ? new Date(lastMsg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}
+                        {lastMsg?.timestamp ? (() => {
+                          const d = new Date(lastMsg.timestamp);
+                          return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                        })() : ''}
                       </span>
                       {hasUnread && (
                         <div style={{
@@ -2734,7 +2765,7 @@ button:active { transform: scale(0.98); }`}</style>
                   />
                   {/* Schedule button */}
                   <button
-                    onClick={() => window.alert('Schedule message coming soon. Use the Schedule tab for blast scheduling.')}
+                    onClick={() => setConversationViewMode('schedule')}
                     title="Schedule message"
                     style={{
                       width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
@@ -3756,7 +3787,21 @@ button:active { transform: scale(0.98); }`}</style>
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => {/* TODO: edit mode */}} style={{
+                <button onClick={() => {
+                  const c = selectedContact;
+                  const firstName = c.first_name || c.full_name?.split(' ')[0] || '';
+                  const lastName = c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '';
+                  setEditingContact({
+                    colId: '', firstName, lastName,
+                    name: getDisplayName(c), phone: c.phone || '', email: c.email || '',
+                    company: c.company || '', jobTitle: c.job_title || '',
+                    linkedin: c.linkedin_url || '', instagram: c.instagram_handle || '',
+                    twitter: c.twitter_handle || '', school: c.school || '',
+                    greekOrg: c.greek_org || '', state: c.state || '',
+                    city: c.city || '', dob: c.dob || '',
+                    venmo: c.venmo_handle || '', notes: c.notes || '',
+                  });
+                }} style={{
                   flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
                   background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
                   fontFamily: "'Inter', sans-serif",
@@ -4092,7 +4137,7 @@ button:active { transform: scale(0.98); }`}</style>
                     ['Analytics', 'Standard', 'Advanced', 'Custom'],
                     ['Integrations', 'Notion, Slack', 'All', 'All + Custom'],
                     ['Support', 'Email', 'Priority', 'Dedicated CSM'],
-                    ['Price/seat', '$2,000/mo', '$1,800/mo', 'Custom'],
+                    ['Price/seat', '$2,000/mo', '$2,500/mo', 'Custom'],
                     ['AI Add-ons', '$1,000/ea', '$1,000/ea', 'Included'],
                     ['AI Tools Available', '6', '6', '6 + Custom'],
                   ].map((row, i) => (
