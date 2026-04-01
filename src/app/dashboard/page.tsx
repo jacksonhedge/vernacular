@@ -1599,11 +1599,16 @@ button:active { transform: scale(0.98); }`}</style>
                 const last = col.messages[col.messages.length - 1];
                 return last?.isAIDraft;
               }).length;
-              const ghostColors = ['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852']; // Blinky, Pinky, Inky, Clyde
+              const ghosts = [
+                { name: 'Blinky', color: '#FF0000', role: 'Lead Generator', desc: 'Finds and qualifies new prospects' },
+                { name: 'Pinky', color: '#FFB8FF', role: 'Tone Specialist', desc: 'Matches your brand voice perfectly' },
+                { name: 'Inky', color: '#00FFFF', role: 'Follow-Up Engine', desc: 'Never lets a conversation go cold' },
+                { name: 'Clyde', color: '#FFB852', role: 'Support Agent', desc: 'Handles FAQs and troubleshooting' },
+              ];
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '0 8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 8px' }}>
                   {/* Pac-Man */}
-                  <svg width="20" height="20" viewBox="0 0 20 20" style={{ animation: aiModeEnabled ? 'none' : 'none' }}>
+                  <svg width="24" height="24" viewBox="0 0 20 20">
                     <path d={aiModeEnabled
                       ? "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 3l7 7-7 7"
                       : "M10 0a10 10 0 1 1 0 20 10 10 0 0 1 0-20zM10 4l6 6-6 6"
@@ -1611,27 +1616,34 @@ button:active { transform: scale(0.98); }`}</style>
                     <circle cx="8" cy="6" r="1.2" fill="#1a1a1a" />
                   </svg>
                   {/* Pac-dots between */}
-                  <div style={{ display: 'flex', gap: 3, alignItems: 'center', margin: '0 2px' }}>
-                    <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#FFE000' }} />
-                    <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#FFE000' }} />
+                  <div style={{ display: 'flex', gap: 3, alignItems: 'center', margin: '0 3px' }}>
+                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
+                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
+                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#FFE000' }} />
                   </div>
                   {/* 4 Ghosts */}
-                  {ghostColors.map((color, i) => {
+                  {ghosts.map((ghost, i) => {
                     const isBlinking = awaitingApproval > i;
                     return (
-                      <svg key={i} width="18" height="18" viewBox="0 0 14 16" style={{
-                        animation: isBlinking ? 'ghostBlink 0.8s ease-in-out infinite alternate' : 'none',
-                      }}>
-                        <path d={`M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z`}
-                          fill={isBlinking ? '#2222FF' : color}
-                          stroke={isBlinking ? '#fff' : 'none'}
-                          strokeWidth={isBlinking ? 0.5 : 0}
-                        />
-                        <circle cx="5" cy="7" r="1.5" fill="#fff" />
-                        <circle cx="9" cy="7" r="1.5" fill="#fff" />
-                        <circle cx={5.5} cy="7" r="0.8" fill="#1a1a2e" />
-                        <circle cx={9.5} cy="7" r="0.8" fill="#1a1a2e" />
-                      </svg>
+                      <div key={i} style={{ position: 'relative', cursor: 'pointer' }} title={`${ghost.name} — ${ghost.role}: ${ghost.desc}`}>
+                        <svg width="26" height="26" viewBox="0 0 14 16" style={{
+                          animation: isBlinking ? 'ghostBlink 0.8s ease-in-out infinite alternate' : 'none',
+                          transition: 'transform 0.15s',
+                        }}
+                          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
+                          onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                          <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z"
+                            fill={isBlinking ? '#2222FF' : ghost.color}
+                            stroke={isBlinking ? '#fff' : 'none'}
+                            strokeWidth={isBlinking ? 0.5 : 0}
+                          />
+                          <circle cx="5" cy="7" r="1.5" fill="#fff" />
+                          <circle cx="9" cy="7" r="1.5" fill="#fff" />
+                          <circle cx={5.5} cy="7" r="0.8" fill="#1a1a2e" />
+                          <circle cx={9.5} cy="7" r="0.8" fill="#1a1a2e" />
+                        </svg>
+                      </div>
                     );
                   })}
                 </div>
