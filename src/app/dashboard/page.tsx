@@ -875,13 +875,44 @@ button:active { transform: scale(0.98); }`}</style>
   const formatHeartbeat = (dateStr: string) => {
     if (!dateStr) return 'Never';
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Never';
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffSecs = Math.floor(diffMs / 1000);
     if (diffSecs < 60) return `${diffSecs}s ago`;
     const diffMins = Math.floor(diffSecs / 60);
     if (diffMins < 60) return `${diffMins}m ago`;
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    return `${diffDays}d ago`;
+  };
+
+  // Derive station status from heartbeat — don't trust the DB status field alone
+  const getStationStatus = (station: Station): 'online' | 'idle' | 'offline' => {
+    if (!station.last_heartbeat) return 'offline';
+    if (station.phone_number === 'TBD') return 'offline';
+    const d = new Date(station.last_heartbeat);
+    if (isNaN(d.getTime())) return 'offline';
+    const diffMs = Date.now() - d.getTime();
+    const diffMins = diffMs / 60000;
+    if (diffMins < 3) return 'online';     // heartbeat within 3 min = online
+    if (diffMins < 10) return 'idle';       // 3-10 min = idle
+    return 'offline';                        // >10 min = offline
+  };
+
+  const getStationDotColor = (station: Station) => {
+    const s = getStationStatus(station);
+    return s === 'online' ? '#22C55E' : s === 'idle' ? '#F59E0B' : '#EF4444';
+  };
+
+  const getStationDotShadow = (station: Station) => {
+    return getStationStatus(station) === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : 'none';
+  };
+
+  const getStationLabel = (station: Station) => {
+    const s = getStationStatus(station);
+    return s === 'online' ? 'Online' : s === 'idle' ? 'Idle' : 'Offline';
   };
 
   // Settings save
@@ -1063,7 +1094,7 @@ button:active { transform: scale(0.98); }`}</style>
               <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 16px', opacity: 0.9 }}>
                 {(() => {
                   const stepsComplete = [
-                    stations.some(s => s.phone_number !== 'TBD' && s.status !== 'offline'),
+                    stations.some(s => getStationStatus(s) !== 'offline'),
                     contacts.length > 0,
                     metrics.messagesAllTime > 0,
                   ].filter(Boolean).length;
@@ -1072,7 +1103,7 @@ button:active { transform: scale(0.98); }`}</style>
               </p>
               <div style={{ display: 'flex', gap: 24 }}>
                 {[
-                  { num: '1', text: 'Connect a phone line', done: stations.some(s => s.phone_number !== 'TBD' && s.status !== 'offline') },
+                  { num: '1', text: 'Connect a phone line', done: stations.some(s => getStationStatus(s) !== 'offline') },
                   { num: '2', text: 'Import contacts', done: contacts.length > 0 },
                   { num: '3', text: 'Send your first message', done: metrics.messagesAllTime > 0 },
                 ].map(step => (
@@ -1267,8 +1298,8 @@ button:active { transform: scale(0.98); }`}</style>
                 }}>
                   <div style={{
                     width: 10, height: 10, borderRadius: 5, flexShrink: 0,
-                    background: st.status === 'online' ? '#22C55E' : st.status === 'idle' ? '#F59E0B' : '#EF4444',
-                    boxShadow: st.status === 'online' ? '0 0 6px rgba(34,197,94,0.4)' : 'none',
+                    background: getStationDotColor(st),
+                    boxShadow: getStationDotShadow(st),
                   }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{st.name}</div>
@@ -5195,8 +5226,8 @@ button:active { transform: scale(0.98); }`}</style>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                        {statusDot(s.status)}
-                        <span style={{ fontSize: 12, fontWeight: 500, color: '#374151', textTransform: 'capitalize' }}>{s.status}</span>
+                        {statusDot(getStationStatus(s))}
+                        <span style={{ fontSize: 12, fontWeight: 500, color: '#374151', textTransform: 'capitalize' }}>{getStationStatus(s)}</span>
                       </div>
                       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
                         Last heartbeat: {s.last_heartbeat ? new Date(s.last_heartbeat).toLocaleString() : 'Never'}
@@ -5266,14 +5297,17 @@ button:active { transform: scale(0.98); }`}</style>
   const renderStations = () => {
     const getStatusColor = (status: string) => {
       if (status === 'online') return '#22C55E';
-      if (status === 'syncing') return '#F59E0B';
+      if (status === 'idle' || status === 'syncing') return '#F59E0B';
       return '#EF4444';
     };
-    const getStatusLabel = (status: string) => {
+    const getStatusLabelText = (status: string) => {
       if (status === 'online') return 'ONLINE';
+      if (status === 'idle') return 'IDLE';
       if (status === 'syncing') return 'SYNCING';
       return 'OFFLINE';
     };
+    // Use heartbeat-derived status instead of DB field
+    const resolveStatus = (st: Station) => getStationStatus(st);
     const getRelativeTime = (ts: string | null | undefined) => {
       if (!ts) return 'Never';
       const diff = Date.now() - new Date(ts).getTime();
@@ -5312,7 +5346,7 @@ button:active { transform: scale(0.98); }`}</style>
       );
     };
 
-    const onlineCount = stations.filter(s => s.status === 'online').length;
+    const onlineCount = stations.filter(s => getStationStatus(s) === 'online').length;
     const uptimePct = stations.length > 0 ? Math.round((onlineCount / stations.length) * 100) : 0;
 
     return (
@@ -5330,11 +5364,11 @@ button:active { transform: scale(0.98); }`}</style>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, flexWrap: 'wrap' }}>
             {/* Left stations */}
             {stations.filter((_, i) => i % 2 === 0).map(st => {
-              const stColor = getStatusColor(st.status);
+              const stColor = getStatusColor(resolveStatus(st));
               return (
                 <div key={st.id} style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{
-                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${st.status === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${resolveStatus(st) === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
                     borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
                   }}>
                     <div style={{ color: stColor, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{getMachineIcon(st.machine_name)}</div>
@@ -5343,15 +5377,15 @@ button:active { transform: scale(0.98); }`}</style>
                     <div style={{ fontSize: 18, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>{st.phone_number || 'TBD'}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                       <div style={{ width: 10, height: 10, borderRadius: '50%', background: stColor, boxShadow: `0 0 8px ${stColor}` }} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabel(st.status)}</span>
-                      <SignalBars status={st.status} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabelText(resolveStatus(st))}</span>
+                      <SignalBars status={resolveStatus(st)} />
                     </div>
                   </div>
                   {/* Connection line */}
                   <div style={{
                     width: 48, height: 2,
-                    background: st.status === 'online' ? '#22C55E' : 'transparent',
-                    borderTop: st.status === 'online' ? 'none' : '2px dashed #374151',
+                    background: resolveStatus(st) === 'online' ? '#22C55E' : 'transparent',
+                    borderTop: resolveStatus(st) === 'online' ? 'none' : '2px dashed #374151',
                   }} />
                 </div>
               );
@@ -5373,16 +5407,16 @@ button:active { transform: scale(0.98); }`}</style>
 
             {/* Right stations */}
             {stations.filter((_, i) => i % 2 === 1).map(st => {
-              const stColor = getStatusColor(st.status);
+              const stColor = getStatusColor(resolveStatus(st));
               return (
                 <div key={st.id} style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{
                     width: 48, height: 2,
-                    background: st.status === 'online' ? '#22C55E' : 'transparent',
-                    borderTop: st.status === 'online' ? 'none' : '2px dashed #374151',
+                    background: resolveStatus(st) === 'online' ? '#22C55E' : 'transparent',
+                    borderTop: resolveStatus(st) === 'online' ? 'none' : '2px dashed #374151',
                   }} />
                   <div style={{
-                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${st.status === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                    background: 'rgba(255,255,255,0.05)', border: `1px solid ${resolveStatus(st) === 'online' ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
                     borderRadius: 16, padding: '20px 24px', minWidth: 200, textAlign: 'center',
                   }}>
                     <div style={{ color: stColor, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>{getMachineIcon(st.machine_name)}</div>
@@ -5391,8 +5425,8 @@ button:active { transform: scale(0.98); }`}</style>
                     <div style={{ fontSize: 18, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace", marginBottom: 10 }}>{st.phone_number || 'TBD'}</div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                       <div style={{ width: 10, height: 10, borderRadius: '50%', background: stColor, boxShadow: `0 0 8px ${stColor}` }} />
-                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabel(st.status)}</span>
-                      <SignalBars status={st.status} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: stColor, letterSpacing: '0.05em' }}>{getStatusLabelText(resolveStatus(st))}</span>
+                      <SignalBars status={resolveStatus(st)} />
                     </div>
                   </div>
                 </div>
@@ -5420,8 +5454,8 @@ button:active { transform: scale(0.98); }`}</style>
         {/* ── Section B: Phone Line Detail Cards ────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {stations.map(st => {
-            const stColor = getStatusColor(st.status);
-            const stLabel = getStatusLabel(st.status);
+            const stColor = getStatusColor(resolveStatus(st));
+            const stLabel = getStatusLabelText(resolveStatus(st));
             return (
               <div key={st.id} style={{
                 background: '#fff', borderRadius: 20, padding: 0,
@@ -5507,9 +5541,9 @@ button:active { transform: scale(0.98); }`}</style>
                 {/* Status Signals Row */}
                 <div style={{ display: 'flex', padding: '14px 24px', gap: 24, flexWrap: 'wrap' }}>
                   {[
-                    { label: 'Connection', ok: st.status === 'online', onText: 'Connected', offText: 'Disconnected' },
-                    { label: 'iMessage', ok: st.status === 'online', onText: 'Active', offText: 'Inactive' },
-                    { label: 'Sync', ok: st.status !== 'offline', onText: st.status === 'syncing' ? 'Syncing' : 'Up to date', offText: 'Behind', color: st.status === 'syncing' ? '#F59E0B' : undefined },
+                    { label: 'Connection', ok: resolveStatus(st) === 'online', onText: 'Connected', offText: 'Disconnected' },
+                    { label: 'iMessage', ok: resolveStatus(st) !== 'offline', onText: 'Active', offText: 'Inactive' },
+                    { label: 'Sync', ok: resolveStatus(st) !== 'offline', onText: resolveStatus(st) === 'idle' ? 'Idle' : 'Up to date', offText: 'Behind', color: resolveStatus(st) === 'idle' ? '#F59E0B' : undefined },
                     { label: 'Last Error', ok: true, onText: 'None', offText: '' },
                   ].map((sig, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -6096,7 +6130,7 @@ button:active { transform: scale(0.98); }`}</style>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {stations.map((s, idx) => {
-                  const isOnline = s.status === 'online';
+                  const isOnline = getStationStatus(s) === 'online';
                   const isAssigned = idx === 0;
                   const lastBeat = s.last_heartbeat ? new Date(s.last_heartbeat) : null;
                   return (
