@@ -2540,13 +2540,23 @@ button:active { transform: scale(0.98); }`}</style>
                     borderBottom: '1px solid rgba(0,0,0,0.04)',
                     minHeight: 68,
                   }}>
+                    {/* Fruit icon + phone */}
                     <div style={{
-                      width: 40, height: 40, borderRadius: 20, flexShrink: 0,
-                      background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      background: 'rgba(0,0,0,0.04)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 0,
                     }}>
-                      {col.contact?.initials || '##'}
+                      {(() => {
+                        const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                        const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                        return <span style={{ fontSize: 16, lineHeight: 1 }}>{fruits[Math.max(0, idx) % fruits.length]}</span>;
+                      })()}
+                      {col.contact?.phone && (
+                        <span style={{ fontSize: 7, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, marginTop: 1 }}>
+                          {col.contact.phone.replace(/.*(\d{4})$/, '•$1')}
+                        </span>
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
