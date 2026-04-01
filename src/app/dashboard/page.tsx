@@ -892,10 +892,11 @@ button:active { transform: scale(0.98); }`}</style>
       const data = await res.json();
       if (res.ok) {
         console.log(`[Vernacular] ✅ Message queued successfully`, data);
-        console.log(`[Vernacular]   → Notion Page: ${data.notionPageId || 'N/A'}`);
-        console.log(`[Vernacular]   → Station: ${data.stationName || 'N/A'} (${data.stationPhone || 'N/A'})`);
+        console.log(`[Vernacular]   → Notion Queued: ${data.notionQueued ? 'Yes' : 'No'}`);
+        console.log(`[Vernacular]   → Station: ${data.station?.name || 'N/A'} (${data.station?.phone || 'N/A'})`);
         console.log(`[Vernacular]   → Message ID: ${data.messageId || 'N/A'}`);
         console.log(`[Vernacular]   → Conversation ID: ${data.conversationId || 'N/A'}`);
+        console.log(`[Vernacular]   → Contact ID: ${data.contactId || 'N/A'}`);
         // Update message ID to mark as delivered (removes "Delivering..." state)
         setColumns(prev => prev.map(c => c.id === colId ? {
           ...c,
