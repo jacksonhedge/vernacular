@@ -690,10 +690,12 @@ export default function DashboardPage() {
         // Poll for inbound messages from Notion → Supabase
         try {
           const pollRes = await fetch('/api/engine/poll-inbound');
-          const pollData = await pollRes.json();
-          if (pollData.synced > 0) {
-            console.log(`[Vernacular] 📥 ${pollData.synced} new inbound message(s) synced from Notion`);
-            playSound('receive');
+          if (pollRes.ok) {
+            const pollData = await pollRes.json();
+            if (pollData.synced > 0) {
+              console.log(`[Vernacular] 📥 ${pollData.synced} new inbound message(s) synced from Notion`);
+              playSound('receive');
+            }
           }
         } catch { /* silent */ }
 
