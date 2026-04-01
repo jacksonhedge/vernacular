@@ -340,6 +340,7 @@ export default function DashboardPage() {
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
+  const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
   const [editingGhost, setEditingGhost] = useState<number | null>(null);
   const [ghostConfig, setGhostConfig] = useState([
     { name: 'Blinky', color: '#FF0000', role: 'Lead Generator', purpose: 'Finds and qualifies new prospects from inbound leads' },
@@ -2572,16 +2573,18 @@ button:active { transform: scale(0.98); }`}</style>
                 const hasUnread = lastMsg?.direction === 'incoming';
                 const hasAiDraft = lastMsg?.isAIDraft;
                 const isSelected = selectedConversationId === col.id;
+                const isRead = readConversations.has(col.id);
                 const rowBg = isSelected
                   ? 'rgba(55,138,221,0.08)'
                   : hasAiDraft
                     ? 'rgba(245,158,11,0.06)'
-                    : hasUnread
+                    : (hasUnread && !isRead)
                       ? 'rgba(34,197,94,0.06)'
                       : 'transparent';
                 return (
                   <button key={col.id} onClick={() => {
                     setSelectedConversationId(col.id);
+                    setReadConversations(prev => new Set(prev).add(col.id));
                     const el = document.getElementById(`stream-col-${col.id}`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
                   }} style={{
@@ -2630,7 +2633,7 @@ button:active { transform: scale(0.98); }`}</style>
                           return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
                         })() : ''}
                       </span>
-                      {hasUnread && (
+                      {hasUnread && !readConversations.has(col.id) && (
                         <div style={{
                           width: 8, height: 8, borderRadius: 4, background: '#378ADD',
                         }} />
