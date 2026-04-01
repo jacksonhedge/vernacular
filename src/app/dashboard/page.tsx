@@ -3089,25 +3089,44 @@ button:active { transform: scale(0.98); }`}</style>
                 display: 'flex', flexDirection: 'column', gap: 6, background: '#fff',
               }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {/* AI toggle */}
-                  <button
-                    onClick={() => setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] }))}
-                    title={aiResponseEnabled[col.id] ? 'AI Agent ON — Click to disable' : 'Enable AI Agent'}
-                    style={{
-                      width: 32, height: 32, borderRadius: 8, border: 'none', flexShrink: 0,
-                      background: aiResponseEnabled[col.id] ? 'rgba(245,158,11,0.15)' : 'rgba(0,0,0,0.04)',
-                      color: aiResponseEnabled[col.id] ? '#D97706' : '#8e8e93', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 14,
-                    }}
-                  >
-                    {aiResponseEnabled[col.id] ? '🤖' : '🤖'}
-                  </button>
+                  {/* Ghost AI toggle */}
+                  {(() => {
+                    const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                    const ghost = ghostConfig[Math.max(0, colIdx) % ghostConfig.length];
+                    const isActive = aiResponseEnabled[col.id];
+                    return (
+                      <button
+                        onClick={() => { setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] })); playSound('click'); }}
+                        title={isActive ? `${ghost.name} AI ON — Click to disable` : `Enable ${ghost.name} AI`}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8, border: 'none', flexShrink: 0,
+                          background: isActive ? `${ghost.color}20` : 'rgba(0,0,0,0.04)',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 14 16" style={{
+                          animation: isActive ? 'ghostBlink 1s ease-in-out infinite alternate' : 'none',
+                        }}>
+                          <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z"
+                            fill={isActive ? ghost.color : '#ccc'} />
+                          <circle cx="5" cy="7" r="1.5" fill="#fff" />
+                          <circle cx="9" cy="7" r="1.5" fill="#fff" />
+                          <circle cx={5.5} cy="7" r="0.8" fill={isActive ? '#1a1a2e' : '#999'} />
+                          <circle cx={9.5} cy="7" r="0.8" fill={isActive ? '#1a1a2e' : '#999'} />
+                        </svg>
+                      </button>
+                    );
+                  })()}
                   <input
                     value={inputValues[col.id] || ''}
                     onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
                     onKeyDown={e => { if (e.key === 'Enter') sendMessage(col.id); }}
-                    placeholder={aiResponseEnabled[col.id] ? 'AI Agent active...' : 'Type a message...'}
+                    placeholder={(() => {
+                      const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                      const ghost = ghostConfig[Math.max(0, colIdx) % ghostConfig.length];
+                      return aiResponseEnabled[col.id] ? `${ghost.name} is drafting...` : 'Type a message...';
+                    })()}
                     style={{
                       flex: 1, padding: '9px 12px', borderRadius: 8,
                       border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
