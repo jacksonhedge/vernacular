@@ -45,5 +45,14 @@ export function phoneSearchVariants(raw: string): string[] {
 
 /** Build Supabase .or() filter string for phone matching */
 export function phoneOrFilter(raw: string): string {
+  // Note: Supabase PostgREST treats + as space in query strings.
+  // The JS client handles encoding, but we include both +1 and 1 variants to be safe.
   return phoneSearchVariants(raw).map(v => `phone.eq.${v}`).join(',');
+}
+
+/** Build a simpler phone filter using ilike on last 10 digits — most reliable */
+export function phoneIlikeFilter(raw: string): string {
+  const d10 = normalize10(raw);
+  if (d10.length >= 7) return `phone.ilike.%${d10.slice(-7)}%`;
+  return `phone.ilike.%${d10}%`;
 }

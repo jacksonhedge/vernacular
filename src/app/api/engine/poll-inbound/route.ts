@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { formatPhone, phoneOrFilter } from '@/lib/phone';
+import { formatPhone, phoneOrFilter, phoneIlikeFilter } from '@/lib/phone';
 import { queryDatabase, NOTION_DBS, getTitle, getRichText, getSelect, getPhone } from '@/lib/notion';
 
 // GET /api/engine/poll-inbound — Check Notion Message Queue for new inbound messages
@@ -69,14 +69,23 @@ export async function GET() {
 
       // Find or create contact
       let contactId: string | null = null;
-      const { data: contacts, error: contactErr } = await supabase
+      // Try exact match first, then fuzzy ilike as fallback
+      let contacts: Array<{ id: string; full_name: string | null }> | null = null;
+      const { data: exactMatch, error: contactErr } = await supabase
         .from('contacts').select('id, full_name')
         .or(phoneOrFilter(msg.phone))
         .limit(1);
 
       if (contactErr) {
-        console.error(`[poll-inbound] Contact lookup error for ${msg.phone}:`, contactErr.message);
-        errors++; continue;
+        console.error(`[poll-inbound] Contact exact lookup error for ${msg.phone}:`, contactErr.message);
+        // Fallback to ilike
+        const { data: fuzzyMatch } = await supabase
+          .from('contacts').select('id, full_name')
+          .or(phoneIlikeFilter(msg.phone))
+          .limit(1);
+        contacts = fuzzyMatch;
+      } else {
+        contacts = exactMatch;
       }
 
       if (contacts && contacts.length > 0) {
@@ -107,7 +116,7 @@ export async function GET() {
         .limit(1);
 
       const stationId = station?.[0]?.id;
-      if (!stationId) continue;
+      if (!stationId) { console.error(`[poll-inbound] No station found for "${msg.station}"`); errors++; continue; }
 
       let convId: string | null = null;
       const { data: existingConv } = await supabase
