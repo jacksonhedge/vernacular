@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { Client } from '@notionhq/client';
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'vernacular-admin-2026';
-const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
+const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
 // Data source ID for the Message Queue collection (from Notion DB db0fb0b9)
 const MESSAGE_QUEUE_DS = 'a1f26bdc-7677-45ff-87b3-50489a66090a';
 

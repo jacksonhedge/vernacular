@@ -4,7 +4,7 @@
  * SDK v5 dataSources.query has permission issues — REST API works.
  */
 
-const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
+const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
 const NOTION_VERSION = '2022-06-28';
 const BASE_URL = 'https://api.notion.com/v1';
 

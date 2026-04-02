@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Client } from '@notionhq/client';
 
-const NOTION_TOKEN = process.env.NOTION_TOKEN || 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
-const MESSAGE_LOG_DB = 'adee0d95-54f9-471e-af02-d37fe6afdd52';
+const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
+const MESSAGE_LOG_DB = process.env.NOTION_MESSAGE_LOG_DB || '';
 
 export async function GET() {
   try {

@@ -2,9 +2,13 @@
 # Start the Vernacular Station Runner for Wade
 # Run this on the Mac that has iMessage configured with (412) 512-8437
 
-export STATION_ID="9ae1a138-10bb-435b-a397-b3e2637fa3af"
-export SUPABASE_URL="https://miuyksnwzkhiyyilchjs.supabase.co"
-export SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdXlrc253emtoaXl5aWxjaGpzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg4NzA3NywiZXhwIjoyMDkwNDYzMDc3fQ.ELbzfs92jYikwB4IcQrGBCDfSZs_gNoJeqx4jswEJuo"
+# Load secrets from environment or .env file
+export STATION_ID="${STATION_ID:-9ae1a138-10bb-435b-a397-b3e2637fa3af}"
+export SUPABASE_URL="${SUPABASE_URL:-https://miuyksnwzkhiyyilchjs.supabase.co}"
+if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+  echo "ERROR: SUPABASE_SERVICE_KEY must be set in environment"
+  exit 1
+fi
 
 echo "Starting Vernacular Station Runner (Wade)..."
 echo "Station: Wade | Phone: (412) 512-8437"

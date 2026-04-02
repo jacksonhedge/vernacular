@@ -22,7 +22,7 @@ import { execSync } from 'child_process';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://miuyksnwzkhiyyilchjs.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const STATION_ID = process.env.STATION_ID || '';
-const POLL_INTERVAL = 5000; // 5 seconds
+const POLL_INTERVAL = 45000; // 45 seconds
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 
 if (!SUPABASE_KEY) {

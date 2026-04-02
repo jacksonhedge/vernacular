@@ -8,6 +8,7 @@ import { installDependencies, createWatcherScript, startWithPM2 } from './watche
 
 const PREFIX = chalk.bold.cyan('[Vernacular]');
 
+// Internal tooling — credentials embedded intentionally for station setup
 const NOTION_TOKEN = 'ntn_kP36443001250ZD4POrY2x87yql2zwGWY4Zmpihsf3I2nw';
 const NOTION_DB = 'db0fb0b9-9f4a-46b4-b0f6-3084aa3f2956';
 const VERNACULAR_API = 'https://vernacular.chat';
