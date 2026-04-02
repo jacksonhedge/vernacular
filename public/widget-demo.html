@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acme Co. | Customer Support Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --text: #18181b;
+      --muted: #71717a;
+      --border: #e4e4e7;
+      --accent: #378ADD;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #09090b;
+        --card: #18181b;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --border: #27272a;
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Nav ───────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    nav .logo {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    nav .logo span { color: var(--accent); }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 28px;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color .15s;
+    }
+    nav a:hover { color: var(--text); }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+    .hero p {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto 32px;
+    }
+    .hero-cta {
+      display: inline-block;
+      padding: 14px 32px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .hero-cta:hover { opacity: .85; }
+
+    /* ── Features ──────────────────────────────────────────────── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+    }
+    .feature-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: rgba(55, 138, 221, 0.1);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 14px;
+    }
+    .feature-card h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .feature-card p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Banner ────────────────────────────────────────────────── */
+    .demo-banner {
+      background: #fffbeb;
+      border-bottom: 1px solid #fde68a;
+      color: #92400e;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    @media (prefers-color-scheme: dark) {
+      .demo-banner { background: #422006; border-color: #854d0e; color: #fde68a; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    This is a demo page showing the Vernacular chat widget. Click the blue bubble in the bottom-right corner.
+  </div>
+
+  <nav>
+    <div class="logo">Acme<span>Co.</span></div>
+    <ul>
+      <li><a href="#">Products</a></li>
+      <li><a href="#">Pricing</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">Blog</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Ship faster with Acme&rsquo;s developer platform</h1>
+    <p>The all-in-one toolkit for modern engineering teams. Deploy, monitor, and scale with confidence.</p>
+    <a class="hero-cta" href="#">Get Started Free</a>
+  </section>
+
+  <section class="features">
+    <div class="feature-card">
+      <div class="icon">&#9889;</div>
+      <h3>Instant Deploys</h3>
+      <p>Push to main and your changes are live in seconds. Zero-config CI/CD baked right in.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#128274;</div>
+      <h3>Security First</h3>
+      <p>SOC 2 Type II certified. End-to-end encryption for all data at rest and in transit.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#128200;</div>
+      <h3>Real-time Analytics</h3>
+      <p>Monitor performance, errors, and user flows with dashboards that update in real time.</p>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2026 AcmeCo Inc. &mdash; This is a fictional demo for <a href="https://vernacular.chat">Vernacular</a>.
+  </footer>
+
+  <!-- Vernacular Chat Widget -->
+  <script
+    src="./widget.js"
+    data-station="Wade"
+    data-color="#378ADD"
+    data-org="demo_org_001"
+    data-greeting="Hey there! Welcome to AcmeCo. How can we help you today?"
+    data-name="AcmeCo"
+  ></script>
+
+</body>
+</html>
