@@ -6794,8 +6794,8 @@ button:active { transform: scale(0.98); }`}</style>
     }}>
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside style={{
-        width: sidebarCollapsed ? 64 : 240,
-        minWidth: sidebarCollapsed ? 64 : 240,
+        width: sidebarCollapsed ? 64 : 260,
+        minWidth: sidebarCollapsed ? 64 : 260,
         background: '#1a1a2e',
         display: 'flex',
         flexDirection: 'column',
@@ -6938,34 +6938,35 @@ button:active { transform: scale(0.98); }`}</style>
         })()}
 
         {/* Nav Items */}
-        <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
+        <nav style={{ flex: 1, padding: '6px 10px', overflowY: 'auto' }}>
           {NAV_ITEMS.map(item => {
             const isActive = activeTab === item.tab;
             const isHovered = hoveredNav === item.label;
             return (
               <div key={item.label}>
                 <button
-                  onClick={() => setActiveTab(item.tab)}
+                  onClick={() => { setActiveTab(item.tab); playSound('click'); }}
                   onMouseEnter={() => setHoveredNav(item.label)}
                   onMouseLeave={() => setHoveredNav(null)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: sidebarCollapsed ? 0 : 10, width: '100%',
-                    padding: sidebarCollapsed ? '9px 0' : '9px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: sidebarCollapsed ? 0 : 12, width: '100%',
+                    padding: sidebarCollapsed ? '12px 0' : '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
                     justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                    fontSize: 13, fontWeight: isActive ? 600 : 500,
+                    fontSize: 14, fontWeight: isActive ? 600 : 500,
                     fontFamily: "'Inter', sans-serif",
-                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.55)',
+                    letterSpacing: '-0.01em',
+                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.6)',
                     background: isActive
-                      ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.2)')
-                      : isHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
-                    marginBottom: 2, transition: 'all 0.15s ease', textAlign: 'left',
+                      ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.15)')
+                      : isHovered ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    marginBottom: 3, transition: 'all 0.15s ease', textAlign: 'left',
                     position: 'relative',
                   }}
                 >
                   {isActive && (
                     <div style={{
                       position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                      width: 3, height: 18, borderRadius: '0 3px 3px 0', background: '#378ADD',
+                      width: 3, height: 20, borderRadius: '0 3px 3px 0', background: '#378ADD',
                     }} />
                   )}
                   <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex', flexShrink: 0 }}>
@@ -6974,8 +6975,8 @@ button:active { transform: scale(0.98); }`}</style>
                   {!sidebarCollapsed && item.label}
                   {item.label === 'Conversations' && unreadCount > 0 && (
                     <span style={{
-                      position: 'absolute', top: 4, right: 8,
-                      width: 18, height: 18, borderRadius: 9,
+                      position: 'absolute', top: 6, right: 10,
+                      width: 20, height: 20, borderRadius: 10,
                       background: '#EF4444', color: '#fff',
                       fontSize: 10, fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6983,15 +6984,16 @@ button:active { transform: scale(0.98); }`}</style>
                   )}
                 </button>
                 {item.tab === 'conversations' && activeTab === 'conversations' && !sidebarCollapsed && (
-                  <div style={{ paddingLeft: 32, marginBottom: 4 }}>
+                  <div style={{ paddingLeft: 38, marginBottom: 6 }}>
                     {(['matrix', 'streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
                       <button key={mode} onClick={() => setConversationViewMode(mode)} style={{
                         display: 'block', width: '100%', textAlign: 'left',
-                        padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                        fontSize: 12, fontWeight: conversationViewMode === mode ? 600 : 400,
+                        padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        fontSize: 13, fontWeight: conversationViewMode === mode ? 600 : 400,
                         color: conversationViewMode === mode ? '#378ADD' : 'rgba(255,255,255,0.4)',
                         background: conversationViewMode === mode ? 'rgba(55,138,221,0.1)' : 'transparent',
                         fontFamily: "'Inter', sans-serif", textTransform: 'capitalize',
+                        marginBottom: 1,
                       }}>{mode}</button>
                     ))}
                   </div>
@@ -7002,22 +7004,26 @@ button:active { transform: scale(0.98); }`}</style>
         </nav>
 
         {/* Collapse Toggle */}
-        <div style={{ padding: '8px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-end' }}>
+        <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
           <button
-            onClick={() => setSidebarCollapsed(c => !c)}
+            onClick={() => { setSidebarCollapsed(c => !c); playSound('click'); }}
             style={{
-              width: 28, height: 28, borderRadius: 6, border: 'none',
+              display: 'flex', alignItems: 'center', gap: 8, width: sidebarCollapsed ? 36 : '100%',
+              height: 36, borderRadius: 8, border: 'none', justifyContent: 'center',
               background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.15s ease',
+              cursor: 'pointer', transition: 'all 0.15s ease',
+              fontSize: 12, fontWeight: 500, fontFamily: "'Inter', sans-serif",
             }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {sidebarCollapsed
-                ? <polyline points="9 18 15 12 9 6" />
-                : <polyline points="15 18 9 12 15 6" />
+                ? <><polyline points="9 18 15 12 9 6" /><line x1="4" y1="4" x2="4" y2="20" /></>
+                : <><polyline points="15 18 9 12 15 6" /><line x1="20" y1="4" x2="20" y2="20" /></>
               }
             </svg>
+            {!sidebarCollapsed && <span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span>}
           </button>
         </div>
 
