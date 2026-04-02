@@ -657,12 +657,18 @@ export default function DashboardPage() {
             })),
           };
         });
-        // Merge with any locally-saved columns (from Start Conversation)
+        // Merge with locally-saved columns, deduplicating by phone number
         try {
           const saved = JSON.parse(localStorage.getItem('vernacular_open_columns') || '[]') as ConversationColumn[];
-          // Add any saved columns that aren't already in the API results
+          // Collect all phone numbers from API results to prevent duplicates
+          const apiPhones = new Set(realColumns.map(c => c.contact?.phone).filter(Boolean));
           const apiIds = new Set(realColumns.map(c => c.id));
-          const extraCols = saved.filter(s => !apiIds.has(s.id) && s.contact);
+          // Only keep local columns whose phone isn't already in API results
+          const extraCols = saved.filter(s =>
+            s.contact &&
+            !apiIds.has(s.id) &&
+            (!s.contact.phone || !apiPhones.has(s.contact.phone))
+          );
           setColumns([...realColumns, ...extraCols]);
         } catch {
           setColumns(realColumns);
