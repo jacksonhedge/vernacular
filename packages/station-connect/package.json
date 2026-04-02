@@ -1,0 +1,19 @@
+{
+  "name": "@hedgeinc/vernacular-station",
+  "version": "1.0.0",
+  "description": "Vernacular iMessage station setup and connection tool",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "vernacular-station": "index.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.101.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.0",
+    "execa": "^9.0.0"
+  }
+}
