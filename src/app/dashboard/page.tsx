@@ -341,6 +341,7 @@ export default function DashboardPage() {
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
   const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
+  const [showPreviousChats, setShowPreviousChats] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Sound effects using Web Audio API
@@ -2641,10 +2642,20 @@ button:active { transform: scale(0.98); }`}</style>
                   })()}
                 </div>
               </div>
-              {/* Conversation List */}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
+              {/* Active Chats Label */}
+              <div style={{
+                padding: '8px 14px', background: '#fafbfc',
+                borderBottom: '1px solid rgba(0,0,0,0.06)',
+                borderTop: '1px solid rgba(0,0,0,0.06)',
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#1c1c1e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Active ({columns.filter(c => c.contact && c.messages.length > 0).length})
+                </span>
+              </div>
+              {/* Active Conversation List — always visible */}
+              <div style={{ overflowY: 'auto', maxHeight: showPreviousChats ? '40%' : undefined, flex: showPreviousChats ? undefined : 1 }}>
             {columns
-              .filter(col => col.contact && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+              .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
               .map(col => {
                 const lastMsg = col.messages.length > 0 ? col.messages[col.messages.length - 1] : null;
                 const hasUnread = lastMsg?.direction === 'incoming';
@@ -2754,6 +2765,60 @@ button:active { transform: scale(0.98); }`}</style>
                 );
               })}
           </div>
+              {/* Previous Chats Dropdown */}
+              {(() => {
+                const previousChats = columns.filter(c => c.contact && c.messages.length === 0 && c.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+                if (previousChats.length === 0 && !showPreviousChats) return null;
+                return (
+                  <>
+                    <button onClick={() => setShowPreviousChats(!showPreviousChats)} style={{
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '8px 14px', border: 'none', cursor: 'pointer',
+                      background: showPreviousChats ? 'rgba(55,138,221,0.04)' : '#f5f6f8',
+                      borderTop: '1px solid rgba(0,0,0,0.06)',
+                      borderBottom: showPreviousChats ? '1px solid rgba(0,0,0,0.04)' : 'none',
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Previous Chats ({previousChats.length})
+                      </span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2.5" strokeLinecap="round"
+                        style={{ transform: showPreviousChats ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    {showPreviousChats && (
+                      <div style={{ overflowY: 'auto', maxHeight: 200, background: '#fafbfc' }}>
+                        {previousChats.map(col => {
+                          const fruits = ['🍒','🍓','🍊','🍎','🍇','🍈','🔔','🍋','🍑','🍍'];
+                          const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                          return (
+                            <button key={col.id} onClick={() => {
+                              playSound('click');
+                              setSelectedConversationId(col.id);
+                              const el = document.getElementById(`stream-col-${col.id}`);
+                              if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                            }} style={{
+                              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                              padding: '10px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                              background: 'transparent', borderBottom: '1px solid rgba(0,0,0,0.03)',
+                              opacity: 0.7,
+                            }}
+                              onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                              onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                            >
+                              <span style={{ fontSize: 18 }}>{fruits[Math.max(0,idx) % fruits.length]}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: '#1c1c1e' }}>{col.contact?.name || 'Unknown'}</div>
+                                <div style={{ fontSize: 11, color: '#8e8e93' }}>{col.contact?.phone || 'No messages'}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
           </div>{/* end right side (dot grid + list) */}
         </div>{/* end icon rail + right content */}
         </div>{/* end Contact List Panel */}
