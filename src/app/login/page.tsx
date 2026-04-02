@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -13,6 +13,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('vernacular_remember') === 'true';
+    return false;
+  });
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('vernacular_remember');
+    if (saved === 'true') {
+      const savedEmail = localStorage.getItem('vernacular_email') || '';
+      const savedPass = localStorage.getItem('vernacular_pass') || '';
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPass) setPassword(savedPass);
+    }
+  }, []);
 
   const handleLogin = async () => {
     setError('');
@@ -22,6 +38,16 @@ export default function LoginPage() {
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw new Error(authError.message);
+      // Save or clear credentials based on remember me
+      if (rememberMe) {
+        localStorage.setItem('vernacular_remember', 'true');
+        localStorage.setItem('vernacular_email', email);
+        localStorage.setItem('vernacular_pass', password);
+      } else {
+        localStorage.removeItem('vernacular_remember');
+        localStorage.removeItem('vernacular_email');
+        localStorage.removeItem('vernacular_pass');
+      }
       window.location.href = '/dashboard';
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -111,6 +137,28 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Remember Me */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+            <button onClick={() => setRememberMe(!rememberMe)} type="button" style={{
+              width: 18, height: 18, borderRadius: 4, border: rememberMe ? 'none' : '1.5px solid rgba(0,0,0,0.2)',
+              background: rememberMe ? '#378ADD' : '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              transition: 'all 0.15s',
+            }}>
+              {rememberMe && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
+            <label onClick={() => setRememberMe(!rememberMe)} style={{
+              fontSize: 13, color: '#6b7280', cursor: 'pointer', userSelect: 'none',
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              Remember me
+            </label>
           </div>
 
           <button onClick={handleLogin} disabled={loading} style={{
