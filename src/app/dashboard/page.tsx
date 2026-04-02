@@ -6955,7 +6955,7 @@ button:active { transform: scale(0.98); }`}</style>
                     fontSize: 14, fontWeight: isActive ? 600 : 500,
                     fontFamily: "'Inter', sans-serif",
                     letterSpacing: '-0.01em',
-                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.6)',
+                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.85)',
                     background: isActive
                       ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.15)')
                       : isHovered ? 'rgba(255,255,255,0.08)' : 'transparent',
@@ -6969,7 +6969,7 @@ button:active { transform: scale(0.98); }`}</style>
                       width: 3, height: 20, borderRadius: '0 3px 3px 0', background: '#378ADD',
                     }} />
                   )}
-                  <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.4)', display: 'flex', flexShrink: 0 }}>
+                  <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.6)', display: 'flex', flexShrink: 0 }}>
                     {item.icon}
                   </span>
                   {!sidebarCollapsed && item.label}
@@ -6990,7 +6990,7 @@ button:active { transform: scale(0.98); }`}</style>
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
                         fontSize: 13, fontWeight: conversationViewMode === mode ? 600 : 400,
-                        color: conversationViewMode === mode ? '#378ADD' : 'rgba(255,255,255,0.4)',
+                        color: conversationViewMode === mode ? '#378ADD' : 'rgba(255,255,255,0.6)',
                         background: conversationViewMode === mode ? 'rgba(55,138,221,0.1)' : 'transparent',
                         fontFamily: "'Inter', sans-serif", textTransform: 'capitalize',
                         marginBottom: 1,
