@@ -56,6 +56,7 @@ export async function GET() {
     let synced = 0;
     let skipped = 0;
     let errors = 0;
+    const errorDetails: string[] = [];
     for (const msg of inboundMessages) {
       // Check if we already have this Notion page synced
       const { data: existing } = await supabase
@@ -67,25 +68,18 @@ export async function GET() {
 
       if (existing && existing.length > 0) { skipped++; continue; }
 
-      // Find or create contact
+      // Find or create contact — use ilike on last 7 digits (most reliable)
       let contactId: string | null = null;
-      // Try exact match first, then fuzzy ilike as fallback
-      let contacts: Array<{ id: string; full_name: string | null }> | null = null;
-      const { data: exactMatch, error: contactErr } = await supabase
+      const digits = msg.phone.replace(/\D/g, '');
+      const last7 = digits.slice(-7);
+      const { data: contacts, error: contactErr } = await supabase
         .from('contacts').select('id, full_name')
-        .or(phoneOrFilter(msg.phone))
+        .ilike('phone', `%${last7}%`)
         .limit(1);
 
       if (contactErr) {
-        console.error(`[poll-inbound] Contact exact lookup error for ${msg.phone}:`, contactErr.message);
-        // Fallback to ilike
-        const { data: fuzzyMatch } = await supabase
-          .from('contacts').select('id, full_name')
-          .or(phoneIlikeFilter(msg.phone))
-          .limit(1);
-        contacts = fuzzyMatch;
-      } else {
-        contacts = exactMatch;
+        const reason = `contact lookup: ${contactErr.message}`;
+        errors++; errorDetails.push(`${msg.phone}: ${reason}`); continue;
       }
 
       if (contacts && contacts.length > 0) {
@@ -101,13 +95,12 @@ export async function GET() {
           })
           .select('id').single();
         if (newContactErr) {
-          console.error(`[poll-inbound] Contact create error:`, newContactErr.message);
-          errors++; continue;
+          errors++; errorDetails.push(`${msg.phone}: contact create: ${newContactErr.message}`); continue;
         }
         contactId = newContact?.id || null;
       }
 
-      if (!contactId) { console.error(`[poll-inbound] No contactId for ${msg.phone}`); errors++; continue; }
+      if (!contactId) { errors++; errorDetails.push(`${msg.phone}: no contactId`); continue; }
 
       // Find or create conversation
       const { data: station } = await supabase
@@ -116,7 +109,7 @@ export async function GET() {
         .limit(1);
 
       const stationId = station?.[0]?.id;
-      if (!stationId) { console.error(`[poll-inbound] No station found for "${msg.station}"`); errors++; continue; }
+      if (!stationId) { errors++; errorDetails.push(`${msg.phone}: no station "${msg.station}"`); continue; }
 
       let convId: string | null = null;
       const { data: existingConv } = await supabase
@@ -129,7 +122,7 @@ export async function GET() {
       if (existingConv && existingConv.length > 0) {
         convId = existingConv[0].id;
       } else {
-        const { data: newConv } = await supabase
+        const { data: newConv, error: convErr } = await supabase
           .from('conversations')
           .insert({
             station_id: stationId,
@@ -141,10 +134,11 @@ export async function GET() {
             flagged: false,
           })
           .select('id').single();
+        if (convErr) { errors++; errorDetails.push(`${msg.phone}: conv create: ${convErr.message}`); continue; }
         convId = newConv?.id || null;
       }
 
-      if (!convId) { console.error(`[poll-inbound] No convId for ${msg.phone}`); errors++; continue; }
+      if (!convId) { errors++; errorDetails.push(`${msg.phone}: no convId`); continue; }
 
       // Create message record
       const { error: msgErr } = await supabase.from('messages').insert({
@@ -154,9 +148,9 @@ export async function GET() {
         status: 'delivered',
         ai_generated: false,
         notion_page_id: msg.notionId,
-        source_system: 'claude-cowork',  // Inbound via Wade station (Cowork)
+        source_system: 'claude-cowork',
       });
-      if (msgErr) { console.error(`[poll-inbound] Insert failed:`, msgErr.message); errors++; continue; }
+      if (msgErr) { errors++; errorDetails.push(`${msg.phone}: msg insert: ${msgErr.message}`); continue; }
 
       // Update conversation
       await supabase.from('conversations').update({
@@ -174,6 +168,7 @@ export async function GET() {
       synced,
       skipped,
       errors,
+      errorDetails: errorDetails.slice(0, 5),
       messages: inboundMessages.map(m => ({
         phone: m.phone,
         contactName: m.contactName,
