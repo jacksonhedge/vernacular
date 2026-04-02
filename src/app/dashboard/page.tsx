@@ -413,6 +413,7 @@ export default function DashboardPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null);
+  const conversationsAutoLoaded = useRef(false);
   const [aiModeEnabled, setAiModeEnabled] = useState(false);
   const [showAiModePanel, setShowAiModePanel] = useState(false);
   const [aiModeRules, setAiModeRules] = useState({
@@ -673,6 +674,7 @@ export default function DashboardPage() {
         } catch {
           setColumns(realColumns);
         }
+        setLastReloadTime(new Date());
       }
     }).catch(() => {});
   }, [user]);
@@ -732,6 +734,14 @@ export default function DashboardPage() {
       ref?.scrollIntoView({ behavior: 'smooth' });
     });
   }, [columns]);
+
+  // Auto-load Notion conversations on first visit to Conversations tab
+  useEffect(() => {
+    if (activeTab === 'conversations' && !conversationsAutoLoaded.current && !loadingNotion) {
+      conversationsAutoLoaded.current = true;
+      loadAllNotionConversations();
+    }
+  }, [activeTab, loadingNotion]);
 
   // Initialize profile form from user data
   useEffect(() => {
@@ -1090,7 +1100,7 @@ button:active { transform: scale(0.98); }`}</style>
       if (saveError) throw saveError;
       setOrgSettings(settingsForm);
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       setSaveStatus('idle');
       window.alert('Failed to save settings: ' + (err instanceof Error ? err.message : String(err)));
@@ -1765,7 +1775,9 @@ button:active { transform: scale(0.98); }`}</style>
                         }}
                           onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.2)')}
                           onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+
                         >
+                          <title>{`${ghost.name} — ${ghost.role}: ${ghost.purpose}`}</title>
                           <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z"
                             fill={isBlinking ? '#2222FF' : ghost.color}
                             stroke={isBlinking ? '#fff' : 'none'}
@@ -2189,15 +2201,17 @@ button:active { transform: scale(0.98); }`}</style>
               alignItems: 'center', padding: '12px 0', overflowY: 'auto', gap: 6,
               borderRight: '1px solid rgba(255,255,255,0.06)',
             }}>
-              {matrixItems.map(item => (
+              {(() => {
+                const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                return matrixItems.map((item, idx) => (
                 <button key={item.id} onClick={() => setExpandedMatrixId(expandedMatrixId === item.id ? null : item.id)} style={{
                   width: 48, height: 48, borderRadius: 12, border: getStatusBorder(item.status),
                   background: expandedMatrixId === item.id ? 'rgba(55,138,221,0.25)' : 'rgba(255,255,255,0.05)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
                   position: 'relative', transition: 'all 0.2s', flexShrink: 0,
-                  color: '#fff', fontSize: 14, fontWeight: 700,
-                }}>
-                  {item.initials}
+                  color: '#fff', fontSize: 20, fontWeight: 700,
+                }} title={`${item.name} — ${item.phone}`}>
+                  {fruits[idx % fruits.length]}
                   {item.hasUnread && (
                     <div style={{
                       position: 'absolute', top: -2, right: -2,
@@ -2206,7 +2220,8 @@ button:active { transform: scale(0.98); }`}</style>
                     }} />
                   )}
                 </button>
-              ))}
+              ));
+              })()}
               {/* Add new */}
               <button onClick={addColumn} style={{
                 width: 48, height: 48, borderRadius: 12, border: '2px dashed rgba(255,255,255,0.15)',
@@ -2301,7 +2316,7 @@ button:active { transform: scale(0.98); }`}</style>
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
                         }}>
-                          {item.initials}
+                          {(() => { const f = ['🍒','🍓','🍊','🍎','🍇','🍈','🔔','🍋','🍑','🍍']; return f[Math.max(0, matrixItems.findIndex(m => m.id === item.id)) % f.length]; })()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', fontFamily: "'Inter', sans-serif" }}>
@@ -2356,7 +2371,7 @@ button:active { transform: scale(0.98); }`}</style>
                                   color: msg.direction === 'outgoing' ? '#fff' : '#666',
                                   fontSize: 10, fontWeight: 700,
                                 }}>
-                                  {msg.direction === 'outgoing' ? 'You' : item.initials}
+                                  {msg.direction === 'outgoing' ? 'You' : (() => { const f = ['🍒','🍓','🍊','🍎','🍇','🍈','🔔','🍋','🍑','🍍']; return f[Math.max(0, matrixItems.findIndex(m => m.id === item.id)) % f.length]; })()}
                                 </div>
                                 {/* Bubble */}
                                 <div style={{
@@ -4480,7 +4495,7 @@ button:active { transform: scale(0.98); }`}</style>
             background: saveStatus === 'saved' ? '#22C55E' : primaryBtnStyle.background,
             boxShadow: saveStatus === 'saved' ? '0 1px 3px rgba(34,197,94,0.3)' : primaryBtnStyle.boxShadow,
           }}>
-            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved \u2713' : 'Save Changes'}
           </button>
         </div>
 
