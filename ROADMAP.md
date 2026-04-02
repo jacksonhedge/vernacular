@@ -1,97 +1,170 @@
-# Vernacular — Integration & Configuration Roadmap
+# Vernacular — Product Roadmap
 
 **Owner:** Jackson Fitzgerald, Hedge Inc.
-**Status:** Planning
-**Last Updated:** March 2026
+**Last Updated:** April 2026
 
 ---
 
-## Overview
+## Phase 1 — Core Platform (LIVE)
 
-This roadmap covers the external integration layer for Vernacular — enabling human alerting, contact data ingestion, and remote configuration/control via Slack, Gmail, and an MCP server for Claude Desktop. Integrations are additive to the core closed-loop architecture and do not touch the station pipeline directly.
-
----
-
-## Integration Tiers
-
-| Priority | Integration | Purpose | Phase |
-|----------|-------------|---------|-------|
-| P0 | **MCP Server (Claude Desktop)** | Config & control Vernacular from Claude | Phase 2 |
-| P0 | **Slack** | Human alerts + override triggers | Phase 2 |
-| P1 | **Gmail** | Contact sync + inbound lead ingestion | Phase 2-3 |
-| P2 | **Webhooks / REST API** | General-purpose outbound events | Phase 3 |
-| P2 | **CRM (HubSpot / Salesforce)** | Bi-directional contact enrichment | Phase 3 |
-| P3 | **Zapier / Make** | No-code automation layer | Phase 3+ |
-
----
-
-## Phase 2 Integrations
-
-### 1. MCP Server for Claude Desktop
-
-**Purpose:** Allow operators to query, configure, and control Vernacular stations directly from Claude Desktop using natural language.
-
-**MCP Tools:**
-
-| Tool Name | Description |
-|-----------|-------------|
-| `get_station_status` | Returns online/offline status, last write time, model in use |
-| `list_conversations` | Pulls active conversations across all stations |
-| `get_thread` | Fetches full message history for a contact |
-| `send_message` | Triggers an outbound message from a specified station |
-| `pause_station` | Disables auto-reply on a station (human takeover mode) |
-| `resume_station` | Re-enables auto-reply on a station |
-| `update_system_prompt` | Overwrites the persona/system prompt for a station |
-| `flag_conversation` | Marks a conversation for human review |
-| `get_model_router_logs` | Returns recent model router decisions |
-
-### 2. Slack Integration
-
-Real-time human alerting and lightweight override triggers.
-
-**Alert Events -> Slack:**
-- Conversation flagged -> #vernacular-flags
-- Ollama fallback triggered -> #vernacular-ops
-- Station goes offline -> #vernacular-ops
-- New inbound from unknown contact -> #vernacular-leads
-
-**Interactive Override (v2):**
-- [Take Over] — pauses auto-reply
-- [Dismiss] — unflag
-- [View Thread] — deep link to UI
-
-### 3. Gmail Integration
-
-- Contact ingestion from labeled emails
-- Outbound email summaries for flagged conversations
+| Feature | Status |
+|---------|--------|
+| Web Dashboard (vernacular.chat) | ✅ Live |
+| Supabase backend (contacts, conversations, messages, stations) | ✅ Live |
+| Notion Message Queue (shared bus) | ✅ Live |
+| Station pipeline (Wade — MacBook Air) | ✅ Live |
+| 4-step onboarding (signup → test iMessage → number setup) | ✅ Live |
+| AI Mode + Ghost agents (Blinky, Pinky, Inky, Clyde) | ✅ Live |
+| Pac-Man theme (dot grid, fruits, ghost editor) | ✅ Live |
+| Sound effects (send swoosh, receive tri-tone, click) | ✅ Live |
+| Contact card + list views | ✅ Live |
+| Phone normalization (shared @/lib/phone.ts) | ✅ Live |
+| Notion client (shared @/lib/notion.ts) | ✅ Live |
+| Source system tracking (vernacular-web, claude-cowork, etc.) | ✅ Live |
+| Inbound message polling (Notion → Supabase) | ✅ Live |
+| Heartbeat via /api/engine/ping | ✅ Live |
+| Change password | ✅ Live |
+| AI add-ons pricing ($1,000/mo each) | ✅ Live |
 
 ---
 
-## Phase 3 Integrations
+## Phase 2 — Multi-Platform + Widget (In Progress)
 
-### 4. REST API
-### 5. CRM Integration (HubSpot / Salesforce)
-### 6. Zapier / Make
+### NPM SDK (@vernacular/sdk)
+- ✅ Scaffolded — VernacularClient with 7 API methods + onInbound listener
+- [ ] Publish to npm
+- [ ] API key auth system
+
+### Website Chat Widget (widget.js)
+- ✅ Embeddable script — chat bubble, iMessage handoff, Pac-Man typing
+- [ ] Pre-chat form (name, email, order #)
+- [ ] Business hours / offline mode
+- [ ] Conversation history (localStorage)
+- [ ] QR code iMessage handoff
+- [ ] CSAT rating after conversation
+- [ ] White-label option ($500/mo)
+- [ ] Widget analytics dashboard
+
+### Mac Desktop App (Electron)
+- ✅ Scaffolded — Electron + React + better-sqlite3
+- [ ] Connect to SDK
+- [ ] Direct chat.db read (instant inbound, no polling)
+- [ ] AppleScript send (instant outbound, no Notion relay)
+- [ ] Menu bar tray with unread badge
+- [ ] Native macOS notifications
+- [ ] Code signing + DMG distribution
+- [ ] Auto-updater
+
+### Station Fleet
+- [ ] Second station (Albus — Mac Mini)
+- [ ] Station provisioning workflow
+- [ ] Fleet health dashboard
+- [ ] Auto-restart on crash
 
 ---
 
-## Build Order
+## Phase 3 — Integrations
 
+| Priority | Integration | Purpose | Status |
+|----------|-------------|---------|--------|
+| P0 | **MCP Server (Claude Desktop)** | Config & control Vernacular from Claude | Not started |
+| P0 | **Slack** | Human alerts + override triggers | UI built, no webhook |
+| P1 | **Gmail** | Contact sync + inbound lead ingestion | Not started |
+| P2 | **Webhooks / REST API** | General-purpose outbound events | Partial (internal routes) |
+| P2 | **CRM (HubSpot / Salesforce)** | Bi-directional contact enrichment | UI shows "Coming Soon" |
+| P3 | **Zapier / Make** | No-code automation layer | Not started |
+
+### MCP Server Tools (Claude Desktop)
+| Tool | Description |
+|------|-------------|
+| `get_station_status` | Online/offline, last heartbeat, model |
+| `list_conversations` | Active conversations across stations |
+| `get_thread` | Full message history for a contact |
+| `send_message` | Trigger outbound from a station |
+| `pause_station` | Disable auto-reply (human takeover) |
+| `resume_station` | Re-enable auto-reply |
+| `update_system_prompt` | Change station persona |
+| `flag_conversation` | Mark for human review |
+
+---
+
+## Phase 4 — iMessage 2FA (Verification API)
+
+**Concept:** Companies use Vernacular to send 2FA verification codes via iMessage (blue bubbles) instead of SMS.
+
+**Why:**
+- End-to-end encrypted (vs SMS SIM swap attacks)
+- Blue bubble = trusted sender (vs spoofable green bubbles)
+- Read receipts — know if user saw the code
+- No carrier filtering or grey route delays
+
+**Prerequisites:**
+- [ ] Mac app fleet with sub-3-second delivery (no Notion relay)
+- [ ] 99.99% uptime (redundant stations)
+- [ ] SMS fallback for Android users
+- [ ] Rate limiting (anti-abuse)
+
+**API Design:**
 ```
-1. MCP Server (local, stdio transport)
-2. Slack webhooks (alerting only)
-3. Vernacular REST API (internal)
-4. Slack interactive messages
-5. Gmail contact ingestion
-6. Gmail outbound summaries
-7. CRM sync worker
-8. Public webhook registration
+POST /api/verify/send
+{ "phone": "+14127351089", "template": "verification", "code": "847291", "ttl": 300 }
+→ { "id": "ver_xxx", "status": "sent", "channel": "imessage" }
+
+POST /api/verify/check
+{ "phone": "+14127351089", "code": "847291" }
+→ { "valid": true, "channel": "imessage" }
 ```
 
-## Open Questions
+**Revenue:** $0.02-0.05 per verification. At 1M/month = $20-50K/month.
 
-1. MCP transport — stdio (local) or SSE (hosted)?
-2. Slack interactivity in v1 — buttons or just links?
-3. Gmail OAuth vs. service account?
-4. API auth — secret key or JWT?
-5. Config hot-reload — poll cycle (3s) or restart signal?
+---
+
+## Phase 5 — Mobile + Scale
+
+### iOS App
+- React Native or Swift
+- Push notifications for inbound messages
+- Quick reply from notification
+- Contact sync with phone contacts
+- Cannot send iMessage directly (Apple restriction) — uses Vernacular API
+
+### Android App
+- React Native
+- "Blue bubble on Android" marketing angle
+- Same API client as iOS
+- SMS fallback when iMessage unavailable
+
+### PC App (Windows/Linux)
+- Electron (same codebase as Mac app minus chat.db)
+- Dashboard-only (no local iMessage access)
+- Relay through Mac stations
+
+### Operations Center (25+ stations)
+- [ ] Dedicated rack of Mac Minis
+- [ ] Electrical + networking infrastructure
+- [ ] Load balancer across stations
+- [ ] Station health monitoring + auto-failover
+- [ ] Per-station analytics
+
+---
+
+## Pricing
+
+| Tier | Price | Includes |
+|------|-------|----------|
+| Professional | $2,000/seat/month | 1-3 seats, dedicated phone line, AI drafts, unlimited conversations |
+| Business | $2,500/seat/month | 4-15 seats, all integrations, campaigns |
+| Enterprise | Custom | Unlimited seats, all AI tools included |
+| AI Add-ons | $1,000/mo each | AI Mode, Sentiment Analysis, Campaign Writer, Contact Enrichment, Conversation Summary |
+| Widget White-label | $500/mo | Remove "Powered by Vernacular" |
+| 2FA API | $0.02-0.05/verification | Volume pricing available |
+
+---
+
+## Key Decisions & Constraints
+- **No per-message API cost** — local inference after hardware investment
+- **One number per machine** — clean isolation, easy to debug
+- **Supabase over self-hosted Postgres** — faster v1, Realtime built in
+- **Vercel deployment** — zero-config, auto-deploy from main
+- **Notion as message bus** — bridges Cowork proxy limitations
+- **MCP over custom protocol** — standard, Claude-native, extensible
