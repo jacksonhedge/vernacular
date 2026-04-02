@@ -61,9 +61,11 @@ export async function POST(request: Request) {
 
     // 2. Find or create contact in Supabase
     let contactId: string | null = null;
+    // Use ilike on last 7 digits — most reliable across all phone formats
+    const last7 = n10.slice(-7);
     const { data: existingContacts } = await supabase
       .from('contacts').select('id, full_name')
-      .or(phoneOrFilter(phoneNumber))
+      .ilike('phone', `%${last7}%`)
       .limit(1);
 
     if (existingContacts && existingContacts.length > 0) {
