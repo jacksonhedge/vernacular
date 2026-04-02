@@ -1,0 +1,28 @@
+appId: com.vernacular.desktop
+productName: Vernacular
+copyright: Copyright © 2026 Vernacular
+
+directories:
+  output: dist-build
+
+mac:
+  icon: assets/icon.icns
+  category: public.app-category.business
+  target:
+    - dmg
+    - zip
+  hardenedRuntime: true
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
+
+dmg:
+  title: Vernacular
+  artifactName: Vernacular-${version}.${ext}
+
+files:
+  - dist-electron/**/*
+  - dist-renderer/**/*
+  - package.json
+
+extraMetadata:
+  main: dist-electron/main/index.js
