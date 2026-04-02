@@ -68,13 +68,14 @@ export async function GET() {
 
       if (existing && existing.length > 0) { skipped++; continue; }
 
-      // Find or create contact — use ilike on last 7 digits (most reliable)
+      // Find or create contact — use ilike on last 4 digits (always contiguous even with formatting)
       let contactId: string | null = null;
       const digits = msg.phone.replace(/\D/g, '');
-      const last7 = digits.slice(-7);
+      const d10 = digits.startsWith('1') && digits.length === 11 ? digits.slice(1) : digits;
+      const last4 = d10.slice(-4);
       const { data: contacts, error: contactErr } = await supabase
         .from('contacts').select('id, full_name')
-        .ilike('phone', `%${last7}%`)
+        .ilike('phone', `%${last4}%`)
         .limit(1);
 
       if (contactErr) {
