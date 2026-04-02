@@ -154,6 +154,7 @@ export async function GET() {
         status: 'delivered',
         ai_generated: false,
         notion_page_id: msg.notionId,
+        source_system: 'claude-cowork',  // Inbound via Wade station (Cowork)
       });
       if (msgErr) { console.error(`[poll-inbound] Insert failed:`, msgErr.message); errors++; continue; }
 

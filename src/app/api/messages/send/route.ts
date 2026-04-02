@@ -7,7 +7,8 @@ import { createPage, NOTION_DBS } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
-    const { phoneNumber, message, contactName, organizationId, conversationId } = await request.json();
+    const { phoneNumber, message, contactName, organizationId, conversationId, sourceSystem } = await request.json();
+    const system = sourceSystem || 'vernacular-web';
 
     if (!phoneNumber || !message) {
       return NextResponse.json({ error: 'phoneNumber and message are required' }, { status: 400 });
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
             last_message_preview: message.substring(0, 100),
             unread_count: 0,
             flagged: false,
+            source_system: system,
           })
           .select('id').single();
         convId = newConv?.id || null;
@@ -125,6 +127,7 @@ export async function POST(request: Request) {
           body: message,
           status: 'queued',
           ai_generated: false,
+          source_system: system,
         })
         .select('id').single();
       messageId = msg?.id || null;
