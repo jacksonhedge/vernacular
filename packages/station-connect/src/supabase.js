@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Internal tooling — credentials embedded intentionally for station setup
-const SUPABASE_URL = 'https://miuyksnwzkhiyyilchjs.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdXlrc253emtoaXl5aWxjaGpzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDg4NzA3NywiZXhwIjoyMDkwNDYzMDc3fQ.ELbzfs92jYikwB4IcQrGBCDfSZs_gNoJeqx4jswEJuo';
+// Credentials loaded from environment or ~/vernacular/.env
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || '';
 
 let client = null;
 
