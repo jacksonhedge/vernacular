@@ -690,6 +690,70 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section style={{
+          padding: '80px 24px', borderTop: `1px solid ${t.surfaceBorder}`,
+          textAlign: 'center',
+        }}>
+          <h2 style={{ fontSize: 40, fontWeight: 800, color: t.text, marginBottom: 8, letterSpacing: '-0.02em' }}>Simple pricing. Powerful texting.</h2>
+          <p style={{ fontSize: 20, color: t.textSecondary, marginBottom: 48, fontWeight: 600 }}>
+            $333/seat/month — minimum 3 seats
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, maxWidth: 900, margin: '0 auto 40px' }}>
+            {[
+              {
+                title: 'iMessage Line',
+                desc: 'Dedicated blue bubble number, 50K credits/seat included',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'AI-Powered CRM',
+                desc: 'Ghost agents, auto-responses, contact management',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                    <path d="M6 10v1a6 6 0 0 0 12 0v-1" />
+                    <line x1="12" y1="17" x2="12" y2="22" />
+                    <line x1="8" y1="22" x2="16" y2="22" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'Email + Widget',
+                desc: 'Email integration, embeddable chat widget',
+                icon: (
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M22 4L12 13 2 4" />
+                  </svg>
+                ),
+              },
+            ].map((col, i) => (
+              <div key={i} style={{
+                padding: '32px 24px', borderRadius: 16,
+                background: t.surface, border: `1px solid ${t.surfaceBorder}`,
+                textAlign: 'center',
+              }}>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>{col.icon}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: t.text, marginBottom: 8 }}>{col.title}</div>
+                <div style={{ fontSize: 14, color: t.textSecondary, lineHeight: 1.5 }}>{col.desc}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 13, color: t.textTertiary, marginBottom: 32 }}>
+            Credits: Texts $0.003 &middot; AI responses $0.02 &middot; New contacts $0.25
+          </p>
+          <a href="/signup" style={{
+            display: 'inline-block', padding: '14px 36px', borderRadius: 12,
+            background: '#378ADD', color: '#fff', fontSize: 15, fontWeight: 700,
+            textDecoration: 'none', boxShadow: '0 4px 24px rgba(55,138,221,0.3)',
+          }}>Get Started</a>
+        </section>
+
         {/* CTA */}
         <section style={{
           padding: '100px 24px', borderTop: `1px solid ${t.surfaceBorder}`,

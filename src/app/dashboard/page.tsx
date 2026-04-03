@@ -260,6 +260,11 @@ export default function DashboardPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
 
+  // Notifications
+  const [notifications, setNotifications] = useState<{ id: string; type: string; subject: string; body: string; read: boolean; created_at: string; metadata: Record<string, unknown> }[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationBellRef = useRef<HTMLDivElement>(null);
+
   // Contacts
   const [contacts, setContacts] = useState<ContactRecord[]>([]);
   const [supabaseContactsLoaded, setSupabaseContactsLoaded] = useState(false);
@@ -612,6 +617,11 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
+
+    // Fetch notifications
+    fetch('/api/notify').then(r => r.json()).then(data => {
+      if (data.notifications) setNotifications(data.notifications);
+    }).catch(() => {});
 
     // Fetch Notion contacts and conversation pages
     fetch('/api/notion/contacts').then(r => r.json()).then(data => {
@@ -4744,9 +4754,9 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[
-                  { name: '10K Credits', credits: '10,000', price: '$49', perCredit: '$0.0049', icon: '💬', popular: false },
-                  { name: '50K Credits', credits: '50,000', price: '$199', perCredit: '$0.004', icon: '🚀', popular: true },
-                  { name: '100K Credits', credits: '100,000', price: '$349', perCredit: '$0.0035', icon: '⚡', popular: false },
+                  { name: '100K Credits', credits: '100,000', price: '$79', perCredit: '$0.00079', icon: '💬', popular: false },
+                  { name: '500K Credits', credits: '500,000', price: '$349', perCredit: '$0.0007', icon: '🚀', popular: true },
+                  { name: '1M Credits', credits: '1,000,000', price: '$599', perCredit: '$0.0006', icon: '⚡', popular: false },
                 ].map((pack, i) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
@@ -4783,18 +4793,18 @@ button:active { transform: scale(0.98); }`}</style>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>How Credits Work</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 11, color: '#666' }}>
                   {[
-                    ['Send iMessage', '1 credit'],
-                    ['Send email', '1 credit'],
-                    ['New contact added', '10 credits'],
-                    ['New contact from widget', '15 credits'],
-                    ['AI draft generated', '3 credits'],
-                    ['AI auto-response', '5 credits'],
-                    ['Widget → iMessage', '5 credits'],
-                    ['Contact enrichment', '10 credits'],
-                    ['Bulk blast (per person)', '2 credits'],
-                    ['Contact import (each)', '3 credits'],
+                    ['Send iMessage', '3 credits'],
+                    ['Send email', '3 credits'],
                     ['Receive message', 'Free'],
-                    ['AI sentiment analysis', '2 credits'],
+                    ['New contact added', '250 credits'],
+                    ['New contact from widget', '300 credits'],
+                    ['Contact import (each)', '250 credits'],
+                    ['AI draft generated', '15 credits'],
+                    ['AI auto-response', '20 credits'],
+                    ['AI sentiment analysis', '10 credits'],
+                    ['Widget → iMessage', '50 credits'],
+                    ['Contact enrichment', '500 credits'],
+                    ['Bulk blast (per person)', '5 credits'],
                   ].map(([action, cost], i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
                       <span>{action}</span>
@@ -4835,21 +4845,21 @@ button:active { transform: scale(0.98); }`}</style>
                   {[
                     ['Minimum Seats', '3', '5', '10+'],
                     ['Dedicated iMessage Line', '1 per seat', '1 per seat', '1 per seat'],
-                    ['Credits/seat/month', '5,000', '7,500', '15,000'],
+                    ['Credits/seat/month', '50,000', '75,000', '150,000'],
                     ['Email Integration', '\u2713', '\u2713', '\u2713'],
                     ['Phone Calls', '\u2014', '\u2014', '\u2014'],
                     ['AI Ghost Agents', '4', '4', '4 + Custom'],
-                    ['New Contact (credits)', '10', '10', '5'],
-                    ['AI Draft (credits)', '3', '3', '2'],
-                    ['AI Auto-Response (credits)', '5', '5', '3'],
-                    ['Widget → iMessage (credits)', '5', '5', '3'],
-                    ['Contact Enrichment (credits)', '10', '10', '5'],
+                    ['New Contact (credits)', '250', '250', '250'],
+                    ['AI Draft (credits)', '15', '15', '10'],
+                    ['AI Auto-Response (credits)', '20', '20', '15'],
+                    ['Widget → iMessage (credits)', '50', '50', '30'],
+                    ['Contact Enrichment (credits)', '500', '500', '300'],
                     ['Campaigns', '\u2014', '\u2713', '\u2713'],
                     ['Analytics', 'Standard', 'Advanced', 'Custom'],
                     ['Integrations', 'Notion, Email', 'All', 'All + Custom'],
                     ['Support', 'Email', 'Priority', 'Dedicated CSM'],
                     ['Price/seat', '$333/mo', '$299/mo', '$249/mo'],
-                    ['Credit Overage', '$0.02/credit', '$0.015/credit', '$0.01/credit'],
+                    ['Credit Overage', '$0.001/credit', '$0.0008/credit', '$0.0005/credit'],
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
@@ -7085,6 +7095,59 @@ button:active { transform: scale(0.98); }`}</style>
               </svg>
             )}
           </button>
+          {/* Notification Bell */}
+          <div ref={notificationBellRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <button onClick={() => setShowNotifications(!showNotifications)} style={{
+              width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: showNotifications ? 'rgba(55,138,221,0.15)' : 'rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s', position: 'relative',
+            }} title="Notifications">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={notifications.filter(n => !n.read).length > 0 ? '#378ADD' : 'rgba(255,255,255,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {notifications.filter(n => !n.read).length > 0 && (
+                <div style={{
+                  position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4,
+                  background: '#EF4444', border: '1.5px solid #1a1a2e',
+                }} />
+              )}
+            </button>
+            {showNotifications && (
+              <div style={{
+                position: 'absolute', top: 36, right: 0, width: 320, maxHeight: 400,
+                background: '#1e1e36', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 1000, overflow: 'hidden',
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Notifications</span>
+                  {notifications.filter(n => !n.read).length > 0 && (
+                    <button onClick={() => {
+                      const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+                      fetch('/api/notify', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: unreadIds }) });
+                      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                    }} style={{ fontSize: 11, color: '#378ADD', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div style={{ overflowY: 'auto', maxHeight: 340 }}>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>No notifications yet</div>
+                  ) : notifications.map(n => (
+                    <div key={n.id} style={{
+                      padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      background: n.read ? 'transparent' : 'rgba(55,138,221,0.05)',
+                    }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: n.read ? 'rgba(255,255,255,0.6)' : '#fff', marginBottom: 2 }}>{n.subject}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', lineHeight: 1.4, whiteSpace: 'pre-wrap', maxHeight: 60, overflow: 'hidden' }}>{n.body}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>{new Date(n.created_at).toLocaleString()}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Phone Line Status */}

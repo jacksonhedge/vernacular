@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 
-const NOTIFY_EMAIL = 'jackson@hedgepayments.co';
+const NOTIFY_EMAIL = 'jacksonfitzgerald25@gmail.com';
 
 export async function POST(request: Request) {
   try {
@@ -121,14 +121,24 @@ async function sendSignupNotification(data: {
     `Time: ${new Date().toISOString()}`,
   ].join('\n');
 
-  // Send via Supabase auth admin invite (piggyback for email delivery)
+  // Store notification in Supabase — shows up in dashboard bell icon
   const supabase = createServiceClient();
   try {
-    await supabase.auth.admin.inviteUserByEmail(NOTIFY_EMAIL, {
-      data: { notification_subject: subject, notification_body: body },
+    await supabase.from('notifications').insert({
+      type: 'signup',
+      subject,
+      body,
+      recipient: NOTIFY_EMAIL,
+      metadata: {
+        company_name: data.companyName,
+        full_name: data.fullName,
+        email: data.email,
+        industry: data.industry || null,
+        team_size: data.teamSize || null,
+        use_case: data.useCase || null,
+      },
     });
   } catch {
-    // Fallback: just log
     console.log(`SIGNUP NOTIFICATION:\n${body}`);
   }
 }
