@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { stripPhone, normalize10, formatPhone, phoneOrFilter } from '@/lib/phone';
+import { stripPhone, normalize10, formatPhone } from '@/lib/phone';
 import { createPage, NOTION_DBS } from '@/lib/notion';
+import { findOrCreateContact, logContactActivity, updateEngagement } from '@/lib/contacts';
 
 // Notion config now in @/lib/notion
 
@@ -64,28 +65,19 @@ export async function POST(request: Request) {
       console.error('Notion write failed:', err instanceof Error ? err.message : err);
     }
 
-    // 2. Find or create contact in Supabase
-    let contactId: string | null = null;
-    // Use ilike on last 4 digits — always contiguous even with formatting like (586) 522-3609
-    const last4 = n10.slice(-4);
-    const { data: existingContacts } = await supabase
-      .from('contacts').select('id, full_name')
-      .ilike('phone', `%${last4}%`)
-      .limit(1);
+    // 2. Find or create contact in Supabase (shared utility)
+    const contactId = await findOrCreateContact(supabase, {
+      phone: phoneNumber,
+      full_name: contactName || undefined,
+      source: 'conversation',
+      source_system: system,
+      organization_id: organizationId,
+    });
 
-    if (existingContacts && existingContacts.length > 0) {
-      contactId = existingContacts[0].id;
-    } else {
-      const { data: newContact } = await supabase
-        .from('contacts')
-        .insert({
-          phone: formattedPhone,
-          full_name: contactName || null,
-          source: 'conversation',
-          import_source: 'conversation',
-        })
-        .select('id').single();
-      contactId = newContact?.id || null;
+    // Log activity + update engagement
+    if (contactId) {
+      await logContactActivity(supabase, contactId, 'messaged', `Sent: "${message.substring(0, 50)}"`, undefined, organizationId);
+      await updateEngagement(supabase, contactId, 'sent');
     }
 
     // 3. Find or create conversation

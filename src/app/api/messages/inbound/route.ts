@@ -1,35 +1,24 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { stripPhone, formatPhone, phoneOrFilter } from '@/lib/phone';
+import { findOrCreateContact, logContactActivity, updateEngagement } from '@/lib/contacts';
 
 export async function POST(request: Request) {
   try {
-    const { phoneNumber, message, stationId } = await request.json();
+    const { phoneNumber, message, stationId, sourceSystem } = await request.json();
 
     if (!phoneNumber || !message) {
       return NextResponse.json({ error: 'phoneNumber and message required' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
-    const normalized = stripPhone(phoneNumber);
-    void normalized; // used by phoneOrFilter internally
 
-    // Find contact by phone number
-    const { data: contacts } = await supabase
-      .from('contacts').select('id, full_name')
-      .or(phoneOrFilter(phoneNumber))
-      .limit(1);
-
-    let contactId = contacts?.[0]?.id;
-
-    if (!contactId) {
-      // Create new contact
-      const { data: newContact } = await supabase
-        .from('contacts')
-        .insert({ phone: formatPhone(phoneNumber), source: 'inbound', import_source: 'imessage' })
-        .select('id').single();
-      contactId = newContact?.id;
-    }
+    // Find or create contact (shared utility)
+    const contactId = await findOrCreateContact(supabase, {
+      phone: phoneNumber,
+      source: 'inbound',
+      import_source: 'imessage',
+      source_system: sourceSystem || 'claude-cowork',
+    });
 
     if (!contactId) {
       return NextResponse.json({ error: 'Failed to find or create contact' }, { status: 500 });
@@ -83,6 +72,10 @@ export async function POST(request: Request) {
       last_message_preview: message.substring(0, 100),
       unread_count: 1,
     }).eq('id', convId);
+
+    // Log activity + update engagement
+    await logContactActivity(supabase, contactId, 'replied', `Inbound: "${message.substring(0, 50)}"`);
+    await updateEngagement(supabase, contactId, 'received_reply');
 
     return NextResponse.json({ success: true, messageId: msg?.id, conversationId: convId });
   } catch (err) {

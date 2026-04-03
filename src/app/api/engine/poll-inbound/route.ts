@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { formatPhone, phoneOrFilter, phoneIlikeFilter } from '@/lib/phone';
+import { formatPhone } from '@/lib/phone';
 import { queryDatabase, NOTION_DBS, getTitle, getRichText, getSelect, getPhone } from '@/lib/notion';
+import { findOrCreateContact, logContactActivity, updateEngagement } from '@/lib/contacts';
 
 // GET /api/engine/poll-inbound — Check Notion Message Queue for new inbound messages
 export async function GET() {
@@ -68,40 +69,20 @@ export async function GET() {
 
       if (existing && existing.length > 0) { skipped++; continue; }
 
-      // Find or create contact — use ilike on last 4 digits (always contiguous even with formatting)
-      let contactId: string | null = null;
-      const digits = msg.phone.replace(/\D/g, '');
-      const d10 = digits.startsWith('1') && digits.length === 11 ? digits.slice(1) : digits;
-      const last4 = d10.slice(-4);
-      const { data: contacts, error: contactErr } = await supabase
-        .from('contacts').select('id, full_name')
-        .ilike('phone', `%${last4}%`)
-        .limit(1);
-
-      if (contactErr) {
-        const reason = `contact lookup: ${contactErr.message}`;
-        errors++; errorDetails.push(`${msg.phone}: ${reason}`); continue;
-      }
-
-      if (contacts && contacts.length > 0) {
-        contactId = contacts[0].id;
-      } else if (msg.phone) {
-        const { data: newContact, error: newContactErr } = await supabase
-          .from('contacts')
-          .insert({
-            phone: formatPhone(msg.phone),
-            full_name: msg.contactName || null,
-            source: 'inbound',
-            import_source: 'imessage',
-          })
-          .select('id').single();
-        if (newContactErr) {
-          errors++; errorDetails.push(`${msg.phone}: contact create: ${newContactErr.message}`); continue;
-        }
-        contactId = newContact?.id || null;
-      }
+      // Find or create contact (shared utility)
+      const contactId = await findOrCreateContact(supabase, {
+        phone: msg.phone,
+        full_name: msg.contactName || undefined,
+        source: 'inbound',
+        import_source: 'imessage',
+        source_system: 'claude-cowork',
+      });
 
       if (!contactId) { errors++; errorDetails.push(`${msg.phone}: no contactId`); continue; }
+
+      // Log activity + update engagement for inbound reply
+      await logContactActivity(supabase, contactId, 'replied', `Inbound: "${msg.message.substring(0, 50)}"`);
+      await updateEngagement(supabase, contactId, 'received_reply');
 
       // Find or create conversation
       const { data: station } = await supabase

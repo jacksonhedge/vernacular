@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { stripPhone, normalize10, formatPhone, phoneOrFilter } from '@/lib/phone';
+import { stripPhone, normalize10, formatPhone } from '@/lib/phone';
+import { findOrCreateContact } from '@/lib/contacts';
 import { createPage, NOTION_DBS } from '@/lib/notion';
 
 export async function POST(request: Request) {
@@ -64,19 +65,13 @@ export async function POST(request: Request) {
     }
 
     // 2. Also write to Supabase (for dashboard tracking)
-    let contactId: string | null = null;
-    const { data: existingContact } = await supabase
-      .from('contacts').select('id').or(phoneOrFilter(phoneNumber)).limit(1);
-
-    if (existingContact && existingContact.length > 0) {
-      contactId = existingContact[0].id;
-    } else {
-      const { data: newContact } = await supabase
-        .from('contacts')
-        .insert({ phone: formattedPhone, full_name: contactName || null, source: 'test-message', import_source: 'test' })
-        .select('id').single();
-      contactId = newContact?.id || null;
-    }
+    const contactId = await findOrCreateContact(supabase, {
+      phone: phoneNumber,
+      full_name: contactName || undefined,
+      source: 'test-message',
+      import_source: 'test',
+      organization_id: organizationId,
+    });
 
     const { data: conv } = await supabase
       .from('conversations')
