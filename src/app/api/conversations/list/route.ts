@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -8,8 +9,11 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) return unauthorized();
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
 

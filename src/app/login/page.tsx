@@ -24,9 +24,7 @@ export default function LoginPage() {
     const saved = localStorage.getItem('vernacular_remember');
     if (saved === 'true') {
       const savedEmail = localStorage.getItem('vernacular_email') || '';
-      const savedPass = localStorage.getItem('vernacular_pass') || '';
       if (savedEmail) setEmail(savedEmail);
-      if (savedPass) setPassword(savedPass);
     }
   }, []);
 
@@ -42,11 +40,9 @@ export default function LoginPage() {
       if (rememberMe) {
         localStorage.setItem('vernacular_remember', 'true');
         localStorage.setItem('vernacular_email', email);
-        localStorage.setItem('vernacular_pass', password);
       } else {
         localStorage.removeItem('vernacular_remember');
         localStorage.removeItem('vernacular_email');
-        localStorage.removeItem('vernacular_pass');
       }
       window.location.href = '/dashboard';
     } catch (err: unknown) {

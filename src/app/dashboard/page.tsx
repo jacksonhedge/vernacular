@@ -4724,7 +4724,7 @@ button:active { transform: scale(0.98); }`}</style>
                 Add Seats
               </button>
             </div>
-            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>$333/seat/month (minimum 3 seats). Each seat includes a dedicated iMessage line, AI-powered responses, email integration, and 5,000 credits. No phone calls — text and email only.</div>
+            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>$333/seat/month (minimum 3 seats). Each seat includes a dedicated iMessage line, AI-powered responses, email integration, and 50,000 credits. No phone calls — text and email only.</div>
 
             {/* Seats + Lines */}
             <div style={{ marginBottom: 24 }}>

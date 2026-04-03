@@ -93,10 +93,10 @@ messages       -- conversation_id, direction, body, model_used, imessage_guid, s
 ---
 
 ## Pricing
-- **Professional**: $2,000/seat/month (1-3 seats, includes dedicated phone line, AI drafts, unlimited conversations)
-- **Business**: $2,500/seat/month (4-15 seats, all integrations, campaigns)
-- **Enterprise**: Custom pricing (unlimited seats, all AI tools included)
-- **AI Add-ons**: $1,000/mo each (AI Mode, Sentiment Analysis, Campaign Writer, Contact Enrichment, Conversation Summary)
+- **Team**: $333/seat/month (minimum 3 seats, 50K credits/seat)
+- **Growth**: $299/seat/month (5+ seats, 75K credits/seat)
+- **Enterprise**: $249/seat/month (10+ seats, 150K credits/seat)
+- **Credit Packs**: 100K/$79, 500K/$349, 1M/$599
 
 ---
 

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -30,8 +31,11 @@ export async function POST(request: Request) {
 }
 
 // GET — fetch notifications (unread first, most recent)
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) return unauthorized();
+
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -62,8 +66,11 @@ export async function GET(request: Request) {
 }
 
 // PATCH — mark notifications as read
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) return unauthorized();
+
     const { ids } = await request.json();
 
     if (!ids || !Array.isArray(ids)) {

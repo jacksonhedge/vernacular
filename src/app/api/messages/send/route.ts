@@ -10,6 +10,10 @@ export async function POST(request: Request) {
     const { phoneNumber, message, contactName, organizationId, conversationId, sourceSystem } = await request.json();
     const system = sourceSystem || 'vernacular-web';
 
+    if (!organizationId) {
+      return NextResponse.json({ error: 'organizationId required' }, { status: 400 });
+    }
+
     if (!phoneNumber || !message) {
       return NextResponse.json({ error: 'phoneNumber and message are required' }, { status: 400 });
     }

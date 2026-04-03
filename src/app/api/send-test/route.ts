@@ -7,6 +7,10 @@ export async function POST(request: Request) {
   try {
     const { phoneNumber, organizationId, contactName, message: customMessage } = await request.json();
 
+    if (!organizationId) {
+      return NextResponse.json({ error: 'organizationId required' }, { status: 400 });
+    }
+
     if (!phoneNumber) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
     }

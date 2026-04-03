@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { formatPhone, phoneOrFilter } from '@/lib/phone';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) return unauthorized();
+
     const contentType = request.headers.get('content-type') || '';
     const supabase = createServiceClient();
 
