@@ -661,18 +661,27 @@ export default function DashboardPage() {
         });
         // Merge with locally-saved columns, deduplicating by phone number
         try {
-          const saved = JSON.parse(localStorage.getItem('vernacular_open_columns') || '[]') as ConversationColumn[];
-          // Collect all phone numbers from API results to prevent duplicates
-          const apiPhones = new Set(realColumns.map(c => c.contact?.phone).filter(Boolean));
-          const apiIds = new Set(realColumns.map(c => c.id));
-          // Only keep local columns whose phone isn't already in API results
-          const extraCols = saved.filter(s =>
-            s.contact &&
-            !apiIds.has(s.id) &&
-            (!s.contact.phone || !apiPhones.has(s.contact.phone))
-          );
-          setColumns([...realColumns, ...extraCols]);
-        } catch {
+          const raw = localStorage.getItem('vernacular_open_columns');
+          if (raw && raw !== '[]') {
+            const saved = JSON.parse(raw) as ConversationColumn[];
+            if (Array.isArray(saved)) {
+              const apiPhones = new Set(realColumns.map(c => c.contact?.phone).filter(Boolean));
+              const apiIds = new Set(realColumns.map(c => c.id));
+              const extraCols = saved.filter(s =>
+                s && s.contact &&
+                !apiIds.has(s.id) &&
+                (!s.contact.phone || !apiPhones.has(s.contact.phone))
+              );
+              setColumns([...realColumns, ...extraCols]);
+            } else {
+              setColumns(realColumns);
+            }
+          } else {
+            setColumns(realColumns);
+          }
+        } catch (e) {
+          console.error('[Vernacular] Failed to parse saved columns, clearing:', e);
+          localStorage.removeItem('vernacular_open_columns');
           setColumns(realColumns);
         }
         setLastReloadTime(new Date());
@@ -720,12 +729,15 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Persist open columns to localStorage
+  // Persist open columns to localStorage (save only contact info, not messages)
   useEffect(() => {
     if (columns.length > 0) {
       try {
-        localStorage.setItem('vernacular_open_columns', JSON.stringify(columns));
-      } catch { /* silent */ }
+        const toSave = columns
+          .filter(c => c.contact)
+          .map(c => ({ id: c.id, contact: c.contact, messages: c.messages.slice(-5) }));
+        localStorage.setItem('vernacular_open_columns', JSON.stringify(toSave));
+      } catch { localStorage.removeItem('vernacular_open_columns'); }
     }
   }, [columns]);
 
@@ -4586,13 +4598,13 @@ button:active { transform: scale(0.98); }`}</style>
                 Add Seats
               </button>
             </div>
-            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>Each seat includes a dedicated iMessage phone line, AI drafts, and unlimited conversations.</div>
+            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>Each seat includes a dedicated iMessage line, AI-powered responses, email integration, and up to 10,000 texts/month. No phone calls — text and email only.</div>
 
             {/* Seats + Lines */}
             <div style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Seats (includes dedicated phone line)</span>
-                <span style={{ fontSize: 13, color: '#8e8e93', fontWeight: 600 }}>$2,000/seat/month</span>
+                <span style={{ fontSize: 13, color: '#8e8e93', fontWeight: 600 }}>$1,222/seat/month</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: '#6b7280' }}>{teamMembers.length} seat{teamMembers.length !== 1 ? 's' : ''} &middot; {stations.filter(s => s.phone_number !== 'TBD').length} phone line{stations.filter(s => s.phone_number !== 'TBD').length !== 1 ? 's' : ''}</span>
@@ -4683,15 +4695,17 @@ button:active { transform: scale(0.98); }`}</style>
                 <tbody>
                   {[
                     ['Seats', '1-3', '4-15', 'Unlimited'],
-                    ['Dedicated Phone Lines', '1-3', '4-15', 'Unlimited'],
-                    ['Messages/day', '1,000', '10,000', 'Unlimited'],
+                    ['Dedicated iMessage Line', '1-3', '4-15', 'Unlimited'],
+                    ['Texts/month', '10,000', '50,000', 'Unlimited'],
+                    ['Email Integration', '\u2713', '\u2713', '\u2713'],
+                    ['Phone Calls', '\u2014', '\u2014', '\u2014'],
+                    ['AI-Powered Responses', '\u2713', '\u2713', '\u2713'],
                     ['Campaigns', '\u2014', '\u2713', '\u2713'],
                     ['Analytics', 'Standard', 'Advanced', 'Custom'],
-                    ['Integrations', 'Notion, Slack', 'All', 'All + Custom'],
+                    ['Integrations', 'Notion, Email', 'All', 'All + Custom'],
                     ['Support', 'Email', 'Priority', 'Dedicated CSM'],
-                    ['Price/seat', '$2,000/mo', '$2,500/mo', 'Custom'],
+                    ['Price/seat', '$1,222/mo', '$1,999/mo', 'Custom'],
                     ['AI Add-ons', '$1,000/ea', '$1,000/ea', 'Included'],
-                    ['AI Tools Available', '6', '6', '6 + Custom'],
                   ].map((row, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                       <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
