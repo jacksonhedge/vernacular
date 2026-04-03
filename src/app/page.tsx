@@ -618,7 +618,7 @@ export default function LandingPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <div style={{ position: 'relative', background: 'rgba(55,138,221,0.15)', border: '1px dashed rgba(55,138,221,0.3)', color: '#7ab8f0', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 3px 12px', maxWidth: '85%', lineHeight: 1.4 }}>
                         <span style={{ position: 'absolute', top: -5, right: 4, fontSize: 6, background: 'rgba(55,138,221,0.25)', color: '#7ab8f0', padding: '0px 3px', borderRadius: 2, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>AI</span>
-                        For 12 seats on Business, that&apos;s $2,500/seat — I can lock in $2,200 if you sign by Friday
+                        For 12 seats on Growth, that&apos;s $299/seat with 75K credits each — I can lock in $249/seat if you sign by Friday
                       </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-start' }}><div style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 10, padding: '5px 10px', borderRadius: '12px 12px 12px 3px', border: '1px solid rgba(255,255,255,0.08)' }}>Deal. Send over the contract 🤝</div></div>
