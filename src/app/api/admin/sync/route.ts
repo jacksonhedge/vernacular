@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { Client } from '@notionhq/client';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'vernacular-admin-2026';
 const NOTION_TOKEN = process.env.NOTION_TOKEN || '';
 // Data source ID for the Message Queue collection (from Notion DB db0fb0b9)
 const MESSAGE_QUEUE_DS = 'a1f26bdc-7677-45ff-87b3-50489a66090a';
