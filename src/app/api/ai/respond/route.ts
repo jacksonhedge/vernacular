@@ -109,14 +109,13 @@ Rules:
       return NextResponse.json({ error: 'AI generated empty response' }, { status: 500 });
     }
 
-    // Store the AI draft/response in the messages table
+    // Store the AI draft/response — uses actual messages table columns
     const messageData: Record<string, unknown> = {
-      conversation_id: conversationId,
-      direction: 'outbound',
-      body: aiResponse,
-      status: mode === 'auto' ? 'queued' : 'draft',
-      ai_generated: true,
-      ai_model: selectedModel,
+      message: aiResponse,
+      contact_phone: contactPhone,
+      direction: 'Outbound',
+      station: 'Wade',
+      status: mode === 'auto' ? 'Queued' : 'Draft',
       source_system: 'vernacular-ai',
     };
 

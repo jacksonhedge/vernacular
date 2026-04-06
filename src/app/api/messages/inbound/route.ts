@@ -53,15 +53,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to find or create conversation' }, { status: 500 });
     }
 
-    // Insert inbound message
+    // Insert inbound message — uses actual messages table columns
     const { data: msg } = await supabase
       .from('messages')
       .insert({
-        conversation_id: convId,
-        direction: 'inbound',
-        body: message,
-        status: 'delivered',
-        ai_generated: false,
+        message: message,
+        contact_phone: phoneNumber,
+        direction: 'Inbound',
+        station: 'Wade',
+        status: 'Received',
+        source_system: sourceSystem || 'wade-listener',
         sent_at: new Date().toISOString(),
       })
       .select('id').single();
