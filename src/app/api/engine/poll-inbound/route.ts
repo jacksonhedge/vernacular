@@ -43,6 +43,10 @@ export async function GET() {
 
       if (direction !== 'Inbound' || !message || !phone) continue;
 
+      // Skip spam: short codes, emails, non-phone strings
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 7 || phone.includes('@') || phone.includes('Note:')) continue;
+
       inboundMessages.push({
         notionId: p.id as string,
         phone,
