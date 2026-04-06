@@ -826,14 +826,6 @@ export default function DashboardPage() {
     });
   }, [columns]);
 
-  // Auto-load Notion conversations on first visit to Conversations tab
-  useEffect(() => {
-    if (activeTab === 'conversations' && !conversationsAutoLoaded.current && !loadingNotion) {
-      conversationsAutoLoaded.current = true;
-      loadAllNotionConversations();
-    }
-  }, [activeTab, loadingNotion]);
-
   // Initialize profile form from user data
   useEffect(() => {
     if (user && !profileLoaded) {
@@ -1103,6 +1095,16 @@ button:active { transform: scale(0.98); }`}</style>
     setLoadingNotion(false);
     setLastReloadTime(new Date());
   };
+
+  // Auto-load Notion conversations on first visit to Conversations tab
+  // NOTE: This useEffect MUST be after loadAllNotionConversations declaration
+  // to avoid temporal dead zone in minified bundle
+  useEffect(() => {
+    if (activeTab === 'conversations' && !conversationsAutoLoaded.current && !loadingNotion) {
+      conversationsAutoLoaded.current = true;
+      loadAllNotionConversations();
+    }
+  }, [activeTab, loadingNotion]);
 
   // Format time
   const formatTime = (dateStr: string) => {
