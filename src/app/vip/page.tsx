@@ -165,24 +165,6 @@ function FeatureCard({ icon, title, description }: { icon: string; title: string
 }
 
 /* ─── Step card ──────────────────────────────────────────────────── */
-function StepCard({ num, title, description }: { num: number; title: string; description: string }) {
-  return (
-    <div style={{ flex: '1 1 200px', textAlign: 'center', padding: '20px 16px', position: 'relative' }}>
-      <div
-        style={{
-          width: 48, height: 48, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: `linear-gradient(135deg, ${C.blue}, ${C.purple})`, color: '#fff', fontSize: 20, fontWeight: 800,
-          margin: '0 auto 16px', fontFamily: 'JetBrains Mono, monospace',
-        }}
-      >
-        {num}
-      </div>
-      <h4 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: '0 0 8px', fontFamily: 'Inter, sans-serif' }}>{title}</h4>
-      <p style={{ fontSize: 14, color: C.textSecondary, lineHeight: 1.5, margin: 0, fontFamily: 'Inter, sans-serif' }}>{description}</p>
-    </div>
-  );
-}
-
 /* ─── VIP Contact Card ───────────────────────────────────────────── */
 function VIPContactCard() {
   const tags = [
@@ -317,7 +299,7 @@ export default function VIPPage() {
   useEffect(() => setMounted(true), []);
 
   const scrollToDemo = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   if (!mounted) return null;
@@ -414,16 +396,6 @@ export default function VIPPage() {
       </Section>
 
       {/* ─── How it works ─────────────────────────────────────── */}
-      <Section id="how-it-works" style={{ background: C.surface, borderRadius: 32, maxWidth: 1100, margin: '0 auto' }}>
-        <SectionTitle title="How It Works" subtitle="From inbound text to blue-bubble reply in seconds." />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-          <StepCard num={1} title="Player texts your VIP line" description="Blue iMessage arrives on your dedicated number." />
-          <StepCard num={2} title="Ghost agent drafts a response" description="AI reads context + CRM data to compose a reply." />
-          <StepCard num={3} title="Host reviews and approves" description="Approve, edit, or type your own response." />
-          <StepCard num={4} title="Player gets a blue bubble reply" description="Feels personal, not automated. Because it is." />
-        </div>
-      </Section>
-
       {/* ─── CRM Preview ──────────────────────────────────────── */}
       <Section>
         <SectionTitle title="VIP CRM at a Glance" subtitle="Every detail about your highest-value relationships, always one tap away." />
@@ -433,7 +405,7 @@ export default function VIPPage() {
       </Section>
 
       {/* ─── Pricing ──────────────────────────────────────────── */}
-      <Section>
+      <Section id="pricing">
         <SectionTitle title="Simple Pricing, Massive ROI" />
         <div
           style={{
