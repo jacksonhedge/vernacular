@@ -1887,7 +1887,41 @@ button:active { transform: scale(0.98); }`}</style>
               );
             })()}
             <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.08)' }} />
-            <button onClick={loadAllNotionConversations} disabled={loadingNotion} style={{
+            <button onClick={() => {
+              // Reload from Supabase API (not Notion mock data)
+              const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+              if (orgId) {
+                fetch(`/api/conversations/list?orgId=${orgId}`).then(r => r.json()).then(data => {
+                  if (data.conversations) {
+                    const realColumns: ConversationColumn[] = data.conversations.map((conv: Record<string, unknown>) => {
+                      const contact = conv.contact as Record<string, unknown>;
+                      const unreadCount = conv.unreadCount as number;
+                      const messages = conv.messages as Record<string, unknown>[];
+                      return {
+                        id: `real-${conv.conversationId}`,
+                        contact: {
+                          id: (contact.id as string) || '',
+                          name: (contact.name as string) || 'Unknown',
+                          initials: (contact.initials as string) || '??',
+                          tag: unreadCount > 0 ? 'UNREAD' : 'ACTIVE',
+                          tagColor: unreadCount > 0 ? '#EF4444' : '#22C55E',
+                          tagBg: unreadCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                          phone: (contact.phone as string) || '',
+                        },
+                        messages: (messages || []).map((m: Record<string, unknown>) => ({
+                          id: m.id as string, text: m.text as string,
+                          direction: m.direction as 'outgoing' | 'incoming',
+                          timestamp: m.timestamp as string,
+                          isAIDraft: m.isAIDraft as boolean | undefined,
+                        })),
+                      };
+                    });
+                    setColumns(realColumns);
+                    setLastReloadTime(new Date());
+                  }
+                }).catch(() => {});
+              }
+            }} disabled={loadingNotion} style={{
               ...primaryBtnStyle,
               background: loadingNotion ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.06)',
               color: loadingNotion ? '#8e8e93' : '#1c1c1e',
