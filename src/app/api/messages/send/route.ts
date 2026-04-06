@@ -60,6 +60,16 @@ export async function POST(request: Request) {
         source_system: system,
         organization_id: organizationId,
       }).select('id').single();
+
+      // Also write to messages table for timeline/history
+      await supabase.from('messages').insert({
+        message,
+        contact_phone: `+1${n10}`,
+        direction: 'Outbound',
+        station: station.name,
+        status: 'Queued',
+        source_system: system,
+      });
       queueId = queued?.id || null;
     } catch (err) {
       console.error('Outbound queue failed:', err instanceof Error ? err.message : err);
