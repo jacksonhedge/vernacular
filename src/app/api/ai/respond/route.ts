@@ -3,11 +3,11 @@ import { createServiceClient } from '@/lib/supabase';
 import { deductCredits } from '@/lib/credits';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';  // Fast + cheap for texting
+const DEFAULT_MODEL = 'claude-3-5-haiku-20241022';  // Fast + cheap for texting
 const MODELS: Record<string, string> = {
-  'haiku': 'claude-haiku-4-5-20251001',     // $0.0005/response — fast, good for short texts
-  'sonnet': 'claude-sonnet-4-6',             // $0.002/response — better quality
-  'opus': 'claude-opus-4-6',                 // $0.003/response — best quality
+  'haiku': 'claude-3-5-haiku-20241022',      // $0.0005/response — fast, good for short texts
+  'sonnet': 'claude-sonnet-4-20250514',      // $0.002/response — better quality
+  'opus': 'claude-opus-4-20250514',          // $0.003/response — best quality
 };
 
 interface AIRespondRequest {
