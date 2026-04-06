@@ -3187,6 +3187,53 @@ button:active { transform: scale(0.98); }`}</style>
                       )}
                       {msg.text}
                     </div>
+                    {/* AI Draft action buttons */}
+                    {msg.isAIDraft && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
+                        <button onClick={async () => {
+                          playSound('send');
+                          // Approve — send as-is
+                          const phone = col.contact?.phone;
+                          const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                          if (phone) {
+                            await fetch('/api/messages/send', {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
+                            });
+                            // Replace draft with sent message
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, isAIDraft: false, id: `sent-${Date.now()}` } : m),
+                            } : c));
+                          }
+                        }} style={{
+                          padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                          background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700,
+                          fontFamily: "'Inter', sans-serif",
+                        }}>Approve</button>
+                        <button onClick={() => {
+                          // Use but Edit — put text in input for editing
+                          setInputValues(prev => ({ ...prev, [col.id]: msg.text }));
+                          // Remove the draft
+                          setColumns(prev => prev.map(c => c.id === col.id ? {
+                            ...c, messages: c.messages.filter(m => m.id !== msg.id),
+                          } : c));
+                        }} style={{
+                          padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(245,158,11,0.3)', cursor: 'pointer',
+                          background: 'rgba(245,158,11,0.08)', color: '#D97706', fontSize: 11, fontWeight: 700,
+                          fontFamily: "'Inter', sans-serif",
+                        }}>Edit</button>
+                        <button onClick={() => {
+                          // Type my own — dismiss the draft
+                          setColumns(prev => prev.map(c => c.id === col.id ? {
+                            ...c, messages: c.messages.filter(m => m.id !== msg.id),
+                          } : c));
+                        }} style={{
+                          padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.03)', color: '#8e8e93', fontSize: 11, fontWeight: 600,
+                          fontFamily: "'Inter', sans-serif",
+                        }}>Dismiss</button>
+                      </div>
+                    )}
                     {/* Timestamp + delivery status (below bubble) */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6, marginTop: 2,
