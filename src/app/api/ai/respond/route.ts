@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { deductCredits } from '@/lib/credits';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
@@ -146,6 +147,12 @@ Rules:
       } catch (notionErr) {
         console.error('[AI] Notion queue failed:', notionErr);
       }
+    }
+
+    // Deduct AI credits
+    if (organizationId) {
+      const creditAction = mode === 'auto' ? 'ai_auto_response' : 'ai_draft';
+      await deductCredits(supabase, organizationId, creditAction, `${ghostName || 'AI'}: "${aiResponse.substring(0, 30)}..."`, undefined, savedMsg?.id || undefined);
     }
 
     return NextResponse.json({

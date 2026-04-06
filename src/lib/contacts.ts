@@ -5,6 +5,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { formatPhone, normalize10 } from './phone';
+import { deductCredits } from './credits';
 
 export interface ContactInput {
   phone: string;
@@ -133,6 +134,18 @@ export async function findOrCreateContact(
   if (error) {
     console.error('[contacts] Create failed:', error.message);
     return null;
+  }
+
+  // Deduct credits for new contact creation
+  if (newContact?.id && input.organization_id) {
+    const isWidget = input.source === 'widget';
+    await deductCredits(
+      supabase,
+      input.organization_id,
+      isWidget ? 'new_contact_widget' : 'new_contact',
+      `New contact: ${input.full_name || input.phone}`,
+      newContact.id,
+    );
   }
 
   return newContact?.id || null;

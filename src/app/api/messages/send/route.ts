@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase';
 import { stripPhone, normalize10, formatPhone } from '@/lib/phone';
 import { createPage, NOTION_DBS } from '@/lib/notion';
 import { findOrCreateContact, logContactActivity, updateEngagement } from '@/lib/contacts';
+import { deductCredits } from '@/lib/credits';
 
 // Notion config now in @/lib/notion
 
@@ -133,6 +134,11 @@ export async function POST(request: Request) {
         last_message_at: new Date().toISOString(),
         last_message_preview: message.substring(0, 100),
       }).eq('id', convId);
+    }
+
+    // Deduct credits
+    if (organizationId) {
+      await deductCredits(supabase, organizationId, 'send_imessage', `To: ${contactName || phoneNumber}`, contactId || undefined, messageId || undefined);
     }
 
     return NextResponse.json({
