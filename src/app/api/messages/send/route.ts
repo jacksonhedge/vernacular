@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { stripPhone, normalize10, formatPhone } from '@/lib/phone';
-import { createPage, NOTION_DBS } from '@/lib/notion';
 import { findOrCreateContact, logContactActivity, updateEngagement } from '@/lib/contacts';
 import { deductCredits } from '@/lib/credits';
-
-// Notion config now in @/lib/notion
 
 export async function POST(request: Request) {
   try {
@@ -66,22 +63,7 @@ export async function POST(request: Request) {
       console.error('Outbound queue failed:', err instanceof Error ? err.message : err);
     }
 
-    // 1b. Also write to Notion Message Queue (backwards compatibility for stations not yet on direct polling)
-    let notionPageId: string | null = null;
-    try {
-      const result = await createPage(NOTION_DBS.MESSAGE_QUEUE, {
-        'Message': { title: [{ text: { content: message } }] },
-        'Contact Phone': { phone_number: `+1${n10}` },
-        'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
-        'Station': { select: { name: station.name } },
-        'Status': { select: { name: 'Queued' } },
-        'Direction': { select: { name: 'Outbound' } },
-        'Company': { rich_text: [{ text: { content: 'FraternityBase' } }] },
-      });
-      if (result.ok) notionPageId = result.pageId;
-    } catch (err) {
-      console.error('Notion write failed:', err instanceof Error ? err.message : err);
-    }
+    // Notion removed — all messaging goes through Supabase outbound_queue now
 
     // 2. Find or create contact in Supabase (shared utility)
     const contactId = await findOrCreateContact(supabase, {
@@ -164,7 +146,7 @@ export async function POST(request: Request) {
       messageId,
       conversationId: convId,
       contactId,
-      notionQueued: !!notionPageId,
+      notionQueued: false,
       station: { name: station.name, phone: station.phone_number, status: station.status },
     });
   } catch (err) {

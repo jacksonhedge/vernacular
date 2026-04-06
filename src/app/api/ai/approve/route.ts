@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { createPage, NOTION_DBS } from '@/lib/notion';
 import { normalize10 } from '@/lib/phone';
 
 // POST /api/ai/approve — Approve, edit, or reject an AI draft
@@ -18,27 +17,24 @@ export async function POST(request: Request) {
       const finalText = action === 'edit' ? editedText : undefined;
 
       // Update message status to queued
-      const updateData: Record<string, unknown> = { status: 'queued' };
-      if (finalText) updateData.body = finalText;
+      const updateData: Record<string, unknown> = { status: 'Queued' };
+      if (finalText) updateData.message = finalText;
 
       await supabase.from('messages').update(updateData).eq('id', messageId);
 
-      // Get the message text for Notion
-      const { data: msg } = await supabase
-        .from('messages').select('body').eq('id', messageId).single();
-
-      const messageText = finalText || msg?.body || '';
-
-      // Queue to Notion for Wade to send
+      // Queue to outbound_queue for Wade to pick up via direct polling
       if (contactPhone) {
         const n10 = normalize10(contactPhone);
-        await createPage(NOTION_DBS.MESSAGE_QUEUE, {
-          'Message': { title: [{ text: { content: messageText } }] },
-          'Contact Phone': { phone_number: `+1${n10}` },
-          'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
-          'Station': { select: { name: 'Wade' } },
-          'Status': { select: { name: 'Queued' } },
-          'Direction': { select: { name: 'Outbound' } },
+        const { data: msg } = await supabase
+          .from('messages').select('message').eq('id', messageId).single();
+        const messageText = finalText || msg?.message || '';
+
+        await supabase.from('outbound_queue').insert({
+          station_name: 'Wade',
+          contact_phone: `+1${n10}`,
+          contact_name: contactName || null,
+          message: messageText,
+          source_system: 'vernacular-ai',
         });
       }
 
@@ -49,7 +45,6 @@ export async function POST(request: Request) {
         status: 'queued_for_send',
       });
     } else if (action === 'reject') {
-      // Mark as rejected
       await supabase.from('messages')
         .update({ status: 'rejected' })
         .eq('id', messageId);

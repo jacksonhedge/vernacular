@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { stripPhone, normalize10, formatPhone } from '@/lib/phone';
 import { findOrCreateContact } from '@/lib/contacts';
-import { createPage, NOTION_DBS } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
@@ -47,24 +46,17 @@ export async function POST(request: Request) {
 
     const testMessage = customMessage || `Hey! This is a test from Vernacular. Your iMessage CRM is ready to go. 💬\n\nSent from your Vernacular number: ${station.phone_number}`;
 
-    // 1. Write to Notion Message Queue (Wade listens to this)
-    let notionPageId: string | null = null;
-    try {
-      const result = await createPage(NOTION_DBS.MESSAGE_QUEUE, {
-        'Message': { title: [{ text: { content: testMessage } }] },
-        'Contact Phone': { phone_number: `+1${n10}` },
-        'Contact Name': { rich_text: [{ text: { content: contactName || 'Test User' } }] },
-        'Station': { select: { name: station.name } },
-        'Status': { select: { name: 'Queued' } },
-        'Direction': { select: { name: 'Outbound' } },
-        'Company': { rich_text: [{ text: { content: 'FraternityBase' } }] },
-      });
-      if (result.ok) notionPageId = result.pageId;
-    } catch (notionErr) {
-      console.error('Notion write failed:', notionErr instanceof Error ? notionErr.message : notionErr);
-    }
+    // 1. Queue to outbound_queue for Wade to pick up
+    await supabase.from('outbound_queue').insert({
+      station_name: station.name,
+      contact_phone: `+1${n10}`,
+      contact_name: contactName || 'Test User',
+      message: testMessage,
+      source_system: 'test',
+      organization_id: organizationId,
+    });
 
-    // 2. Also write to Supabase (for dashboard tracking)
+    // 2. Write to Supabase for dashboard tracking
     const contactId = await findOrCreateContact(supabase, {
       phone: phoneNumber,
       full_name: contactName || undefined,
@@ -96,8 +88,8 @@ export async function POST(request: Request) {
       stationName: station.name,
       stationPhone: station.phone_number,
       message: 'Test message queued! Check your phone for a blue iMessage.',
-      notionQueued: !!notionPageId,
-      note: 'Message sent to Notion Message Queue. Wade will pick it up within 60 seconds.',
+      notionQueued: false,
+      note: 'Message queued to outbound_queue. Wade will pick it up within 5 seconds.',
     });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to send test' }, { status: 500 });

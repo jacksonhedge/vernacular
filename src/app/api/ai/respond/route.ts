@@ -138,23 +138,22 @@ Rules:
       metadata: { tokens: tokensUsed, model: selectedModel, mode },
     });
 
-    // If auto mode, also queue to Notion for sending
+    // If auto mode, queue to outbound_queue for Wade to send
     if (mode === 'auto') {
       try {
-        const { createPage, NOTION_DBS } = await import('@/lib/notion');
         const { normalize10 } = await import('@/lib/phone');
         const n10 = normalize10(contactPhone);
 
-        await createPage(NOTION_DBS.MESSAGE_QUEUE, {
-          'Message': { title: [{ text: { content: aiResponse } }] },
-          'Contact Phone': { phone_number: `+1${n10}` },
-          'Contact Name': { rich_text: [{ text: { content: contactName || '' } }] },
-          'Station': { select: { name: 'Wade' } },
-          'Status': { select: { name: 'Queued' } },
-          'Direction': { select: { name: 'Outbound' } },
+        await supabase.from('outbound_queue').insert({
+          station_name: 'Wade',
+          contact_phone: `+1${n10}`,
+          contact_name: contactName || null,
+          message: aiResponse,
+          source_system: 'vernacular-ai',
+          ai_generated: true,
         });
-      } catch (notionErr) {
-        console.error('[AI] Notion queue failed:', notionErr);
+      } catch (queueErr) {
+        console.error('[AI] Outbound queue failed:', queueErr);
       }
     }
 
