@@ -3,11 +3,11 @@ import { createServiceClient } from '@/lib/supabase';
 import { deductCredits } from '@/lib/credits';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const DEFAULT_MODEL = 'claude-3-5-haiku-20241022';  // Fast + cheap for texting
+const DEFAULT_MODEL = 'claude-3-haiku-20240307';  // Fast + cheap for texting
 const MODELS: Record<string, string> = {
-  'haiku': 'claude-3-5-haiku-20241022',      // $0.0005/response — fast, good for short texts
-  'sonnet': 'claude-sonnet-4-20250514',      // $0.002/response — better quality
-  'opus': 'claude-opus-4-20250514',          // $0.003/response — best quality
+  'haiku': 'claude-3-haiku-20240307',         // $0.0005/response — fast, good for short texts
+  'sonnet': 'claude-3-5-sonnet-20241022',     // $0.002/response — better quality
+  'opus': 'claude-3-opus-20240229',           // $0.003/response — best quality
 };
 
 interface AIRespondRequest {
@@ -94,8 +94,11 @@ Rules:
 
     if (!claudeRes.ok) {
       const err = await claudeRes.json();
-      console.error('[AI] Claude API error:', err);
-      return NextResponse.json({ error: err.error?.message || 'AI generation failed' }, { status: 500 });
+      console.error('[AI] Claude API error:', JSON.stringify(err));
+      return NextResponse.json({
+        error: err.error?.message || 'AI generation failed',
+        details: { type: err.error?.type, model: selectedModel, status: claudeRes.status }
+      }, { status: 500 });
     }
 
     const claudeData = await claudeRes.json();
