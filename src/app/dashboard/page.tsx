@@ -3363,8 +3363,8 @@ button:active { transform: scale(0.98); }`}</style>
       </div>
       </div>}
 
-      {/* Invite Member Modal */}
-      {showInviteModal && (
+      {/* Invite Member Modal — rendered globally, skip here */}
+      {false && showInviteModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
@@ -3559,8 +3559,8 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
       )}
 
-      {/* Contact Edit Modal — iMessage Contact Card */}
-      {editingContact && (
+      {/* Contact Edit Modal — rendered globally, skip here */}
+      {false && editingContact && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
@@ -7455,8 +7455,8 @@ button:active { transform: scale(0.98); }`}</style>
         {renderContent()}
       </main>
 
-      {/* Global Invite Modal — renders on any tab */}
-      {showInviteModal && activeTab !== 'conversations' && (
+      {/* Global Invite Modal */}
+      {showInviteModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
@@ -7537,8 +7537,8 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
       )}
 
-      {/* Global Contact Edit Modal — renders on any tab */}
-      {editingContact && activeTab !== 'conversations' && (
+      {/* Global Contact Edit Modal */}
+      {editingContact && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
