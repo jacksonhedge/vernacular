@@ -27,6 +27,14 @@ const timeAgo = (d: string | null) => {
 const formatCurrency = (n: number) => `$${n.toLocaleString()}`;
 const formatNumber = (n: number) => n.toLocaleString();
 
+// Derive station status from heartbeat — same logic as dashboard
+const isStationOnline = (s: Station): boolean => {
+  if (!s.last_heartbeat || s.phone_number === 'TBD') return false;
+  const d = new Date(s.last_heartbeat);
+  if (isNaN(d.getTime())) return false;
+  return (Date.now() - d.getTime()) / 60000 < 10; // online if heartbeat < 10 min
+};
+
 const planBase: Record<string, number> = { starter: 0, pro: 99, enterprise: 499 };
 
 const calcOrgMRR = (org: Org, users: User[], stations: Station[]) => {
@@ -113,7 +121,7 @@ export default function AdminPage() {
   };
 
   const getOrgName = (orgId: string | null) => orgs.find(o => o.id === orgId)?.name || 'Unknown';
-  const onlineStations = stations.filter(s => s.status === 'online').length;
+  const onlineStations = stations.filter(s => isStationOnline(s)).length;
   const offlineStations = stations.filter(s => s.status === 'offline').length;
   const totalMRR = orgs.reduce((sum, org) => sum + calcOrgMRR(org, users, stations), 0);
   const responseRate = counts.outbound > 0 ? Math.round((counts.inbound / counts.outbound) * 100) : 0;
@@ -326,7 +334,7 @@ export default function AdminPage() {
               <KPICard label="Active Stations" value={`${onlineStations}/${stations.length}`} color={onlineStations > 0 ? '#22C55E' : '#EF4444'} sub={`$${stations.length * 49}/mo number revenue`} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 28 }}>
-              <KPICard label="Total Clients" value={orgs.length} color="#EC4899" sub={`${orgs.filter(o => stations.some(s => s.organization_id === o.id && s.status === 'online')).length} with active stations`} />
+              <KPICard label="Total Clients" value={orgs.length} color="#EC4899" sub={`${orgs.filter(o => stations.some(s => s.organization_id === o.id && isStationOnline(s))).length} with active stations`} />
               <KPICard label="Messages Today" value={formatNumber(counts.messagesToday)} color="#F59E0B" sub={`${formatNumber(counts.messages)} all time`} />
               <KPICard label="Response Rate" value={`${responseRate}%`} color="#F59E0B" sub={`${formatNumber(counts.inbound)} in / ${formatNumber(counts.outbound)} out`} />
               <KPICard label="AI Draft Usage" value={`${aiDraftRate}%`} color="#A855F7" sub={`${formatNumber(counts.aiGenerated)} AI-generated`} />
@@ -400,7 +408,7 @@ export default function AdminPage() {
                     });
                     stations.forEach(s => {
                       if (s.last_heartbeat) {
-                        activities.push({ type: 'station', time: s.last_heartbeat, text: `${s.name} heartbeat (${s.status})`, color: s.status === 'online' ? '#22C55E' : '#EF4444' });
+                        activities.push({ type: 'station', time: s.last_heartbeat, text: `${s.name} heartbeat (${s.status})`, color: isStationOnline(s) ? '#22C55E' : '#EF4444' });
                       }
                     });
                     return activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 20).map((a, i) => (
@@ -520,7 +528,7 @@ export default function AdminPage() {
                 {/* Station nodes + hub */}
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
                   {stations.map(station => {
-                    const isOnline = station.status === 'online';
+                    const isOnline = isStationOnline(station);
                     const isSyncing = station.status === 'syncing';
                     const statusColor = isOnline ? '#22C55E' : isSyncing ? '#F59E0B' : '#EF4444';
                     const org = orgs.find(o => o.id === station.organization_id);
@@ -663,7 +671,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {stations.map(s => {
-                    const isOnline = s.status === 'online';
+                    const isOnline = isStationOnline(s);
                     const statusColor = isOnline ? '#22C55E' : s.status === 'syncing' ? '#F59E0B' : '#EF4444';
                     return (
                       <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', transition: 'background 0.15s' }}>
@@ -807,7 +815,7 @@ export default function AdminPage() {
                             <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Stations ({orgStations.length})</div>
                             {orgStations.map(s => (
                               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'online' ? '#22C55E' : '#EF4444' }} />
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: isStationOnline(s) ? '#22C55E' : '#EF4444' }} />
                                 <div>
                                   <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{s.name}</div>
                                   <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>{s.phone_number || '—'}</div>
@@ -1074,7 +1082,7 @@ export default function AdminPage() {
                 padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
               }}>
                 <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>
-                  {orgs.filter(o => stations.some(s => s.organization_id === o.id && s.status === 'online')).length}
+                  {orgs.filter(o => stations.some(s => s.organization_id === o.id && isStationOnline(s))).length}
                 </span>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Active (Online Stations)</span>
               </div>
@@ -1179,12 +1187,12 @@ export default function AdminPage() {
                         }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{orgStations.length}</span>
-                            {orgStations.some(s => s.status === 'online') && (
+                            {orgStations.some(s => isStationOnline(s)) && (
                               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }} />
                             )}
                           </div>
                           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
-                            {orgStations.filter(s => s.status === 'online').length} online
+                            {orgStations.filter(s => isStationOnline(s)).length} online
                           </div>
                         </div>
 
@@ -1229,8 +1237,8 @@ export default function AdminPage() {
                             }}>
                               <div style={{
                                 width: 6, height: 6, borderRadius: '50%',
-                                background: s.status === 'online' ? '#22C55E' : '#EF4444',
-                                boxShadow: s.status === 'online' ? '0 0 6px rgba(34,197,94,0.5)' : 'none',
+                                background: isStationOnline(s) ? '#22C55E' : '#EF4444',
+                                boxShadow: isStationOnline(s) ? '0 0 6px rgba(34,197,94,0.5)' : 'none',
                               }} />
                               <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD', fontWeight: 600 }}>{s.phone_number || 'No number'}</span>
                               <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{s.name}</span>
