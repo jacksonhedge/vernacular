@@ -520,13 +520,12 @@ export default function DashboardPage() {
         supabase.from('conversations').select('*', { count: 'exact', head: true })
           .eq('status', 'active'),
         supabase.from('messages').select('*', { count: 'exact', head: true })
-          .eq('ai_generated', true),
+          .eq('source_system', 'ai'),
         supabase.from('conversations').select('id', { count: 'exact', head: true }),
         supabase.from('conversations').select('id, unread_count')
           .gt('unread_count', 0),
         supabase.from('messages').select(`
-          id, direction, body, ai_generated, sent_at, status,
-          conversations!inner(contact_id, contacts(full_name, phone))
+          id, direction, message, source_system, sent_at, status, contact_phone, station
         `).order('sent_at', { ascending: false }).limit(10),
         supabase.from('stations').select('*').eq('organization_id', orgId).order('name'),
         supabase.from('users').select('id, full_name, email, role').eq('organization_id', orgId).order('role'),
@@ -549,15 +548,13 @@ export default function DashboardPage() {
 
       // Recent messages
       const formatted: RecentMessage[] = ((recentMsgData as Record<string, unknown>[]) || []).map((m) => {
-        const conv = m.conversations as Record<string, unknown>;
-        const contact = conv?.contacts as Record<string, unknown>;
         return {
           id: m.id as string,
-          contactName: (contact?.full_name as string) || 'Unknown',
-          contactPhone: (contact?.phone as string) || '',
-          preview: ((m.body as string) || '').slice(0, 80),
+          contactName: (m.contact_phone as string) || 'Unknown',
+          contactPhone: (m.contact_phone as string) || '',
+          preview: ((m.message as string) || '').slice(0, 80),
           direction: m.direction as string,
-          aiGenerated: m.ai_generated as boolean,
+          aiGenerated: (m.source_system as string) === 'ai',
           sentAt: m.sent_at as string,
         };
       });
@@ -695,7 +692,7 @@ export default function DashboardPage() {
           }
         } catch (e) {
           console.error('[Vernacular] Failed to parse saved columns, clearing:', e);
-          localStorage.removeItem('vernacular_open_columns');
+          try { localStorage.removeItem('vernacular_open_columns'); } catch { /* storage unavailable */ }
           setColumns(realColumns);
         }
         setLastReloadTime(new Date());
@@ -720,13 +717,14 @@ export default function DashboardPage() {
         }
 
         // Poll for inbound messages from Notion → Supabase
+        let newInboundSynced = 0;
         try {
           const pollRes = await fetch('/api/engine/poll-inbound');
           if (pollRes.ok) {
             const pollData = await pollRes.json();
             if (pollData.synced > 0) {
+              newInboundSynced = pollData.synced;
               console.log(`[Vernacular] 📥 ${pollData.synced} new inbound message(s) synced from Notion`);
-              playSound('receive');
             }
           }
         } catch { /* silent */ }
@@ -738,6 +736,72 @@ export default function DashboardPage() {
         if (convData) {
           setUnreadCount((convData as Array<{ unread_count?: number }>).reduce((sum, c) => sum + (c.unread_count || 0), 0));
         }
+
+        // Re-fetch conversation columns (merge new messages, don't replace)
+        try {
+          const convRes = await fetch(`/api/conversations/list?orgId=${orgId}`);
+          if (convRes.ok) {
+            const convListData = await convRes.json();
+            if (convListData.conversations && convListData.conversations.length > 0) {
+              const freshColumns: ConversationColumn[] = convListData.conversations.map((conv: Record<string, unknown>) => {
+                const contact = conv.contact as Record<string, unknown>;
+                const unreadCount = conv.unreadCount as number;
+                const messages = conv.messages as Record<string, unknown>[];
+                return {
+                  id: `real-${conv.conversationId}`,
+                  contact: {
+                    id: (contact.id as string) || '',
+                    name: (contact.name as string) || 'Unknown',
+                    initials: (contact.initials as string) || '??',
+                    tag: unreadCount > 0 ? 'UNREAD' : 'ACTIVE',
+                    tagColor: unreadCount > 0 ? '#EF4444' : '#22C55E',
+                    tagBg: unreadCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                    phone: (contact.phone as string) || '',
+                  },
+                  messages: (messages || []).map((m: Record<string, unknown>) => ({
+                    id: m.id as string,
+                    text: m.text as string,
+                    direction: m.direction as 'outgoing' | 'incoming',
+                    timestamp: m.timestamp as string,
+                    isAIDraft: m.isAIDraft as boolean | undefined,
+                  })),
+                };
+              });
+
+              setColumns(prev => {
+                // Build a map of fresh columns by id
+                const freshMap = new Map(freshColumns.map((c: ConversationColumn) => [c.id, c]));
+                // Merge: update existing columns with new messages, keep non-API columns untouched
+                const merged = prev.map(existing => {
+                  const fresh = freshMap.get(existing.id);
+                  if (fresh) {
+                    freshMap.delete(existing.id);
+                    // Append only truly new messages (by id)
+                    const existingIds = new Set(existing.messages.map(m => m.id));
+                    const newMsgs = fresh.messages.filter(m => !existingIds.has(m.id));
+                    return {
+                      ...existing,
+                      contact: fresh.contact, // update tag/unread status
+                      messages: [...existing.messages, ...newMsgs],
+                    };
+                  }
+                  return existing;
+                });
+                // Add any completely new conversations from the API
+                const brandNew = Array.from(freshMap.values());
+                return [...merged, ...brandNew];
+              });
+            }
+          }
+        } catch { /* silent */ }
+
+        // Play sound if new inbound messages arrived
+        if (newInboundSynced > 0) {
+          playSound('receive');
+        }
+
+        // Update the "Updated Last" timestamp
+        setLastReloadTime(new Date());
       } catch { /* silent */ }
     }, 30000);
     return () => clearInterval(interval);
@@ -751,7 +815,7 @@ export default function DashboardPage() {
           .filter(c => c.contact)
           .map(c => ({ id: c.id, contact: c.contact, messages: c.messages.slice(-5) }));
         localStorage.setItem('vernacular_open_columns', JSON.stringify(toSave));
-      } catch { localStorage.removeItem('vernacular_open_columns'); }
+      } catch { try { localStorage.removeItem('vernacular_open_columns'); } catch { /* storage unavailable */ } }
     }
   }, [columns]);
 
@@ -3363,118 +3427,7 @@ button:active { transform: scale(0.98); }`}</style>
       </div>
       </div>}
 
-      {/* Invite Member Modal — rendered globally */}
-      {/* @ts-expect-error - modal moved to global render */}
-      {false && showInviteModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-        }} onClick={() => inviteStatus !== 'sending' && setShowInviteModal(false)}>
-          <div style={{
-            background: '#fff', borderRadius: 20, padding: '32px', width: 420,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-          }} onClick={e => e.stopPropagation()}>
-            {inviteStatus === 'sent' && inviteResult ? (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 8 }}>Member Invited!</h3>
-                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, lineHeight: 1.5 }}>{inviteResult.message}</p>
-                {inviteResult.tempPassword && (
-                  <div style={{
-                    padding: '14px 18px', borderRadius: 12, background: '#f8f9fa',
-                    border: '1px solid rgba(0,0,0,0.06)', marginBottom: 16, textAlign: 'left',
-                  }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Temporary Password</div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace" }}>{inviteResult.tempPassword}</div>
-                    <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6, fontWeight: 500 }}>Share this securely. They must change it on first login.</div>
-                  </div>
-                )}
-                <button onClick={() => { setShowInviteModal(false); window.location.reload(); }} style={{
-                  width: '100%', padding: '12px', borderRadius: 12, border: 'none',
-                  background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', color: '#fff',
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                }}>Done</button>
-              </div>
-            ) : (
-              <>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 4 }}>Invite Team Member</h3>
-                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 20 }}>They&apos;ll get a login to your Vernacular workspace.</p>
-                {inviteResult?.error && (
-                  <div style={{
-                    padding: '10px 14px', borderRadius: 8, marginBottom: 16,
-                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                    color: '#DC2626', fontSize: 12,
-                  }}>{inviteResult.error}</div>
-                )}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Full Name *</label>
-                  <input value={inviteForm.fullName} onChange={e => setInviteForm(p => ({ ...p, fullName: e.target.value }))}
-                    placeholder="Tyler Alesso" style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)',
-                      fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'Inter', sans-serif",
-                    }} />
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Email *</label>
-                  <input value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="tyler@company.com" type="email" style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)',
-                      fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'Inter', sans-serif",
-                    }} />
-                </div>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Role</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {['admin', 'member'].map(r => (
-                      <button key={r} onClick={() => setInviteForm(p => ({ ...p, role: r }))} style={{
-                        flex: 1, padding: '10px', borderRadius: 10, cursor: 'pointer',
-                        border: inviteForm.role === r ? '2px solid #378ADD' : '1.5px solid rgba(0,0,0,0.1)',
-                        background: inviteForm.role === r ? 'rgba(55,138,221,0.06)' : '#fff',
-                        fontSize: 13, fontWeight: 600, color: inviteForm.role === r ? '#378ADD' : '#1c1c1e',
-                        textTransform: 'capitalize', fontFamily: "'Inter', sans-serif",
-                      }}>{r}</button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!inviteForm.fullName || !inviteForm.email) { setInviteResult({ error: 'Name and email are required' }); return; }
-                    setInviteStatus('sending');
-                    setInviteResult(null);
-                    try {
-                      const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
-                      const res = await fetch('/api/team/invite', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ...inviteForm, organizationId: orgId }),
-                      });
-                      const data = await res.json();
-                      if (!res.ok) { setInviteResult({ error: data.error }); setInviteStatus('error'); return; }
-                      setInviteResult({ tempPassword: data.tempPassword, message: data.message });
-                      setInviteStatus('sent');
-                    } catch (err) {
-                      setInviteResult({ error: err instanceof Error ? err.message : 'Failed to invite' });
-                      setInviteStatus('error');
-                    }
-                  }}
-                  disabled={inviteStatus === 'sending'}
-                  style={{
-                    width: '100%', padding: '13px', borderRadius: 12, border: 'none',
-                    background: inviteStatus === 'sending' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-                    color: '#fff', fontSize: 14, fontWeight: 700, cursor: inviteStatus === 'sending' ? 'default' : 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >{inviteStatus === 'sending' ? 'Inviting...' : 'Send Invite'}</button>
-                <button onClick={() => setShowInviteModal(false)} style={{
-                  width: '100%', padding: '10px', borderRadius: 10, border: 'none',
-                  background: 'transparent', color: '#8e8e93', cursor: 'pointer',
-                  fontSize: 13, marginTop: 8,
-                }}>Cancel</button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Invite Member Modal — rendered globally at bottom of component */}
 
       {/* Ghost Edit Modal */}
       {editingGhost !== null && (
@@ -3560,181 +3513,7 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
       )}
 
-      {/* Contact Edit Modal — rendered globally, skip here */}
-      {false && editingContact && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-        }} onClick={() => setEditingContact(null)}>
-          <div style={{
-            background: '#fff', borderRadius: 20, padding: '0', width: 400, maxHeight: '80vh', overflow: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-          }} onClick={e => e.stopPropagation()}>
-            {/* Avatar header */}
-            <div style={{ padding: '28px 24px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 36, margin: '0 auto 12px',
-                background: 'linear-gradient(135deg, #378ADD, #6366F1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 24, fontWeight: 700,
-              }}>
-                {editingContact.name ? editingContact.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##'}
-              </div>
-              <input value={editingContact.name} placeholder="Contact Name"
-                onChange={e => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}
-                style={{ width: '80%', padding: '8px', borderRadius: 8, border: 'none', fontSize: 18, fontWeight: 700, textAlign: 'center', outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
-            </div>
-
-            {/* Contact fields */}
-            <div style={{ padding: '16px 24px' }}>
-              {/* Name row */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 2 }}>First Name</label>
-                  <input value={editingContact.firstName} placeholder="First"
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, firstName: e.target.value, name: `${e.target.value} ${prev.lastName}`.trim() } : null)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 2 }}>Last Name</label>
-                  <input value={editingContact.lastName} placeholder="Last"
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, lastName: e.target.value, name: `${prev.firstName} ${e.target.value}`.trim() } : null)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
-                </div>
-              </div>
-
-              {/* Section: Contact */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 0 4px' }}>Contact</div>
-              {[
-                { label: 'Phone', key: 'phone', placeholder: '+1 (412) 735-1089', mono: true },
-                { label: 'Email', key: 'email', placeholder: 'name@company.com', mono: false },
-              ].map(field => (
-                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
-                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
-                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent', fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif" }} />
-                </div>
-              ))}
-
-              {/* Section: Work */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Work</div>
-              {[
-                { label: 'Company', key: 'company', placeholder: 'Acme Inc' },
-                { label: 'Title', key: 'jobTitle', placeholder: 'VP of Sales' },
-              ].map(field => (
-                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
-                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
-                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
-                </div>
-              ))}
-
-              {/* Section: Social */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Social</div>
-              {[
-                { label: 'LinkedIn', key: 'linkedin', placeholder: 'linkedin.com/in/...' },
-                { label: 'Instagram', key: 'instagram', placeholder: '@handle' },
-                { label: 'Twitter/X', key: 'twitter', placeholder: '@handle' },
-                { label: 'Venmo', key: 'venmo', placeholder: '@username' },
-              ].map(field => (
-                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
-                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
-                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
-                </div>
-              ))}
-
-              {/* Section: Personal */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>Personal</div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '8px 0' }}>
-                    <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>School</label>
-                    <input value={editingContact.school} placeholder="UofSC"
-                      onChange={e => setEditingContact(prev => prev ? { ...prev, school: e.target.value } : null)}
-                      style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
-                  </div>
-                </div>
-              </div>
-              {[
-                { label: 'Greek Org', key: 'greekOrg', placeholder: 'Sigma Chi' },
-                { label: 'City', key: 'city', placeholder: 'Pittsburgh' },
-                { label: 'State', key: 'state', placeholder: 'PA' },
-                { label: 'Birthday', key: 'dob', placeholder: 'MM/DD/YYYY' },
-              ].map(field => (
-                <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                  <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
-                  <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
-                    onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
-                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
-                </div>
-              ))}
-              {/* Notes */}
-              <div style={{ padding: '10px 0' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', display: 'block', marginBottom: 6 }}>Notes</label>
-                <textarea
-                  value={editingContact.notes || ''}
-                  placeholder="Add notes about this contact..."
-                  onChange={e => setEditingContact(prev => prev ? { ...prev, notes: e.target.value } : null)}
-                  rows={3}
-                  style={{
-                    width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)',
-                    fontSize: 13, outline: 'none', color: '#1c1c1e', resize: 'vertical', boxSizing: 'border-box' as const,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Save / Cancel */}
-            <div style={{ display: 'flex', gap: 8, padding: '12px 24px 20px' }}>
-              <button onClick={async () => {
-                const ec = editingContact;
-                const initials = ec.name ? ec.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
-                setColumns(prev => prev.map(c => c.id === ec.colId && c.contact ? {
-                  ...c, contact: { ...c.contact, name: ec.name, initials, phone: ec.phone }
-                } : c));
-                try {
-                  await fetch('/api/contacts/import', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      organizationId: (user?.organizations as Record<string, unknown>)?.id,
-                      source: 'edit',
-                      contacts: [{
-                        phone: ec.phone, fullName: ec.name, full_name: ec.name,
-                        firstName: ec.firstName, first_name: ec.firstName,
-                        lastName: ec.lastName, last_name: ec.lastName,
-                        email: ec.email, company: ec.company,
-                        jobTitle: ec.jobTitle, job_title: ec.jobTitle,
-                        linkedinUrl: ec.linkedin, linkedin_url: ec.linkedin,
-                        instagram: ec.instagram, instagram_handle: ec.instagram,
-                        twitter: ec.twitter, twitter_handle: ec.twitter,
-                        school: ec.school, greekOrg: ec.greekOrg, greek_org: ec.greekOrg,
-                        state: ec.state, city: ec.city,
-                        dob: ec.dob, venmo: ec.venmo, venmo_handle: ec.venmo,
-                        notes: ec.notes,
-                      }],
-                    }),
-                  });
-                } catch { /* save locally even if API fails */ }
-                setEditingContact(null);
-              }} style={{
-                flex: 1, padding: '12px', borderRadius: 10, border: 'none',
-                background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', color: '#fff',
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
-              }}>Save Contact</button>
-              <button onClick={() => setEditingContact(null)} style={{
-                flex: 1, padding: '12px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)',
-                background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              }}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Contact Edit Modal — rendered globally at bottom of component */}
 
       {/* AI Agent Settings Panel */}
       {showAiAgentPanel && (
@@ -7470,14 +7249,14 @@ button:active { transform: scale(0.98); }`}</style>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 8 }}>Member Invited!</h3>
-                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, lineHeight: 1.5 }}>{inviteResult.message}</p>
-                {inviteResult.tempPassword && (
+                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, lineHeight: 1.5 }}>{inviteResult?.message}</p>
+                {inviteResult?.tempPassword && (
                   <div style={{
                     padding: '14px 18px', borderRadius: 12, background: '#f8f9fa',
                     border: '1px solid rgba(0,0,0,0.06)', marginBottom: 16, textAlign: 'left',
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Temporary Password</div>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace" }}>{inviteResult.tempPassword}</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace" }}>{inviteResult?.tempPassword}</div>
                     <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6, fontWeight: 500 }}>Share this securely. They must change it on first login.</div>
                   </div>
                 )}
@@ -7555,7 +7334,7 @@ button:active { transform: scale(0.98); }`}</style>
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#fff', fontSize: 24, fontWeight: 700,
               }}>
-                {editingContact.name ? editingContact.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##'}
+                {editingContact?.name ? editingContact.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##'}
               </div>
               <input value={editingContact.name} placeholder="Contact Name"
                 onChange={e => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}

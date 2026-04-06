@@ -54,29 +54,43 @@ export async function GET(request: NextRequest) {
     const contactMap: Record<string, { phone: string; full_name: string; email: string; company: string; tags: string[] }> = {};
     (contacts || []).forEach(c => { contactMap[c.id] = c; });
 
-    // Get messages for each conversation
-    const convIds = conversations.map(c => c.id);
-    const { data: messages } = await supabase
-      .from('messages')
-      .select('id, conversation_id, direction, body, status, ai_generated, created_at, sent_at')
-      .in('conversation_id', convIds)
-      .order('created_at', { ascending: true })
-      .limit(500);
+    // Get messages for each conversation by matching contact_phone
+    // The messages table uses: id, message, contact_phone, direction, station, status, source_system, sent_at, created_at
+    const contactPhones = [...new Set(Object.values(contactMap).map(c => c.phone).filter(Boolean))];
+    const { data: messages } = contactPhones.length > 0
+      ? await supabase
+          .from('messages')
+          .select('id, direction, message, status, source_system, sent_at, created_at, contact_phone, station')
+          .in('contact_phone', contactPhones)
+          .order('created_at', { ascending: true })
+          .limit(500)
+      : { data: [] as Array<{ id: string; direction: string; message: string; status: string; source_system: string; sent_at: string; created_at: string; contact_phone: string; station: string }> };
+
+    // Build a lookup: contact_phone -> contact_id
+    const phoneToContactId: Record<string, string> = {};
+    Object.entries(contactMap).forEach(([cid, c]) => { if (c.phone) phoneToContactId[c.phone] = cid; });
+
+    // Build a lookup: contact_id -> conversation_id
+    const contactIdToConvId: Record<string, string> = {};
+    conversations.forEach(conv => { if (conv.contact_id) contactIdToConvId[conv.contact_id] = conv.id; });
 
     const messagesByConv: Record<string, Array<{
       id: string; text: string; direction: string; timestamp: string; status: string; isAIDraft: boolean;
     }>> = {};
 
     (messages || []).forEach(m => {
-      if (!messagesByConv[m.conversation_id]) messagesByConv[m.conversation_id] = [];
+      const contactId = phoneToContactId[m.contact_phone];
+      const convId = contactId ? contactIdToConvId[contactId] : undefined;
+      if (!convId) return;
+      if (!messagesByConv[convId]) messagesByConv[convId] = [];
       const time = m.sent_at || m.created_at;
-      messagesByConv[m.conversation_id].push({
+      messagesByConv[convId].push({
         id: m.id,
-        text: m.body,
+        text: m.message || '',
         direction: m.direction === 'outbound' ? 'outgoing' : 'incoming',
         timestamp: time ? new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
         status: m.status,
-        isAIDraft: m.ai_generated,
+        isAIDraft: m.source_system === 'ai',
       });
     });
 
