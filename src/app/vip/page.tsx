@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 /* ─── Palette ────────────────────────────────────────────────────── */
 const C = {
@@ -18,18 +18,7 @@ const C = {
   textTertiary: 'rgba(255,255,255,0.35)',
 };
 
-/* ─── Pac-Man + Ghosts ───────────────────────────────────────────── */
-function PacGhosts() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 18, opacity: 0.7 }}>
-      <span style={{ display: 'inline-block', width: 20, height: 20, background: C.yellow, borderRadius: '50%', clipPath: 'polygon(100% 50%, 75% 85%, 0% 100%, 0% 0%, 75% 15%)' }} />
-      <span style={{ fontSize: 16 }}>{'👻'}</span>
-      <span style={{ fontSize: 16, filter: 'hue-rotate(200deg)' }}>{'👻'}</span>
-      <span style={{ fontSize: 16, filter: 'hue-rotate(90deg)' }}>{'👻'}</span>
-      <span style={{ fontSize: 16, filter: 'hue-rotate(300deg)' }}>{'👻'}</span>
-    </div>
-  );
-}
+/* ─── (Pac-Man removed from nav) ─────────────────────────────────── */
 
 /* ─── Typing dots ────────────────────────────────────────────────── */
 function TypingDots() {
@@ -106,26 +95,8 @@ function Bubble({ from, text, isAIDraft, showActions }: { from: 'host' | 'player
   );
 }
 
-/* ─── iMessage Phone Mock ────────────────────────────────────────── */
+/* ─── iMessage Phone Mock — static, no animation bounce ─────────── */
 function PhoneMock() {
-  const [step, setStep] = useState(0);
-  const maxStep = 4;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const advance = () => {
-      setStep(s => {
-        if (s >= maxStep) {
-          timer.current = setTimeout(advance, 3500);
-          return 0;
-        }
-        timer.current = setTimeout(advance, s === maxStep - 1 ? 3000 : 1800);
-        return s + 1;
-      });
-    };
-    timer.current = setTimeout(advance, 1200);
-    return () => { if (timer.current) clearTimeout(timer.current); };
-  }, []);
 
   return (
     <div
@@ -146,24 +117,16 @@ function PhoneMock() {
         <span>iMessage</span>
       </div>
 
-      {/* chat area */}
-      <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 320 }}>
-        {step >= 0 && <Bubble from="host" text="Hey Marcus, great game last night. We've got courtside seats for Thursday's Lakers game — want me to hold 2 for you?" />}
-        {step >= 1 && <Bubble from="player" text="Absolutely. Can you also check my comp balance?" />}
-        {step >= 2 && step < maxStep && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
-            <TypingDots />
-            <span style={{ fontSize: 10, color: C.yellow, fontFamily: 'JetBrains Mono, monospace' }}>Blinky drafting...</span>
-          </div>
-        )}
-        {step >= 3 && (
-          <Bubble
-            from="host"
-            isAIDraft
-            showActions
-            text="Your current comp balance is $12,500. I've reserved 2 courtside seats for Thursday. Should I arrange car service from your hotel?"
-          />
-        )}
+      {/* chat area — all messages shown statically */}
+      <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <Bubble from="host" text="Hey Marcus, great game last night. We've got courtside seats for Thursday's Lakers game — want me to hold 2 for you?" />
+        <Bubble from="player" text="Absolutely. Can you also check my comp balance?" />
+        <Bubble
+          from="host"
+          isAIDraft
+          showActions
+          text="Your current comp balance is $12,500. I've reserved 2 courtside seats for Thursday. Should I arrange car service from your hotel?"
+        />
       </div>
     </div>
   );
@@ -373,12 +336,10 @@ export default function VIPPage() {
         }}
       >
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <a href="/" style={{ fontSize: 20, fontWeight: 800, color: C.text, textDecoration: 'none', fontFamily: 'Inter, sans-serif' }}>
-              vernacular
-            </a>
-            <PacGhosts />
-          </div>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+            <img src="/logo.png" alt="Vernacular" style={{ width: 32, height: 32, borderRadius: 8 }} />
+            <span style={{ fontSize: 20, fontWeight: 800, color: C.text, fontFamily: 'Inter, sans-serif' }}>Vernacular</span>
+          </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <a href="/signup" style={{ fontSize: 14, fontWeight: 600, color: C.blue, textDecoration: 'none', fontFamily: 'Inter, sans-serif' }}>Get Started</a>
           </div>
