@@ -2663,10 +2663,10 @@ button:active { transform: scale(0.98); }`}</style>
                             {contact?.full_name || '—'}
                           </td>
                           <td style={{ padding: '10px 8px', color: '#666', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
-                            {msg.contact_phone || '—'}
+                            {String(msg.contact_phone || '—')}
                           </td>
                           <td style={{ padding: '10px 8px', color: '#1c1c1e', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {msg.message || '—'}
+                            {String(msg.message || '—')}
                           </td>
                           <td style={{ padding: '10px 8px' }}>
                             <span style={{
@@ -2674,11 +2674,11 @@ button:active { transform: scale(0.98); }`}</style>
                               background: msg.status === 'Sent' || msg.status === 'sent' ? 'rgba(34,197,94,0.1)' : msg.status === 'Received' ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
                               color: msg.status === 'Sent' || msg.status === 'sent' ? '#22C55E' : msg.status === 'Received' ? '#378ADD' : '#8e8e93',
                             }}>
-                              {msg.status || '—'}
+                              {String(msg.status || '—')}
                             </span>
                           </td>
                           <td style={{ padding: '10px 8px', fontSize: 11, color: '#8e8e93' }}>
-                            {msg.source_system || msg.station || '—'}
+                            {String(msg.source_system || msg.station || '—')}
                           </td>
                         </tr>
                       );
