@@ -7228,8 +7228,8 @@ button:active { transform: scale(0.98); }`}</style>
                 Overview
               </span>
             </div>
-            <div style={{ fontSize: 13, color: '#8e8e93', fontWeight: 500 }}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            <div style={{ fontSize: 13, color: '#8e8e93', fontWeight: 500 }} suppressHydrationWarning>
+              {typeof window !== 'undefined' ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : ''}
             </div>
           </div>
         )}
