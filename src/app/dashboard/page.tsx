@@ -670,20 +670,23 @@ export default function DashboardPage() {
             })),
           };
         });
-        // Merge with locally-saved columns, deduplicating by phone number
+        // Use localStorage as primary if user has saved session, otherwise use API
         try {
           const raw = localStorage.getItem('vernacular_open_columns');
           if (raw && raw !== '[]') {
             const saved = JSON.parse(raw) as ConversationColumn[];
-            if (Array.isArray(saved)) {
-              const apiPhones = new Set(realColumns.map(c => c.contact?.phone).filter(Boolean));
-              const apiIds = new Set(realColumns.map(c => c.id));
-              const extraCols = saved.filter(s =>
-                s && s.contact &&
-                !apiIds.has(s.id) &&
-                (!s.contact.phone || !apiPhones.has(s.contact.phone))
-              );
-              setColumns([...realColumns, ...extraCols]);
+            if (Array.isArray(saved) && saved.length > 0 && saved.some(s => s.contact)) {
+              // User has a saved session — use it, but update messages from API
+              const apiById = new Map(realColumns.map(c => [c.contact?.phone, c]));
+              const merged = saved.map(s => {
+                if (!s.contact?.phone) return s;
+                const apiCol = apiById.get(s.contact.phone);
+                if (apiCol && apiCol.messages.length > s.messages.length) {
+                  return { ...s, messages: apiCol.messages };
+                }
+                return s;
+              });
+              setColumns(merged);
             } else {
               setColumns(realColumns);
             }
@@ -1747,11 +1750,8 @@ button:active { transform: scale(0.98); }`}</style>
   ];
 
   const renderConversations = () => {
-    // Auto-load Notion conversations on first visit
-    if (!conversationsAutoLoaded.current && !loadingNotion) {
-      conversationsAutoLoaded.current = true;
-      setTimeout(() => loadAllNotionConversations(), 0);
-    }
+    // Notion conversations only load on manual Reload click
+    // Auto-load disabled — was overwriting user's open sessions
     return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
       {/* Top Bar */}
