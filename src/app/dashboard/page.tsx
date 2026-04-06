@@ -2829,10 +2829,19 @@ button:active { transform: scale(0.98); }`}</style>
                       }}>
                         {col.contact?.name || 'Unknown'}
                       </div>
+                      {col.contact?.phone && (
+                        <div style={{
+                          fontSize: 11, color: '#378ADD', fontWeight: 500,
+                          fontFamily: "'JetBrains Mono', monospace", marginTop: 1,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {col.contact.phone}
+                        </div>
+                      )}
                       <div style={{
                         fontSize: 11, color: '#8e8e93', fontWeight: 400,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        fontFamily: "'Inter', sans-serif", marginTop: 2,
+                        fontFamily: "'Inter', sans-serif", marginTop: 1,
                       }}>
                         {lastMsg?.text || 'No messages yet'}
                       </div>
