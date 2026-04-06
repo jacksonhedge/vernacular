@@ -43,9 +43,11 @@ export async function GET() {
 
       if (direction !== 'Inbound' || !message || !phone) continue;
 
-      // Skip spam: short codes, emails, non-phone strings
+      // Skip spam: short codes, emails, non-phone strings, test numbers
       const phoneDigits = phone.replace(/\D/g, '');
-      if (phoneDigits.length < 7 || phone.includes('@') || phone.includes('Note:')) continue;
+      if (phoneDigits.length < 7) continue;
+      if (phone.includes('@') || phone.includes('Note:') || phone.includes('Candidates')) continue;
+      if (phoneDigits.substring(phoneDigits.length === 11 ? 1 : 0, phoneDigits.length === 11 ? 4 : 3) === '555') continue;
 
       inboundMessages.push({
         notionId: p.id as string,
