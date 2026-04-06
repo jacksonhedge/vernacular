@@ -12,7 +12,7 @@ type OrgSetting = { id: string; organization_id: string; ai_auto_draft: boolean;
 type Message = { id: string; direction: string; body: string; status: string; ai_generated: boolean; sent_at: string; station_id: string; conversation_id: string; contact_phone: string | null; contact_name: string | null; organization_id: string | null };
 type Conversation = { id: string; station_id: string; contact_id: string; status: string; last_message_at: string };
 type Counts = { messages: number; conversations: number; contacts: number; messagesToday: number; outbound: number; inbound: number; aiGenerated: number };
-type AdminTab = 'overview' | 'machines' | 'companies' | 'signups' | 'messages';
+type AdminTab = 'overview' | 'machines' | 'companies' | 'signups' | 'messages' | 'clients';
 
 /* ──────────── Helpers ──────────── */
 const timeAgo = (d: string | null) => {
@@ -60,6 +60,7 @@ export default function AdminPage() {
   const [companySortBy, setCompanySortBy] = useState<'mrr' | 'team' | 'stations'>('mrr');
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ synced: number; skipped: number; errors?: string[] } | null>(null);
+  const [expandedClient, setExpandedClient] = useState<string | null>(null);
 
   const syncFromNotion = async () => {
     setSyncing(true);
@@ -182,6 +183,7 @@ export default function AdminPage() {
     { id: 'companies', label: 'Companies', icon: '◧' },
     { id: 'signups', label: 'Signups', icon: '↗' },
     { id: 'messages', label: 'Messages', icon: '◈' },
+    { id: 'clients', label: 'Clients', icon: '◉' },
   ];
 
   /* ──── Machine SVG Icons ──── */
@@ -323,8 +325,9 @@ export default function AdminPage() {
               <KPICard label="Total Seats" value={users.length} color="#A855F7" sub={`$${users.length * 29}/mo seat revenue`} />
               <KPICard label="Active Stations" value={`${onlineStations}/${stations.length}`} color={onlineStations > 0 ? '#22C55E' : '#EF4444'} sub={`$${stations.length * 49}/mo number revenue`} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
-              <KPICard label="Messages Today" value={formatNumber(counts.messagesToday)} color="#EC4899" sub={`${formatNumber(counts.messages)} all time`} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 28 }}>
+              <KPICard label="Total Clients" value={orgs.length} color="#EC4899" sub={`${orgs.filter(o => stations.some(s => s.organization_id === o.id && s.status === 'online')).length} with active stations`} />
+              <KPICard label="Messages Today" value={formatNumber(counts.messagesToday)} color="#F59E0B" sub={`${formatNumber(counts.messages)} all time`} />
               <KPICard label="Response Rate" value={`${responseRate}%`} color="#F59E0B" sub={`${formatNumber(counts.inbound)} in / ${formatNumber(counts.outbound)} out`} />
               <KPICard label="AI Draft Usage" value={`${aiDraftRate}%`} color="#A855F7" sub={`${formatNumber(counts.aiGenerated)} AI-generated`} />
               <KPICard label="Contacts Reached" value={formatNumber(counts.contacts)} color="#378ADD" sub={`${formatNumber(counts.conversations)} conversations`} />
@@ -1049,6 +1052,327 @@ export default function AdminPage() {
               </table>
               {filteredMessages.length === 0 && (
                 <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>No messages to show</div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ══════════════════ CLIENTS TAB ══════════════════ */}
+        {tab === 'clients' && (
+          <>
+            {/* Client summary bar */}
+            <div style={{ display: 'flex', gap: 14, marginBottom: 24 }}>
+              <div style={{
+                background: '#131825', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
+                padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#EC4899' }}>{orgs.length}</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Total Clients</span>
+              </div>
+              <div style={{
+                background: '#131825', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
+                padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>
+                  {orgs.filter(o => stations.some(s => s.organization_id === o.id && s.status === 'online')).length}
+                </span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Active (Online Stations)</span>
+              </div>
+              <div style={{
+                background: '#131825', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
+                padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10,
+              }}>
+                <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>
+                  {formatNumber(recentMessages.length)}
+                </span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)' }}>Total Messages</span>
+              </div>
+            </div>
+
+            {/* Client cards */}
+            <div style={{ display: 'grid', gap: 16 }}>
+              {orgs.map(org => {
+                const orgUsers = users.filter(u => u.organization_id === org.id);
+                const orgStations = stations.filter(s => s.organization_id === org.id);
+                const orgMessages = recentMessages.filter(m => m.organization_id === org.id);
+                const orgSetting = settings.find(s => s.organization_id === org.id);
+                const mrr = calcOrgMRR(org, users, stations);
+                const inbound = orgMessages.filter(m => m.direction === 'inbound').length;
+                const outbound = orgMessages.filter(m => m.direction === 'outbound').length;
+                const aiCount = orgMessages.filter(m => m.ai_generated).length;
+                const isExpanded = expandedClient === org.id;
+                const planColor = org.plan === 'enterprise' ? '#A855F7' : org.plan === 'pro' ? '#378ADD' : 'rgba(255,255,255,0.3)';
+
+                // Group messages by conversation_id to get unique conversations
+                const convMap = new Map<string, { messages: Message[]; contact_name: string | null; contact_phone: string | null; lastMsg: Message }>();
+                orgMessages.forEach(m => {
+                  const key = m.conversation_id || m.contact_phone || m.id;
+                  const existing = convMap.get(key);
+                  if (!existing) {
+                    convMap.set(key, { messages: [m], contact_name: m.contact_name, contact_phone: m.contact_phone, lastMsg: m });
+                  } else {
+                    existing.messages.push(m);
+                    if (new Date(m.sent_at) > new Date(existing.lastMsg.sent_at)) {
+                      existing.lastMsg = m;
+                    }
+                    if (m.contact_name && !existing.contact_name) existing.contact_name = m.contact_name;
+                  }
+                });
+                const activeConvCount = convMap.size;
+                const lastActivity = orgMessages.length > 0
+                  ? orgMessages.reduce((latest, m) => new Date(m.sent_at) > new Date(latest.sent_at) ? m : latest).sent_at
+                  : org.created_at;
+
+                return (
+                  <div key={org.id} style={{
+                    background: '#141926', borderRadius: 16,
+                    border: isExpanded ? '1px solid rgba(236,72,153,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                    overflow: 'hidden', transition: 'border-color 0.2s',
+                  }}>
+                    {/* Card header */}
+                    <div style={{ padding: '20px 24px' }}>
+                      {/* Top row: name + plan + MRR */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 44, height: 44, borderRadius: 12,
+                            background: `linear-gradient(135deg, ${planColor}30, ${planColor}10)`,
+                            border: `1px solid ${planColor}30`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: planColor, fontWeight: 800, fontSize: 18,
+                          }}>{org.name.charAt(0)}</div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 16, fontWeight: 700 }}>{org.name}</span>
+                              <span style={{
+                                fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 5,
+                                background: `${planColor}15`, color: planColor,
+                                fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                              }}>{org.plan || 'starter'}</span>
+                            </div>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
+                              Last active: {timeAgo(lastActivity)}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{formatCurrency(mrr)}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>MRR</div>
+                        </div>
+                      </div>
+
+                      {/* Stats grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                        {/* Seats */}
+                        <div style={{
+                          background: 'rgba(55,138,221,0.06)', borderRadius: 10, padding: '12px',
+                          border: '1px solid rgba(55,138,221,0.1)',
+                        }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD' }}>{orgUsers.length}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Seats</div>
+                        </div>
+
+                        {/* Stations */}
+                        <div style={{
+                          background: 'rgba(34,197,94,0.06)', borderRadius: 10, padding: '12px',
+                          border: '1px solid rgba(34,197,94,0.1)',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#22C55E' }}>{orgStations.length}</span>
+                            {orgStations.some(s => s.status === 'online') && (
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 8px rgba(34,197,94,0.5)' }} />
+                            )}
+                          </div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
+                            {orgStations.filter(s => s.status === 'online').length} online
+                          </div>
+                        </div>
+
+                        {/* Messages */}
+                        <div style={{
+                          background: 'rgba(245,158,11,0.06)', borderRadius: 10, padding: '12px',
+                          border: '1px solid rgba(245,158,11,0.1)',
+                        }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#F59E0B' }}>{orgMessages.length}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
+                            {inbound} in / {outbound} out
+                          </div>
+                        </div>
+
+                        {/* Active Conversations */}
+                        <div style={{
+                          background: 'rgba(168,85,247,0.06)', borderRadius: 10, padding: '12px',
+                          border: '1px solid rgba(168,85,247,0.1)',
+                        }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#A855F7' }}>{activeConvCount}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>Conversations</div>
+                        </div>
+
+                        {/* AI Generated */}
+                        <div style={{
+                          background: 'rgba(236,72,153,0.06)', borderRadius: 10, padding: '12px',
+                          border: '1px solid rgba(236,72,153,0.1)',
+                        }}>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: '#EC4899' }}>{aiCount}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>AI Generated</div>
+                        </div>
+                      </div>
+
+                      {/* Station phone numbers row */}
+                      {orgStations.length > 0 && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                          {orgStations.map(s => (
+                            <div key={s.id} style={{
+                              display: 'flex', alignItems: 'center', gap: 6,
+                              background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '6px 12px',
+                              border: '1px solid rgba(255,255,255,0.04)',
+                            }}>
+                              <div style={{
+                                width: 6, height: 6, borderRadius: '50%',
+                                background: s.status === 'online' ? '#22C55E' : '#EF4444',
+                                boxShadow: s.status === 'online' ? '0 0 6px rgba(34,197,94,0.5)' : 'none',
+                              }} />
+                              <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#378ADD', fontWeight: 600 }}>{s.phone_number || 'No number'}</span>
+                              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>{s.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Credit usage bar (based on AI setting) */}
+                      {orgSetting && (
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
+                              AI Mode: {orgSetting.ai_auto_draft ? 'Auto-Draft' : 'Off'} ({orgSetting.ai_model || 'default'})
+                            </span>
+                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: "'JetBrains Mono', monospace" }}>
+                              {orgMessages.length} / {orgSetting.max_messages_per_day} daily limit
+                            </span>
+                          </div>
+                          <div style={{ height: 4, borderRadius: 2, background: '#161c2a', overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${Math.min((orgMessages.length / Math.max(orgSetting.max_messages_per_day, 1)) * 100, 100)}%`,
+                              borderRadius: 2,
+                              background: orgMessages.length > orgSetting.max_messages_per_day * 0.8
+                                ? 'linear-gradient(90deg, #F59E0B, #EF4444)'
+                                : 'linear-gradient(90deg, #22C55E, #378ADD)',
+                              transition: 'width 0.5s ease',
+                            }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* View Conversations button */}
+                      <button
+                        onClick={() => setExpandedClient(isExpanded ? null : org.id)}
+                        style={{
+                          padding: '8px 18px', borderRadius: 8, border: '1px solid rgba(236,72,153,0.2)',
+                          background: isExpanded ? 'rgba(236,72,153,0.12)' : 'rgba(236,72,153,0.06)',
+                          color: '#EC4899', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                          fontFamily: "'Inter', sans-serif", transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', gap: 6,
+                        }}
+                      >
+                        <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', display: 'inline-block' }}>▼</span>
+                        {isExpanded ? 'Hide Conversations' : `View Conversations (${activeConvCount})`}
+                      </button>
+                    </div>
+
+                    {/* Expanded conversation list */}
+                    {isExpanded && (
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', padding: '16px 24px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                          Recent Conversations ({activeConvCount})
+                        </div>
+                        {convMap.size > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {Array.from(convMap.entries())
+                              .sort(([, a], [, b]) => new Date(b.lastMsg.sent_at).getTime() - new Date(a.lastMsg.sent_at).getTime())
+                              .slice(0, 25)
+                              .map(([convId, conv]) => {
+                                const lastDir = conv.lastMsg.direction;
+                                const aiMode = orgSetting?.ai_auto_draft ? 'auto' : 'off';
+                                return (
+                                  <div key={convId} style={{
+                                    display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+                                    borderRadius: 10, background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.03)',
+                                    transition: 'background 0.15s',
+                                  }}>
+                                    {/* Contact avatar */}
+                                    <div style={{
+                                      width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                      background: 'linear-gradient(135deg, rgba(55,138,221,0.15), rgba(168,85,247,0.1))',
+                                      border: '1px solid rgba(55,138,221,0.15)',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                      fontSize: 12, fontWeight: 700, color: '#378ADD',
+                                    }}>
+                                      {(conv.contact_name || conv.contact_phone || '?').charAt(0).toUpperCase()}
+                                    </div>
+
+                                    {/* Contact info */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+                                          {conv.contact_name || 'Unknown'}
+                                        </span>
+                                        {conv.contact_phone && (
+                                          <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.4)' }}>
+                                            {conv.contact_phone}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div style={{
+                                        fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2,
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                      }}>
+                                        {conv.lastMsg.body || '(no content)'}
+                                      </div>
+                                    </div>
+
+                                    {/* Message count */}
+                                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                                      <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.7)' }}>{conv.messages.length}</div>
+                                      <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>msgs</div>
+                                    </div>
+
+                                    {/* AI mode badge */}
+                                    <span style={{
+                                      fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                                      background: aiMode === 'auto' ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.03)',
+                                      color: aiMode === 'auto' ? '#A855F7' : 'rgba(255,255,255,0.2)',
+                                      fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                                    }}>AI {aiMode}</span>
+
+                                    {/* Direction indicator */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                      <span style={{
+                                        fontSize: 12, fontWeight: 700,
+                                        color: lastDir === 'outbound' ? '#378ADD' : '#F59E0B',
+                                      }}>{lastDir === 'outbound' ? '→' : '←'}</span>
+                                      <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
+                                        {timeAgo(conv.lastMsg.sent_at)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>No conversations found for this client</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {orgs.length === 0 && (
+                <div style={{
+                  background: '#131825', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)',
+                  padding: 48, textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: 13,
+                }}>No clients yet</div>
               )}
             </div>
           </>
