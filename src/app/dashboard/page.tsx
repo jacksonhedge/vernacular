@@ -353,6 +353,7 @@ export default function DashboardPage() {
   const [inviteResult, setInviteResult] = useState<{ tempPassword?: string; message?: string; error?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
+  const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -1805,6 +1806,18 @@ button:active { transform: scale(0.98); }`}</style>
                 </svg>
               </button>
             )}
+            {/* Time Filter */}
+            <select value={messageTimeFilter} onChange={e => setMessageTimeFilter(e.target.value as typeof messageTimeFilter)} style={{
+              padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+              background: '#fff', color: '#1c1c1e', fontSize: 12, fontWeight: 600,
+              fontFamily: "'Inter', sans-serif", cursor: 'pointer', outline: 'none',
+            }}>
+              <option value="24h">Last 24 hours</option>
+              <option value="48h">Last 48 hours</option>
+              <option value="72h">Last 72 hours</option>
+              <option value="1w">Last 1 week</option>
+              <option value="2w">Last 2 weeks</option>
+            </select>
             {/* Pac-Man + Ghosts */}
             {(() => {
               const awaitingApproval = columns.filter(col => {
