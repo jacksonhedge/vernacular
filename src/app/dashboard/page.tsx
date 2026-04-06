@@ -132,7 +132,7 @@ interface OrgIntegration {
   last_synced_at: string | null;
 }
 
-type ConversationViewMode = 'streams' | 'summary' | 'schedule' | 'matrix';
+type ConversationViewMode = 'streams' | 'summary' | 'schedule' | 'matrix' | 'messages';
 
 // ── Mock Data for Conversations View ────────────────────────────────────────
 
@@ -352,6 +352,7 @@ export default function DashboardPage() {
   const [inviteStatus, setInviteStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [inviteResult, setInviteResult] = useState<{ tempPassword?: string; message?: string; error?: string } | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -2554,6 +2555,135 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
         );
       })()}
+
+      {/* Messages Timeline View */}
+      {conversationViewMode === 'messages' && (
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+          {(() => {
+            // Collect all messages from all columns, sorted by timestamp
+            const allMsgs: Array<{
+              contactName: string; contactPhone: string; text: string;
+              direction: string; timestamp: string; isAIDraft?: boolean; colId: string;
+            }> = [];
+            columns.filter(col => col.contact).forEach(col => {
+              col.messages.forEach(msg => {
+                allMsgs.push({
+                  contactName: col.contact?.name || 'Unknown',
+                  contactPhone: col.contact?.phone || '',
+                  text: msg.text,
+                  direction: msg.direction,
+                  timestamp: msg.timestamp,
+                  isAIDraft: msg.isAIDraft,
+                  colId: col.id,
+                });
+              });
+            });
+
+            // Also fetch from Supabase messages table
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, marginTop: 16 }}>
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e', margin: 0 }}>Message Timeline</h3>
+                    <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>All messages in chronological order</p>
+                  </div>
+                  <button onClick={async () => {
+                    // Fetch all messages from Supabase
+                    const { data } = await supabase
+                      .from('messages')
+                      .select('id, message, contact_phone, direction, station, status, source_system, sent_at, created_at')
+                      .order('created_at', { ascending: false })
+                      .limit(200);
+                    if (data) {
+                      setTimelineMessages(data);
+                    }
+                  }} style={{
+                    ...primaryBtnStyle,
+                    background: 'rgba(0,0,0,0.06)', color: '#1c1c1e', boxShadow: 'none',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" /><path d="M14 14h6v6h-6z" />
+                    </svg>
+                    Load from Database
+                  </button>
+                </div>
+
+                <table style={{
+                  width: '100%', borderCollapse: 'collapse', fontSize: 13,
+                  fontFamily: "'Inter', sans-serif",
+                }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
+                      {['Time', 'Direction', 'Contact', 'Phone', 'Message', 'Status', 'Source'].map(h => (
+                        <th key={h} style={{
+                          textAlign: 'left', padding: '10px 8px', fontSize: 11, fontWeight: 700,
+                          color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em',
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(timelineMessages.length > 0 ? timelineMessages : []).map((msg, i) => {
+                      const isInbound = String(msg.direction || '').toLowerCase().includes('inbound') || msg.direction === 'incoming';
+                      const msgPhone = String(msg.contact_phone || '');
+                      const contact = contacts.find(c => c.phone && msgPhone && (c.phone.includes(msgPhone.slice(-4)) || msgPhone.includes(c.phone.slice(-4))));
+                      const time = String(msg.sent_at || msg.created_at || '');
+                      return (
+                        <tr key={String(msg.id || i)} style={{
+                          borderBottom: '1px solid rgba(0,0,0,0.04)',
+                          background: i % 2 === 0 ? 'rgba(0,0,0,0.01)' : 'transparent',
+                        }}>
+                          <td style={{ padding: '10px 8px', color: '#8e8e93', fontSize: 12, fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap' }}>
+                            {time ? new Date(time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—'}
+                          </td>
+                          <td style={{ padding: '10px 8px' }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                              background: isInbound ? 'rgba(34,197,94,0.1)' : 'rgba(55,138,221,0.1)',
+                              color: isInbound ? '#22C55E' : '#378ADD',
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                              {isInbound ? '← IN' : '→ OUT'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 8px', fontWeight: 600, color: '#1c1c1e' }}>
+                            {contact?.full_name || '—'}
+                          </td>
+                          <td style={{ padding: '10px 8px', color: '#666', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+                            {msg.contact_phone || '—'}
+                          </td>
+                          <td style={{ padding: '10px 8px', color: '#1c1c1e', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {msg.message || '—'}
+                          </td>
+                          <td style={{ padding: '10px 8px' }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+                              background: msg.status === 'Sent' || msg.status === 'sent' ? 'rgba(34,197,94,0.1)' : msg.status === 'Received' ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
+                              color: msg.status === 'Sent' || msg.status === 'sent' ? '#22C55E' : msg.status === 'Received' ? '#378ADD' : '#8e8e93',
+                            }}>
+                              {msg.status || '—'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '10px 8px', fontSize: 11, color: '#8e8e93' }}>
+                            {msg.source_system || msg.station || '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {timelineMessages.length === 0 && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
+                          Click &quot;Load from Database&quot; to see all messages, or send a message first.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Streams (Columns) View */}
       {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
@@ -7164,7 +7294,7 @@ button:active { transform: scale(0.98); }`}</style>
                 </button>
                 {item.tab === 'conversations' && activeTab === 'conversations' && !sidebarCollapsed && (
                   <div style={{ paddingLeft: 38, marginBottom: 6 }}>
-                    {(['matrix', 'streams', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
+                    {(['matrix', 'streams', 'messages', 'summary', 'schedule'] as ConversationViewMode[]).map(mode => (
                       <button key={mode} onClick={() => setConversationViewMode(mode)} style={{
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
