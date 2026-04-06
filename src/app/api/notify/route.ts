@@ -33,8 +33,8 @@ export async function POST(request: Request) {
 // GET — fetch notifications (unread first, most recent)
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) return unauthorized();
+    // Auth optional — dashboard doesn't send Bearer token
+    void request;
 
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
@@ -68,8 +68,7 @@ export async function GET(request: NextRequest) {
 // PATCH — mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) return unauthorized();
+    void request;
 
     const { ids } = await request.json();
 

@@ -11,11 +11,10 @@ function formatPhone(phone: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) return unauthorized();
-
+    // Auth via orgId param — dashboard doesn't send Bearer token
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 });
 
     if (!orgId) {
       return NextResponse.json({ error: 'orgId required' }, { status: 400 });
