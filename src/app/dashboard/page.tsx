@@ -307,7 +307,7 @@ export default function DashboardPage() {
     school: string; greekOrg: string; state: string; city: string; dob: string;
     venmo: string; notes: string;
   } | null>(null);
-  const [aiResponseEnabled, setAiResponseEnabled] = useState<Record<string, boolean>>({});
+  const [aiResponseMode, setAiResponseMode] = useState<Record<string, 'off' | 'draft' | 'auto'>>({});
   const [showAiAgentPanel, setShowAiAgentPanel] = useState(false);
   const [aiAgentSettings, setAiAgentSettings] = useState({ enabled: false, prepareText: true });
   const [newConvPhone, setNewConvPhone] = useState('');
@@ -3213,32 +3213,46 @@ button:active { transform: scale(0.98); }`}</style>
                 display: 'flex', flexDirection: 'column', gap: 6, background: '#fff',
               }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  {/* Ghost AI toggle */}
+                  {/* Ghost AI toggle — cycles: off → draft → auto */}
                   {(() => {
                     const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
                     const ghost = ghostConfig[Math.max(0, colIdx) % ghostConfig.length];
-                    const isActive = aiResponseEnabled[col.id];
+                    const mode = aiResponseMode[col.id] || 'off';
+                    const nextMode = mode === 'off' ? 'draft' : mode === 'draft' ? 'auto' : 'off';
+                    const modeColor = mode === 'auto' ? '#22C55E' : mode === 'draft' ? '#F59E0B' : '#ccc';
+                    const modeLabel = mode === 'auto' ? 'Auto-Send' : mode === 'draft' ? 'Draft Mode' : 'AI Off';
                     return (
                       <button
-                        onClick={() => { setAiResponseEnabled(prev => ({ ...prev, [col.id]: !prev[col.id] })); playSound('click'); }}
-                        title={isActive ? `${ghost.name} AI ON — Click to disable` : `Enable ${ghost.name} AI`}
+                        onClick={() => { setAiResponseMode(prev => ({ ...prev, [col.id]: nextMode })); playSound('click'); }}
+                        title={`${ghost.name}: ${modeLabel} — Click to switch to ${nextMode === 'off' ? 'Off' : nextMode === 'draft' ? 'Draft' : 'Auto'}`}
                         style={{
                           width: 32, height: 32, borderRadius: 8, border: 'none', flexShrink: 0,
-                          background: isActive ? `${ghost.color}20` : 'rgba(0,0,0,0.04)',
+                          background: mode !== 'off' ? `${modeColor}20` : 'rgba(0,0,0,0.04)',
                           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.2s',
+                          transition: 'all 0.2s', position: 'relative',
                         }}
                       >
                         <svg width="20" height="20" viewBox="0 0 14 16" style={{
-                          animation: isActive ? 'ghostBlink 1s ease-in-out infinite alternate' : 'none',
+                          animation: mode !== 'off' ? 'ghostBlink 1s ease-in-out infinite alternate' : 'none',
                         }}>
                           <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z"
-                            fill={isActive ? ghost.color : '#ccc'} />
+                            fill={mode !== 'off' ? modeColor : '#ccc'} />
                           <circle cx="5" cy="7" r="1.5" fill="#fff" />
                           <circle cx="9" cy="7" r="1.5" fill="#fff" />
-                          <circle cx={5.5} cy="7" r="0.8" fill={isActive ? '#1a1a2e' : '#999'} />
-                          <circle cx={9.5} cy="7" r="0.8" fill={isActive ? '#1a1a2e' : '#999'} />
+                          <circle cx={5.5} cy="7" r="0.8" fill={mode !== 'off' ? '#1a1a2e' : '#999'} />
+                          <circle cx={9.5} cy="7" r="0.8" fill={mode !== 'off' ? '#1a1a2e' : '#999'} />
                         </svg>
+                        {mode !== 'off' && (
+                          <div style={{
+                            position: 'absolute', bottom: -2, right: -2,
+                            width: 10, height: 10, borderRadius: 5,
+                            background: modeColor, border: '1.5px solid #fff',
+                            fontSize: 6, color: '#fff', fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {mode === 'auto' ? 'A' : 'D'}
+                          </div>
+                        )}
                       </button>
                     );
                   })()}
@@ -3249,7 +3263,8 @@ button:active { transform: scale(0.98); }`}</style>
                     placeholder={(() => {
                       const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
                       const ghost = ghostConfig[Math.max(0, colIdx) % ghostConfig.length];
-                      return aiResponseEnabled[col.id] ? `${ghost.name} is drafting...` : 'Type a message...';
+                      const mode = aiResponseMode[col.id] || 'off';
+                      return mode === 'auto' ? `${ghost.name} auto-responding...` : mode === 'draft' ? `${ghost.name} will draft replies...` : 'Type a message...';
                     })()}
                     style={{
                       flex: 1, padding: '9px 12px', borderRadius: 8,
