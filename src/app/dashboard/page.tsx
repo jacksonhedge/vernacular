@@ -2793,8 +2793,17 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
               {/* Previous Chats Dropdown */}
               {(() => {
-                const previousChats = columns.filter(c => c.contact && c.messages.length === 0 && c.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
-                if (previousChats.length === 0 && !showPreviousChats) return null;
+                // Show conversations not currently open as stream columns (selectedConversationId)
+                const activeCols = columns.filter(c => c.contact && c.messages.length > 0);
+                const previousChats = columns.filter(c => c.contact && (c.messages.length === 0 || !activeCols.includes(c)) && c.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+                // Always show the section header so users know it exists
+                if (previousChats.length === 0) return (
+                  <div style={{ padding: '8px 14px', background: '#f5f6f8', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Previous Chats (0)
+                    </span>
+                  </div>
+                );
                 return (
                   <>
                     <button onClick={() => setShowPreviousChats(!showPreviousChats)} style={{
@@ -7398,6 +7407,76 @@ button:active { transform: scale(0.98); }`}</style>
 
         {renderContent()}
       </main>
+
+      {/* Global Contact Edit Modal — renders on any tab */}
+      {editingContact && activeTab !== 'conversations' && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }} onClick={() => setEditingContact(null)}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '0', width: 400, maxHeight: '80vh', overflow: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '28px 24px 16px', textAlign: 'center', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{
+                width: 72, height: 72, borderRadius: 36, margin: '0 auto 12px',
+                background: 'linear-gradient(135deg, #378ADD, #6366F1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 24, fontWeight: 700,
+              }}>
+                {editingContact.name ? editingContact.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##'}
+              </div>
+              <input value={editingContact.name} placeholder="Contact Name"
+                onChange={e => setEditingContact(prev => prev ? { ...prev, name: e.target.value } : null)}
+                style={{ width: '80%', padding: '8px', borderRadius: 8, border: 'none', fontSize: 18, fontWeight: 700, textAlign: 'center', outline: 'none', color: '#1c1c1e', background: 'transparent' }} />
+            </div>
+            <div style={{ padding: '16px 24px' }}>
+              {[
+                { section: 'Contact', fields: [
+                  { label: 'Phone', key: 'phone', placeholder: '+1 (412) 735-1089', mono: true },
+                  { label: 'Email', key: 'email', placeholder: 'name@company.com' },
+                ]},
+                { section: 'Work', fields: [
+                  { label: 'Company', key: 'company', placeholder: 'Acme Inc' },
+                  { label: 'Title', key: 'jobTitle', placeholder: 'VP of Sales' },
+                ]},
+                { section: 'Social', fields: [
+                  { label: 'LinkedIn', key: 'linkedin', placeholder: 'linkedin.com/in/...' },
+                  { label: 'Instagram', key: 'instagram', placeholder: '@handle' },
+                  { label: 'Twitter/X', key: 'twitter', placeholder: '@handle' },
+                  { label: 'Venmo', key: 'venmo', placeholder: '@username' },
+                ]},
+              ].map(group => (
+                <div key={group.section}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 0 4px' }}>{group.section}</div>
+                  {group.fields.map(field => (
+                    <div key={field.key} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                      <label style={{ width: 70, fontSize: 12, fontWeight: 600, color: '#8e8e93', flexShrink: 0 }}>{field.label}</label>
+                      <input value={(editingContact as Record<string, string>)[field.key] || ''} placeholder={field.placeholder}
+                        onChange={e => setEditingContact(prev => prev ? { ...prev, [field.key]: e.target.value } : null)}
+                        style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: 'none', fontSize: 13, outline: 'none', color: '#1c1c1e', background: 'transparent', fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif" }} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button onClick={() => setEditingContact(null)} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
+                  background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+                }}>Cancel</button>
+                <button onClick={() => {
+                  // TODO: save to Supabase
+                  setEditingContact(null);
+                }} style={{
+                  flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                }}>Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

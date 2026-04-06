@@ -1,12 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { getAuthUser, unauthorized } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const user = await getAuthUser(request);
-    if (!user) return unauthorized();
-
     const { email, fullName, role, organizationId } = await request.json();
 
     if (!email || !fullName || !organizationId) {
