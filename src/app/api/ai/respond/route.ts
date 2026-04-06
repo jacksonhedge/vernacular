@@ -3,7 +3,12 @@ import { createServiceClient } from '@/lib/supabase';
 import { deductCredits } from '@/lib/credits';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const DEFAULT_MODEL = 'claude-sonnet-4-6';
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';  // Fast + cheap for texting
+const MODELS: Record<string, string> = {
+  'haiku': 'claude-haiku-4-5-20251001',     // $0.0005/response — fast, good for short texts
+  'sonnet': 'claude-sonnet-4-6',             // $0.002/response — better quality
+  'opus': 'claude-opus-4-6',                 // $0.003/response — best quality
+};
 
 interface AIRespondRequest {
   conversationId: string;
@@ -15,6 +20,7 @@ interface AIRespondRequest {
   mode: 'draft' | 'auto';
   ghostName?: string;
   organizationId?: string;
+  model?: 'haiku' | 'sonnet' | 'opus';
 }
 
 export async function POST(request: Request) {
@@ -22,8 +28,9 @@ export async function POST(request: Request) {
     const body: AIRespondRequest = await request.json();
     const {
       conversationId, contactName, contactPhone, inboundMessage,
-      conversationHistory, systemPrompt, mode, ghostName, organizationId,
+      conversationHistory, systemPrompt, mode, ghostName, organizationId, model,
     } = body;
+    const selectedModel = MODELS[model || 'haiku'] || DEFAULT_MODEL;
 
     if (!conversationId || !inboundMessage) {
       return NextResponse.json({ error: 'conversationId and inboundMessage required' }, { status: 400 });
@@ -78,7 +85,7 @@ Rules:
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: DEFAULT_MODEL,
+        model: selectedModel,
         max_tokens: 256,
         system: finalPrompt,
         messages,
@@ -106,7 +113,7 @@ Rules:
       body: aiResponse,
       status: mode === 'auto' ? 'queued' : 'draft',
       ai_generated: true,
-      ai_model: DEFAULT_MODEL,
+      ai_model: selectedModel,
       source_system: 'vernacular-ai',
     };
 
@@ -126,7 +133,7 @@ Rules:
       organization_id: organizationId || null,
       action: mode === 'auto' ? 'ai_auto_response' : 'ai_draft',
       details: `${ghostName || 'AI'} generated: "${aiResponse.substring(0, 50)}..."`,
-      metadata: { tokens: tokensUsed, model: DEFAULT_MODEL, mode },
+      metadata: { tokens: tokensUsed, model: selectedModel, mode },
     });
 
     // If auto mode, also queue to Notion for sending
