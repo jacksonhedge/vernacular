@@ -1096,15 +1096,8 @@ button:active { transform: scale(0.98); }`}</style>
     setLastReloadTime(new Date());
   };
 
-  // Auto-load Notion conversations on first visit to Conversations tab
-  // NOTE: This useEffect MUST be after loadAllNotionConversations declaration
-  // to avoid temporal dead zone in minified bundle
-  useEffect(() => {
-    if (activeTab === 'conversations' && !conversationsAutoLoaded.current && !loadingNotion) {
-      conversationsAutoLoaded.current = true;
-      loadAllNotionConversations();
-    }
-  }, [activeTab, loadingNotion]);
+  // Auto-load Notion conversations — triggered in renderConversations instead of useEffect
+  // to avoid temporal dead zone and hook ordering issues
 
   // Format time
   const formatTime = (dateStr: string) => {
@@ -1753,7 +1746,13 @@ button:active { transform: scale(0.98); }`}</style>
     { id: 'b3', name: 'Follow-up Sequence #3', recipients: 12, scheduledTime: '2026-03-28T09:00:00', status: 'sent' as const },
   ];
 
-  const renderConversations = () => (
+  const renderConversations = () => {
+    // Auto-load Notion conversations on first visit
+    if (!conversationsAutoLoaded.current && !loadingNotion) {
+      conversationsAutoLoaded.current = true;
+      setTimeout(() => loadAllNotionConversations(), 0);
+    }
+    return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
       {/* Top Bar */}
       <div style={{
@@ -3637,6 +3636,7 @@ button:active { transform: scale(0.98); }`}</style>
       )}
     </div>
   );
+  };
 
   // ── Render: Contacts ──────────────────────────────────────────────────────
 
