@@ -1,5 +1,5 @@
 'use client';
-
+// Dashboard v2 — April 6 2026
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -3363,7 +3363,8 @@ button:active { transform: scale(0.98); }`}</style>
       </div>
       </div>}
 
-      {/* Invite Member Modal — rendered globally, skip here */}
+      {/* Invite Member Modal — rendered globally */}
+      {/* @ts-expect-error - modal moved to global render */}
       {false && showInviteModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
@@ -7491,7 +7492,7 @@ button:active { transform: scale(0.98); }`}</style>
                 <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 4 }}>Invite Team Member</h3>
                 <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 20 }}>They&apos;ll get a login to your Vernacular workspace.</p>
                 {inviteResult?.error && (
-                  <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 12 }}>{inviteResult.error}</div>
+                  <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 12 }}>{inviteResult?.error}</div>
                 )}
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Full Name *</label>
