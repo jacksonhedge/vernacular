@@ -620,28 +620,10 @@ export default function DashboardPage() {
       if (data.notifications) setNotifications(data.notifications);
     }).catch(() => {});
 
-    // Fetch Notion contacts and conversation pages
-    fetch('/api/notion/contacts').then(r => r.json()).then(data => {
-      if (data.contacts) setNotionContacts(data.contacts);
-    }).catch(() => {});
+    // Notion contacts DISABLED — contacts come from Supabase only
 
-    fetch('/api/notion/conversations').then(r => r.json()).then(data => {
-      if (data.conversations) {
-        // Store full conversation data including phone, status, lastMessage, etc.
-        const enriched = data.conversations.map((c: Record<string, unknown>) => ({
-          name: c.name as string,
-          pageId: c.pageId as string,
-          initials: c.initials as string,
-          phone: (c.phone as string) || '',
-          school: (c.school as string) || '',
-          org: (c.org as string) || '',
-          status: (c.status as string) || '',
-          messageCount: (c.messageCount as number) || 0,
-          lastMessage: (c.lastMessage as string) || '',
-        }));
-        setNotionConversations(enriched);
-      }
-    }).catch(() => {});
+    // Notion conversations DISABLED — all data comes from Supabase now
+    // Wade writes to Notion for backup only, dashboard reads from Supabase
 
     // Load real conversations from Supabase
     fetch(`/api/conversations/list?orgId=${orgId}`).then(r => r.json()).then(data => {
