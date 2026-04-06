@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { getAuthUser, unauthorized } from '@/lib/auth';
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length === 10) return `+1 (${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
   if (digits.length === 11 && digits[0] === '1') return `+1 (${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
   return phone;
+}
+
+// Normalize phone to last 10 digits for matching
+function normDigits(phone: string): string {
+  const d = phone.replace(/\D/g, '');
+  return d.length === 11 && d[0] === '1' ? d.slice(1) : d;
 }
 
 export async function GET(request: NextRequest) {
@@ -54,21 +59,17 @@ export async function GET(request: NextRequest) {
     const contactMap: Record<string, { phone: string; full_name: string; email: string; company: string; tags: string[] }> = {};
     (contacts || []).forEach(c => { contactMap[c.id] = c; });
 
-    // Get messages for each conversation by matching contact_phone
-    // The messages table uses: id, message, contact_phone, direction, station, status, source_system, sent_at, created_at
-    const contactPhones = [...new Set(Object.values(contactMap).map(c => c.phone).filter(Boolean))];
-    const { data: messages } = contactPhones.length > 0
-      ? await supabase
-          .from('messages')
-          .select('id, direction, message, status, source_system, sent_at, created_at, contact_phone, station')
-          .in('contact_phone', contactPhones)
-          .order('created_at', { ascending: true })
-          .limit(500)
-      : { data: [] as Array<{ id: string; direction: string; message: string; status: string; source_system: string; sent_at: string; created_at: string; contact_phone: string; station: string }> };
+    // Get ALL recent messages then match by normalized phone digits
+    // Messages use +15865223609 format, contacts use (586) 522-3609 format
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('id, direction, message, status, source_system, sent_at, created_at, contact_phone, station, conversation_id')
+      .order('created_at', { ascending: true })
+      .limit(500);
 
-    // Build a lookup: contact_phone -> contact_id
+    // Build a lookup: normalized phone digits -> contact_id
     const phoneToContactId: Record<string, string> = {};
-    Object.entries(contactMap).forEach(([cid, c]) => { if (c.phone) phoneToContactId[c.phone] = cid; });
+    Object.entries(contactMap).forEach(([cid, c]) => { if (c.phone) phoneToContactId[normDigits(c.phone)] = cid; });
 
     // Build a lookup: contact_id -> conversation_id
     const contactIdToConvId: Record<string, string> = {};
@@ -79,8 +80,17 @@ export async function GET(request: NextRequest) {
     }>> = {};
 
     (messages || []).forEach(m => {
-      const contactId = phoneToContactId[m.contact_phone];
-      const convId = contactId ? contactIdToConvId[contactId] : undefined;
+      // First try conversation_id directly, then fall back to phone matching
+      let convId: string | undefined;
+      if (m.conversation_id && contactIdToConvId) {
+        // Check if this conversation_id is one we're tracking
+        const allConvIds = new Set(Object.values(contactIdToConvId));
+        if (allConvIds.has(m.conversation_id)) convId = m.conversation_id;
+      }
+      if (!convId) {
+        const contactId = m.contact_phone ? phoneToContactId[normDigits(m.contact_phone)] : undefined;
+        convId = contactId ? contactIdToConvId[contactId] : undefined;
+      }
       if (!convId) return;
       if (!messagesByConv[convId]) messagesByConv[convId] = [];
       const time = m.sent_at || m.created_at;

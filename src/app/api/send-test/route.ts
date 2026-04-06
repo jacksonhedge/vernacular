@@ -85,8 +85,9 @@ export async function POST(request: Request) {
 
     if (conv) {
       await supabase.from('messages').insert({
-        conversation_id: conv.id, direction: 'outbound', body: testMessage,
-        status: 'queued', ai_generated: false, sent_at: null,
+        conversation_id: conv.id, direction: 'Outbound', message: testMessage,
+        contact_phone: `+1${n10}`, station: station.name,
+        status: 'Queued', source_system: 'test',
       });
     }
 

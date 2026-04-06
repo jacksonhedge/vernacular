@@ -128,13 +128,14 @@ export async function GET() {
 
       if (!convId) { errors++; errorDetails.push(`${msg.phone}: no convId`); continue; }
 
-      // Create message record
+      // Create message record — use actual messages table columns
       const { error: msgErr } = await supabase.from('messages').insert({
         conversation_id: convId,
-        direction: 'inbound',
-        body: msg.message,
-        status: 'delivered',
-        ai_generated: false,
+        direction: 'Inbound',
+        message: msg.message,
+        contact_phone: msg.phone,
+        station: msg.station || 'Wade',
+        status: 'Delivered',
         notion_page_id: msg.notionId,
         source_system: 'claude-cowork',
       });
