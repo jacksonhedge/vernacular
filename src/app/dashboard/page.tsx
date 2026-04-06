@@ -7408,6 +7408,88 @@ button:active { transform: scale(0.98); }`}</style>
         {renderContent()}
       </main>
 
+      {/* Global Invite Modal — renders on any tab */}
+      {showInviteModal && activeTab !== 'conversations' && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
+        }} onClick={() => inviteStatus !== 'sending' && setShowInviteModal(false)}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '32px', width: 420,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            {inviteStatus === 'sent' && inviteResult ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 8 }}>Member Invited!</h3>
+                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 16, lineHeight: 1.5 }}>{inviteResult.message}</p>
+                {inviteResult.tempPassword && (
+                  <div style={{
+                    padding: '14px 18px', borderRadius: 12, background: '#f8f9fa',
+                    border: '1px solid rgba(0,0,0,0.06)', marginBottom: 16, textAlign: 'left',
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Temporary Password</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace" }}>{inviteResult.tempPassword}</div>
+                    <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6, fontWeight: 500 }}>Share this securely. They must change it on first login.</div>
+                  </div>
+                )}
+                <button onClick={() => { setShowInviteModal(false); window.location.reload(); }} style={{
+                  width: '100%', padding: '12px', borderRadius: 12, border: 'none',
+                  background: 'linear-gradient(135deg, #378ADD, #2B6CB0)', color: '#fff',
+                  fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#1c1c1e', marginBottom: 4 }}>Invite Team Member</h3>
+                <p style={{ fontSize: 13, color: '#8e8e93', marginBottom: 20 }}>They&apos;ll get a login to your Vernacular workspace.</p>
+                {inviteResult?.error && (
+                  <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 16, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#DC2626', fontSize: 12 }}>{inviteResult.error}</div>
+                )}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Full Name *</label>
+                  <input value={inviteForm.fullName} onChange={e => setInviteForm(p => ({ ...p, fullName: e.target.value }))} placeholder="Tyler Alesso" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'Inter', sans-serif" }} />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Email *</label>
+                  <input value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="tyler@company.com" type="email" style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid rgba(0,0,0,0.1)', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: "'Inter', sans-serif" }} />
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#4a5568', display: 'block', marginBottom: 4 }}>Role</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['admin', 'member'].map(r => (
+                      <button key={r} onClick={() => setInviteForm(p => ({ ...p, role: r }))} style={{
+                        flex: 1, padding: '10px', borderRadius: 10, cursor: 'pointer',
+                        border: inviteForm.role === r ? '2px solid #378ADD' : '1.5px solid rgba(0,0,0,0.1)',
+                        background: inviteForm.role === r ? 'rgba(55,138,221,0.06)' : '#fff',
+                        fontSize: 13, fontWeight: 600, color: inviteForm.role === r ? '#378ADD' : '#1c1c1e',
+                        textTransform: 'capitalize', fontFamily: "'Inter', sans-serif",
+                      }}>{r}</button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={async () => {
+                  if (!inviteForm.fullName || !inviteForm.email) { setInviteResult({ error: 'Name and email are required' }); return; }
+                  setInviteStatus('sending'); setInviteResult(null);
+                  try {
+                    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                    const res = await fetch('/api/team/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...inviteForm, organizationId: orgId }) });
+                    const data = await res.json();
+                    if (!res.ok) { setInviteResult({ error: data.error }); setInviteStatus('error'); return; }
+                    setInviteResult({ tempPassword: data.tempPassword, message: data.message }); setInviteStatus('sent');
+                  } catch (err) { setInviteResult({ error: err instanceof Error ? err.message : 'Failed to invite' }); setInviteStatus('error'); }
+                }} disabled={inviteStatus === 'sending'} style={{
+                  width: '100%', padding: '13px', borderRadius: 12, border: 'none',
+                  background: inviteStatus === 'sending' ? '#9fc5eb' : 'linear-gradient(135deg, #378ADD, #2B6CB0)',
+                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: inviteStatus === 'sending' ? 'default' : 'pointer',
+                }}>{inviteStatus === 'sending' ? 'Inviting...' : 'Send Invite'}</button>
+                <button onClick={() => setShowInviteModal(false)} style={{ width: '100%', padding: '10px', borderRadius: 10, border: 'none', background: 'transparent', color: '#8e8e93', cursor: 'pointer', fontSize: 13, marginTop: 8 }}>Cancel</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Global Contact Edit Modal — renders on any tab */}
       {editingContact && activeTab !== 'conversations' && (
         <div style={{
