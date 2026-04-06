@@ -142,6 +142,57 @@ export async function GET() {
       }).eq('id', convId);
 
       synced++;
+
+      // Check if this conversation has AI mode enabled → trigger AI response
+      try {
+        const { data: conv } = await supabase
+          .from('conversations')
+          .select('ai_mode, ai_system_prompt, ai_ghost_name')
+          .eq('id', convId)
+          .single();
+
+        if (conv && (conv.ai_mode === 'draft' || conv.ai_mode === 'auto')) {
+          // Get recent conversation history for context
+          const { data: history } = await supabase
+            .from('messages')
+            .select('direction, body')
+            .eq('conversation_id', convId)
+            .order('created_at', { ascending: true })
+            .limit(10);
+
+          const conversationHistory = (history || []).map(m => ({
+            role: m.direction === 'outbound' ? 'outgoing' : 'incoming',
+            content: m.body,
+          }));
+
+          // Get contact name
+          const { data: contact } = await supabase
+            .from('contacts').select('full_name, phone')
+            .eq('id', contactId).single();
+
+          // Trigger AI response
+          const aiUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vernacular.chat';
+          await fetch(`${aiUrl}/api/ai/respond`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversationId: convId,
+              contactName: contact?.full_name || '',
+              contactPhone: contact?.phone || msg.phone,
+              inboundMessage: msg.message,
+              conversationHistory,
+              systemPrompt: conv.ai_system_prompt || undefined,
+              mode: conv.ai_mode,
+              ghostName: conv.ai_ghost_name || 'Blinky',
+            }),
+          });
+
+          console.log(`[poll-inbound] 🤖 AI ${conv.ai_mode} triggered for ${contact?.full_name || msg.phone}`);
+        }
+      } catch (aiErr) {
+        console.error('[poll-inbound] AI trigger failed:', aiErr instanceof Error ? aiErr.message : aiErr);
+        // Don't fail the sync — AI response is best-effort
+      }
     }
 
     return NextResponse.json({
