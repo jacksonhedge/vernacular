@@ -49,7 +49,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No stations available' }, { status: 503 });
     }
 
-    // 1. Write to Notion Message Queue
+    // 1a. Queue to outbound_queue (direct station communication — 5s polling)
+    let queueId: string | null = null;
+    try {
+      const { data: queued } = await supabase.from('outbound_queue').insert({
+        station_name: station.name,
+        contact_phone: `+1${n10}`,
+        contact_name: contactName || null,
+        message,
+        source_system: system,
+        organization_id: organizationId,
+      }).select('id').single();
+      queueId = queued?.id || null;
+    } catch (err) {
+      console.error('Outbound queue failed:', err instanceof Error ? err.message : err);
+    }
+
+    // 1b. Also write to Notion Message Queue (backwards compatibility for stations not yet on direct polling)
     let notionPageId: string | null = null;
     try {
       const result = await createPage(NOTION_DBS.MESSAGE_QUEUE, {
