@@ -3601,15 +3601,44 @@ button:active { transform: scale(0.98); }`}</style>
             )}
 
             {/* Messages */}
-            <div ref={el => { if (el && !el.dataset.scrolled) { el.scrollTop = el.scrollHeight; el.dataset.scrolled = 'true'; } }} style={{
-              flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8,
+            <div ref={el => {
+              if (el) { el.scrollTop = el.scrollHeight; }
+            }} style={{
+              flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4,
               background: '#f8f9fa',
             }}>
-              {col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off')).map((msg, msgIdx) => {
+              {(() => {
                 const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off'));
+                // Helper: format date separator like iMessage
+                const formatDateSep = (dateStr: string) => {
+                  const d = new Date(dateStr);
+                  if (isNaN(d.getTime())) return null;
+                  const now = new Date();
+                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
+                  if (diffDays === 0) return 'Today';
+                  if (diffDays === 1) return 'Yesterday';
+                  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+                  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                };
+                let lastDateLabel = '';
+                return visibleMsgs.map((msg, msgIdx) => {
                 const isLastOutgoing = msg.direction === 'outgoing' && !msg.isAIDraft &&
                   !visibleMsgs.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
                 const isRecent = msg.id.startsWith('m-');
+                // Date separator
+                const msgDate = msg.timestamp ? formatDateSep(msg.timestamp) : null;
+                const showDateSep = msgDate && msgDate !== lastDateLabel;
+                if (msgDate) lastDateLabel = msgDate;
+                // Time gap: show time if >10 min gap from previous message
+                const prevMsg = msgIdx > 0 ? visibleMsgs[msgIdx - 1] : null;
+                const showTime = (() => {
+                  if (!msg.timestamp) return false;
+                  if (!prevMsg?.timestamp) return true;
+                  const gap = Math.abs(new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime());
+                  return gap > 10 * 60 * 1000; // 10 minutes
+                })();
 
                 // Detect iMessage reactions: Liked "...", Loved "...", etc.
                 // Detect iMessage reactions: "Liked '...'" or "❤️ to '...'" patterns
@@ -3621,7 +3650,13 @@ button:active { transform: scale(0.98); }`}</style>
                   const emoji = reactionEmoji[reactionMatch[1]] || reactionMatch[1] || '👍';
                   const quotedText = reactionMatch[2].substring(0, 40);
                   return (
-                    <div key={msg.id} style={{
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {showDateSep && (
+                      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', background: '#f8f9fa', padding: '0 12px' }}>{msgDate}</span>
+                      </div>
+                    )}
+                    <div style={{
                       display: 'flex', alignItems: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                       flexDirection: 'column',
                     }}>
@@ -3642,11 +3677,27 @@ button:active { transform: scale(0.98); }`}</style>
                         </span>
                       )}
                     </div>
+                    </div>
                   );
                 }
 
                 return (
-                  <div key={msg.id} style={{
+                  <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {/* Date separator — centered like iMessage */}
+                    {showDateSep && (
+                      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#8e8e93', background: '#f8f9fa', padding: '0 12px' }}>{msgDate}</span>
+                      </div>
+                    )}
+                    {/* Time label — shown when >10 min gap */}
+                    {showTime && msg.timestamp && (
+                      <div style={{ textAlign: 'center', padding: '4px 0 2px' }}>
+                        <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
+                          {(() => { const d = new Date(msg.timestamp); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); })()}
+                        </span>
+                      </div>
+                    )}
+                  <div style={{
                     display: 'flex', flexDirection: 'column',
                     alignItems: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                   }}>
@@ -3741,8 +3792,10 @@ button:active { transform: scale(0.98); }`}</style>
                       )}
                     </div>
                   </div>
+                  </div>
                 );
-              })}
+              });
+              })()}
               <div ref={el => { messageEndRefs.current[col.id] = el; }} />
             </div>
 
