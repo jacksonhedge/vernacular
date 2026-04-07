@@ -2977,17 +2977,26 @@ button:active { transform: scale(0.98); }`}</style>
                     playSound('click');
                     setSelectedConversationId(col.id);
                     setReadConversations(prev => new Set(prev).add(col.id));
-                    // Un-dismiss if it was closed
-                    if (dismissedColumns.has(col.id)) {
-                      setDismissedColumns(prev => {
-                        const next = new Set(prev);
-                        next.delete(col.id);
-                        localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
-                        return next;
-                      });
-                    }
-                    const el = document.getElementById(`stream-col-${col.id}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                    // Add to columns if not already open
+                    setColumns(prev => {
+                      if (prev.some(c => c.id === col.id)) {
+                        // Move to front
+                        const existing = prev.find(c => c.id === col.id)!;
+                        return [existing, ...prev.filter(c => c.id !== col.id)];
+                      }
+                      return [col, ...prev];
+                    });
+                    // Un-dismiss
+                    setDismissedColumns(prev => {
+                      const next = new Set(prev);
+                      next.delete(col.id);
+                      localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                      return next;
+                    });
+                    setTimeout(() => {
+                      const el = document.getElementById(`stream-col-${col.id}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                    }, 50);
                   }} style={{
                     display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                     padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -3221,43 +3230,51 @@ button:active { transform: scale(0.98); }`}</style>
             }}>
               {col.contact ? (
                 <>
-                  <div
-                    onClick={() => (() => { const nm = col.contact!.name; const ph = col.contact!.phone || ''; const nameIsPhone = isPhoneNumber(nm); const n = nameIsPhone ? ['', ''] : nm.split(' '); setEditingContact({ colId: col.id, firstName: nameIsPhone ? '' : (n[0] || ''), lastName: nameIsPhone ? '' : (n.slice(1).join(' ') || ''), name: nameIsPhone ? '' : nm, phone: ph || (nameIsPhone ? formatPhoneNumber(nm) : ''), email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
-                    style={{
-                      width: 34, height: 34, borderRadius: 10,
-                      background: 'rgba(0,0,0,0.04)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 20, flexShrink: 0,
-                      cursor: 'pointer',
-                    }}
-                    title="Edit contact info"
-                  >
-                    {(() => {
-                      const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
-                      const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
-                      return fruits[Math.max(0, idx) % fruits.length];
-                    })()}
-                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      onClick={() => (() => { const nm = col.contact!.name; const ph = col.contact!.phone || ''; const nameIsPhone = isPhoneNumber(nm); const n = nameIsPhone ? ['', ''] : nm.split(' '); setEditingContact({ colId: col.id, firstName: nameIsPhone ? '' : (n[0] || ''), lastName: nameIsPhone ? '' : (n.slice(1).join(' ') || ''), name: nameIsPhone ? '' : nm, phone: ph || (nameIsPhone ? formatPhoneNumber(nm) : ''), email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' }); })()}
-                      style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
-                      title="Edit contact info"
-                    >
-                      {col.contact.name}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {col.contact.name}
+                      </span>
                       {col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming' && !col.messages[col.messages.length - 1].isAIDraft && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
+                        <span style={{ fontSize: 10, flexShrink: 0 }}>🔔</span>
                       )}
+                      {pinnedConversations.has(col.id) && <span style={{ fontSize: 10, flexShrink: 0 }}>📌</span>}
                     </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: col.contact.tagColor,
-                      background: col.contact.tagBg, padding: '2px 7px', borderRadius: 4,
-                      fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.04em',
-                    }}>
-                      {col.contact.tag}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      {/* Channel */}
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
+                        background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)',
+                        color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E',
+                        fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                      }}>
+                        {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMsg'}
+                      </span>
+                      {/* AI Mode */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const modes = ['off', 'draft', 'auto'] as const;
+                          const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]);
+                          const nextMode = modes[(currentIdx + 1) % modes.length];
+                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
+                          setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
+                          const convId = col.conversationId || col.id.replace('real-', '');
+                          if (convId) {
+                            await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId);
+                          }
+                        }}
+                        title={`AI: ${col.aiMode || 'off'} (click to cycle)`}
+                        style={{
+                          padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700,
+                          background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)',
+                          color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93',
+                          cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                        }}
+                      >
+                        AI {(col.aiMode || 'off').toUpperCase()}
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -3265,7 +3282,7 @@ button:active { transform: scale(0.98); }`}</style>
                   Select a contact...
                 </div>
               )}
-              {/* Pin button */}
+              {/* Pin toggle */}
               <button
                 onClick={() => {
                   setPinnedConversations(prev => {
@@ -3275,69 +3292,24 @@ button:active { transform: scale(0.98); }`}</style>
                     return next;
                   });
                 }}
-                title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin to left'}
+                title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin'}
                 style={{
-                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
-                  background: pinnedConversations.has(col.id) ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
-                  color: pinnedConversations.has(col.id) ? '#378ADD' : '#8e8e93', cursor: 'pointer',
-                  fontFamily: "'JetBrains Mono', monospace",
+                  width: 24, height: 24, borderRadius: 6, border: 'none', fontSize: 12,
+                  background: pinnedConversations.has(col.id) ? 'rgba(55,138,221,0.1)' : 'transparent',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: pinnedConversations.has(col.id) ? '#378ADD' : '#8e8e93', flexShrink: 0,
                 }}
               >
-                {pinnedConversations.has(col.id) ? '📌' : 'Pin'}
+                📌
               </button>
-              {/* Channel badge */}
-              <span title={`Channel: ${col.channel || 'imessage'}`} style={{
-                padding: '3px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700,
-                background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)',
-                color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E',
-                fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.04em',
-              }}>
-                {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMessage'}
-              </span>
-              {/* AI Mode toggle */}
-              <button
-                onClick={async () => {
-                  const modes = ['off', 'draft', 'auto'] as const;
-                  const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]);
-                  const nextMode = modes[(currentIdx + 1) % modes.length];
-                  setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
-                  setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
-                  const convId = col.conversationId || col.id.replace('real-', '');
-                  if (convId) {
-                    await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId);
-                  }
-                }}
-                title={`AI Mode: ${col.aiMode || 'off'} (click to cycle)`}
-                style={{
-                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
-                  background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)',
-                  color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93',
-                  cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
-                }}
-              >
-                AI {(col.aiMode || 'off').toUpperCase()}
-              </button>
-              <button
-                onClick={() => setShowTimestamps(prev => !prev)}
-                title={showTimestamps ? 'Hide Times' : 'Show Times'}
-                style={{
-                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
-                  background: showTimestamps ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
-                  color: showTimestamps ? '#378ADD' : '#8e8e93', cursor: 'pointer',
-                  fontFamily: "'JetBrains Mono', monospace",
-                }}
-              >
-                {showTimestamps ? 'Hide Times' : 'Times'}
-              </button>
+              {/* Close */}
               <button
                 onClick={() => removeColumn(col.id)}
-                onMouseEnter={() => setHoveredColClose(col.id)}
-                onMouseLeave={() => setHoveredColClose(null)}
                 style={{
-                  width: 28, height: 28, borderRadius: 6, border: 'none',
-                  background: hoveredColClose === col.id ? 'rgba(0,0,0,0.06)' : 'transparent',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#8e8e93', flexShrink: 0, transition: 'background 0.15s ease',
+                  width: 24, height: 24, borderRadius: 6, border: 'none',
+                  background: 'transparent', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#8e8e93', flexShrink: 0,
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
