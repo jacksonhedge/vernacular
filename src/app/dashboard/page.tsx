@@ -349,6 +349,13 @@ export default function DashboardPage() {
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
   const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
+  const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try { return new Set(JSON.parse(localStorage.getItem('vernacular-pinned') || '[]')); } catch { return new Set(); }
+    }
+    return new Set();
+  });
+  const [showReadStreams, setShowReadStreams] = useState(true);
   const [showPreviousChats, setShowPreviousChats] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({ fullName: '', email: '', role: 'member' });
@@ -3151,8 +3158,52 @@ button:active { transform: scale(0.98); }`}</style>
         </div>{/* end icon rail + right content */}
         </div>{/* end Contact List Panel */}
         {/* Stream Columns */}
-        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '16px 16px', minHeight: 0 }}>
-        {columns.map(col => (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* Stream Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 0', flexShrink: 0 }}>
+          <button onClick={() => setShowReadStreams(prev => !prev)} style={{
+            padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+            background: showReadStreams ? 'rgba(0,0,0,0.04)' : 'rgba(55,138,221,0.1)',
+            color: showReadStreams ? '#8e8e93' : '#378ADD', cursor: 'pointer',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            {showReadStreams ? 'Hide Read' : 'Show All'}
+          </button>
+          <button onClick={() => {
+            // Mark all visible conversations as read
+            setReadConversations(prev => {
+              const next = new Set(prev);
+              columns.forEach(c => { if (c.contact) next.add(c.id); });
+              return next;
+            });
+          }} style={{
+            padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+            background: 'rgba(0,0,0,0.04)', color: '#8e8e93', cursor: 'pointer',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            Mark All Read
+          </button>
+          <span style={{ fontSize: 10, color: '#8e8e93', marginLeft: 'auto', fontFamily: "'JetBrains Mono', monospace" }}>
+            {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
+          </span>
+        </div>
+        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '8px 16px 16px', minHeight: 0 }}>
+        {(() => {
+          // Sort: pinned first, then unread, then the rest
+          const sorted = [...columns].sort((a, b) => {
+            const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
+            const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
+            if (aPinned !== bPinned) return bPinned - aPinned;
+            const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
+            const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
+            return bUnread - aUnread;
+          });
+          // Filter: if showReadStreams is off, only show pinned + unread
+          const visible = showReadStreams ? sorted : sorted.filter(c =>
+            pinnedConversations.has(c.id) || c.contact?.tag === 'UNREAD' || !c.contact
+          );
+          return visible;
+        })().map(col => (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
             width: 360, minWidth: 360, height: '100%', display: 'flex', flexDirection: 'column',
             background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)',
@@ -3209,7 +3260,26 @@ button:active { transform: scale(0.98); }`}</style>
                   Select a contact...
                 </div>
               )}
-              {/* AI toggle moved to input bar */}
+              {/* Pin button */}
+              <button
+                onClick={() => {
+                  setPinnedConversations(prev => {
+                    const next = new Set(prev);
+                    if (next.has(col.id)) next.delete(col.id); else next.add(col.id);
+                    localStorage.setItem('vernacular-pinned', JSON.stringify([...next]));
+                    return next;
+                  });
+                }}
+                title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin to left'}
+                style={{
+                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+                  background: pinnedConversations.has(col.id) ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)',
+                  color: pinnedConversations.has(col.id) ? '#378ADD' : '#8e8e93', cursor: 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                {pinnedConversations.has(col.id) ? '📌' : 'Pin'}
+              </button>
               <button
                 onClick={() => setShowTimestamps(prev => !prev)}
                 title={showTimestamps ? 'Hide Times' : 'Show Times'}
