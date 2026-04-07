@@ -1706,6 +1706,42 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
         </div>
       </div>
+
+      {/* Fourth Row: Integrations */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ ...cardStyle, padding: 0 }}>
+          <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={panelHeaderStyle}>Integrations</div>
+            <button onClick={() => setActiveTab('integrations')} style={{
+              padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600,
+              background: 'rgba(55,138,221,0.1)', color: '#378ADD', cursor: 'pointer',
+            }}>Manage</button>
+          </div>
+          <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+            {[
+              { name: 'iMessage', icon: '💬', status: stations.some(s => s.status === 'online') ? 'connected' : 'offline', color: '#22C55E' },
+              { name: 'Discord', icon: '🎮', status: 'coming soon', color: '#5865F2' },
+              { name: 'Telegram', icon: '✈️', status: 'coming soon', color: '#0088cc' },
+              { name: 'Email', icon: '📧', status: 'coming soon', color: '#D97706' },
+              { name: 'Twilio SMS', icon: '📱', status: 'coming soon', color: '#F22F46' },
+            ].map(intg => (
+              <div key={intg.name} style={{
+                padding: '14px 12px', borderRadius: 12, border: '1px solid rgba(0,0,0,0.06)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center',
+              }}>
+                <span style={{ fontSize: 24 }}>{intg.icon}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{intg.name}</span>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                  textTransform: 'uppercase', letterSpacing: '0.04em',
+                  background: intg.status === 'connected' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
+                  color: intg.status === 'connected' ? '#22C55E' : '#8e8e93',
+                }}>{intg.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 
