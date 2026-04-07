@@ -301,6 +301,7 @@ export default function DashboardPage() {
 
   // Conversations (loaded from Supabase)
   const [columns, setColumns] = useState<ConversationColumn[]>([]);
+  const [allConversations, setAllConversations] = useState<ConversationColumn[]>([]);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
@@ -676,7 +677,8 @@ export default function DashboardPage() {
             })),
           };
         });
-        // Filter out dismissed conversations on initial load
+        // Store ALL conversations for contact list, filter dismissed for stream columns
+        setAllConversations(realColumns);
         let dismissed: Set<string>;
         try { dismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { dismissed = new Set(); }
         setColumns(realColumns.filter(c => !dismissed.has(c.id)));
@@ -779,6 +781,8 @@ export default function DashboardPage() {
                 const brandNew = Array.from(freshMap.values()).filter(c => !dismissedColumns.has(c.id));
                 return [...brandNew, ...merged];
               });
+              // Always update allConversations with full data (for contact list)
+              setAllConversations(freshColumns);
             }
           }
         } catch { /* silent */ }
@@ -2946,12 +2950,12 @@ button:active { transform: scale(0.98); }`}</style>
                 borderTop: '1px solid rgba(0,0,0,0.06)',
               }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#1c1c1e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Active ({columns.filter(c => c.contact && c.messages.length > 0).length})
+                  Active ({allConversations.filter(c => c.contact && c.messages.length > 0).length})
                 </span>
               </div>
               {/* Active Conversation List — always visible */}
               <div style={{ overflowY: 'auto', maxHeight: showPreviousChats ? '40%' : undefined, flex: showPreviousChats ? undefined : 1 }}>
-            {columns
+            {allConversations
               .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
               .map(col => {
                 const lastMsg = col.messages.length > 0 ? col.messages[col.messages.length - 1] : null;
@@ -3082,9 +3086,9 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
               {/* Previous Chats Dropdown */}
               {(() => {
-                // Show conversations not currently open as stream columns (selectedConversationId)
-                const activeCols = columns.filter(c => c.contact && c.messages.length > 0);
-                const previousChats = columns.filter(c => c.contact && (c.messages.length === 0 || !activeCols.includes(c)) && c.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+                // Show conversations with no messages
+                const activeCols = allConversations.filter(c => c.contact && c.messages.length > 0);
+                const previousChats = allConversations.filter(c => c.contact && c.messages.length === 0 && c.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
                 // Always show the section header so users know it exists
                 if (previousChats.length === 0) return (
                   <div style={{ padding: '8px 14px', background: '#f5f6f8', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
