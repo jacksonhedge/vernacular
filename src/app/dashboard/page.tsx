@@ -848,10 +848,39 @@ export default function DashboardPage() {
             return col;
           }));
 
-          // Play sound for inbound
+          // Update dashboard metrics
+          setMetrics(prev => ({
+            ...prev,
+            messagesAllTime: prev.messagesAllTime + 1,
+            messagesToday: dir === 'outbound' ? prev.messagesToday + 1 : prev.messagesToday,
+          }));
+
+          // Update Recent Activity on Dashboard tab
           if (dir === 'inbound') {
+            const contactMatch = allConversations.find(col => {
+              if (!col.contact?.phone) return false;
+              return col.contact.phone.replace(/\D/g, '').slice(-10) === phoneDigits;
+            });
+            setRecentMessages(prev => [{
+              id: String(m.id),
+              contactName: contactMatch?.contact?.name || phone,
+              contactPhone: phone,
+              preview: String(m.message || '').slice(0, 80),
+              direction: 'inbound' as string,
+              aiGenerated: false,
+              sentAt: String(m.sent_at || m.created_at || new Date().toISOString()),
+            }, ...prev].slice(0, 10));
+
+            // Update unread badge
+            setUnreadCount(prev => prev + 1);
             playSound('receive');
           }
+
+          // Update Messages timeline if loaded
+          setTimelineMessages(prev => {
+            if (prev.length === 0) return prev; // not loaded yet
+            return [m as Record<string, unknown>, ...prev];
+          });
 
           setLastReloadTime(new Date());
         }
