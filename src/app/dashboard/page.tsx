@@ -355,6 +355,12 @@ export default function DashboardPage() {
     }
     return new Set();
   });
+  const [dismissedColumns, setDismissedColumns] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try { return new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { return new Set(); }
+    }
+    return new Set();
+  });
   const [showReadStreams, setShowReadStreams] = useState(true);
   const [showPreviousChats, setShowPreviousChats] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -793,8 +799,8 @@ export default function DashboardPage() {
                   }
                   return existing;
                 });
-                // Add new conversations to the BEGINNING (most recent first), not the end
-                const brandNew = Array.from(freshMap.values());
+                // Add new conversations to the BEGINNING, but skip dismissed ones
+                const brandNew = Array.from(freshMap.values()).filter(c => !dismissedColumns.has(c.id));
                 return [...brandNew, ...merged];
               });
             }
@@ -928,7 +934,13 @@ button:active { transform: scale(0.98); }`}</style>
   const removeColumn = (colId: string) => {
     setColumns(prev => prev.filter(c => c.id !== colId));
     setShowContactPicker(null);
-    // useEffect will auto-persist the updated columns list
+    // Track dismissed so refresh doesn't re-add it
+    setDismissedColumns(prev => {
+      const next = new Set(prev);
+      next.add(colId);
+      localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+      return next;
+    });
   };
 
   const pickContact = (colId: string, contact: Contact) => {
@@ -2991,6 +3003,15 @@ button:active { transform: scale(0.98); }`}</style>
                     playSound('click');
                     setSelectedConversationId(col.id);
                     setReadConversations(prev => new Set(prev).add(col.id));
+                    // Un-dismiss if it was closed
+                    if (dismissedColumns.has(col.id)) {
+                      setDismissedColumns(prev => {
+                        const next = new Set(prev);
+                        next.delete(col.id);
+                        localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                        return next;
+                      });
+                    }
                     const el = document.getElementById(`stream-col-${col.id}`);
                     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
                   }} style={{
