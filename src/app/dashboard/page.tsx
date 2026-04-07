@@ -33,6 +33,7 @@ interface ConversationColumn {
   conversationId?: string;
   aiMode?: string;
   goal?: string;
+  channel?: 'imessage' | 'discord' | 'telegram' | 'email' | 'sms';
 }
 
 interface DashboardMetrics {
@@ -3283,6 +3284,38 @@ button:active { transform: scale(0.98); }`}</style>
                 }}
               >
                 {pinnedConversations.has(col.id) ? '📌' : 'Pin'}
+              </button>
+              {/* Channel badge */}
+              <span title={`Channel: ${col.channel || 'imessage'}`} style={{
+                padding: '3px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+                background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)',
+                color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E',
+                fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMessage'}
+              </span>
+              {/* AI Mode toggle */}
+              <button
+                onClick={async () => {
+                  const modes = ['off', 'draft', 'auto'] as const;
+                  const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]);
+                  const nextMode = modes[(currentIdx + 1) % modes.length];
+                  setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
+                  setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
+                  const convId = col.conversationId || col.id.replace('real-', '');
+                  if (convId) {
+                    await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId);
+                  }
+                }}
+                title={`AI Mode: ${col.aiMode || 'off'} (click to cycle)`}
+                style={{
+                  padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
+                  background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)',
+                  color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93',
+                  cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                AI {(col.aiMode || 'off').toUpperCase()}
               </button>
               <button
                 onClick={() => setShowTimestamps(prev => !prev)}
