@@ -2962,6 +2962,7 @@ button:active { transform: scale(0.98); }`}</style>
                 const hasUnread = lastMsg?.direction === 'incoming';
                 const hasAiDraft = lastMsg?.isAIDraft;
                 const isSelected = selectedConversationId === col.id;
+                const isOpenAsColumn = columns.some(c => c.id === col.id);
                 const isRead = readConversations.has(col.id);
                 const rowBg = isSelected
                   ? 'rgba(55,138,221,0.08)'
@@ -3049,18 +3050,28 @@ button:active { transform: scale(0.98); }`}</style>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isSelected) {
+                          if (isOpenAsColumn) {
                             // Close: remove column and deselect
                             removeColumn(col.id);
                             setSelectedConversationId(null);
                           } else {
-                            // Show: move column to first position and select
+                            // Show: add to columns if not present, move to first position
                             setColumns(prev => {
-                              const idx = prev.findIndex(c => c.id === col.id);
-                              if (idx <= 0) return prev;
-                              const item = prev[idx];
-                              const rest = prev.filter((_, i) => i !== idx);
-                              return [item, ...rest];
+                              const existing = prev.find(c => c.id === col.id);
+                              if (existing) {
+                                // Already in columns — move to front
+                                return [existing, ...prev.filter(c => c.id !== col.id)];
+                              } else {
+                                // Not in columns (was dismissed) — add it
+                                return [col, ...prev];
+                              }
+                            });
+                            // Un-dismiss
+                            setDismissedColumns(prev => {
+                              const next = new Set(prev);
+                              next.delete(col.id);
+                              localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                              return next;
                             });
                             setSelectedConversationId(col.id);
                             setTimeout(() => {
@@ -3072,12 +3083,12 @@ button:active { transform: scale(0.98); }`}</style>
                         style={{
                           fontSize: 9, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
                           border: 'none', cursor: 'pointer',
-                          background: isSelected ? 'rgba(239,68,68,0.08)' : 'rgba(55,138,221,0.08)',
-                          color: isSelected ? '#DC2626' : '#378ADD',
+                          background: isOpenAsColumn ? 'rgba(239,68,68,0.08)' : 'rgba(55,138,221,0.08)',
+                          color: isOpenAsColumn ? '#DC2626' : '#378ADD',
                           fontFamily: "'JetBrains Mono', monospace",
                         }}
                       >
-                        {isSelected ? 'Close' : 'Show'}
+                        {isOpenAsColumn ? 'Close' : 'Show'}
                       </button>
                     </div>
                   </button>
