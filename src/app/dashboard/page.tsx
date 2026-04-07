@@ -196,7 +196,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
     ),
   },
   {
-    label: 'AI Response Skills',
+    label: 'AI Responder',
     tab: 'ai-drafts',
     color: '#D97706',
     icon: (
@@ -357,6 +357,7 @@ export default function DashboardPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
+  const [aiResponderTab, setAiResponderTab] = useState<'skills' | 'goals' | 'model' | 'agents'>('skills');
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -526,9 +527,10 @@ export default function DashboardPage() {
           .eq('status', 'active'),
         supabase.from('messages').select('*', { count: 'exact', head: true })
           .eq('source_system', 'vernacular-ai'),
-        supabase.from('conversations').select('id', { count: 'exact', head: true }),
-        supabase.from('conversations').select('id, unread_count')
-          .gt('unread_count', 0),
+        supabase.from('messages').select('*', { count: 'exact', head: true })
+          .eq('direction', 'Inbound'),
+        supabase.from('messages').select('*', { count: 'exact', head: true })
+          .eq('direction', 'Outbound'),
         supabase.from('messages').select(`
           id, direction, message, source_system, sent_at, status, contact_phone, station, created_at
         `).order('created_at', { ascending: false }).limit(10),
@@ -539,9 +541,10 @@ export default function DashboardPage() {
         supabase.from('org_integrations').select('*').eq('organization_id', orgId),
       ]);
 
-      const totalConv = (totalConvData as unknown[])?.length || 0;
-      const respondedConv = (respondedConvData as unknown[])?.length || 0;
-      const rate = totalConv > 0 ? Math.round((respondedConv / totalConv) * 100) : 0;
+      // Response rate = outbound messages / inbound messages (how often you reply)
+      const inboundTotal = (totalConvData as unknown as number) || 0;
+      const outboundTotal = (respondedConvData as unknown as number) || 0;
+      const rate = inboundTotal > 0 ? Math.min(100, Math.round((outboundTotal / inboundTotal) * 100)) : 0;
 
       setMetrics({
         messagesToday: todayCount || 0,
@@ -7080,11 +7083,227 @@ button:active { transform: scale(0.98); }`}</style>
       case 'profile': return renderProfile();
       case 'integrations': return renderIntegrations();
       case 'stations': return renderStations();
-      case 'ai-drafts': return renderPlaceholder('AI Drafts', 'Review and manage AI-generated drafts coming soon.', (
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
-        </svg>
-      ));
+      case 'ai-drafts': return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Responder</h2>
+              <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Configure AI-powered messaging agents for your conversations</p>
+            </div>
+          </div>
+
+          {/* Sub-tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 3, width: 'fit-content' }}>
+            {([
+              { key: 'skills' as const, label: 'Skills' },
+              { key: 'goals' as const, label: 'Goals' },
+              { key: 'model' as const, label: 'Model' },
+              { key: 'agents' as const, label: 'Sub-Agents' },
+            ]).map(t => (
+              <button key={t.key} onClick={() => setAiResponderTab(t.key)} style={{
+                padding: '8px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600,
+                background: aiResponderTab === t.key ? '#fff' : 'transparent',
+                color: aiResponderTab === t.key ? '#1c1c1e' : '#8e8e93',
+                boxShadow: aiResponderTab === t.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          {/* Skills Tab */}
+          {aiResponderTab === 'skills' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[
+                { name: 'Greeting', desc: 'Respond to initial contact or "hey" messages', tone: 'Friendly, casual', active: true },
+                { name: 'Follow-up', desc: 'Re-engage contacts who haven\'t replied in 24-72 hours', tone: 'Persistent but respectful', active: true },
+                { name: 'Objection Handling', desc: 'Address concerns about pricing, timing, or competition', tone: 'Empathetic, solution-focused', active: false },
+                { name: 'Scheduling', desc: 'Coordinate meeting times, send calendar links', tone: 'Efficient, direct', active: false },
+                { name: 'VIP Onboarding', desc: 'Walk new VIPs through account setup and first deposit', tone: 'Premium, white-glove', active: false },
+                { name: 'Promo Delivery', desc: 'Share bonus codes, free bets, and exclusive offers', tone: 'Exciting, urgent', active: false },
+              ].map(skill => (
+                <div key={skill.name} style={{
+                  ...cardStyle, padding: 20, display: 'flex', flexDirection: 'column', gap: 8,
+                  border: skill.active ? '2px solid rgba(34,197,94,0.3)' : '1px solid rgba(0,0,0,0.08)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>{skill.name}</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
+                      background: skill.active ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
+                      color: skill.active ? '#22C55E' : '#8e8e93',
+                      textTransform: 'uppercase',
+                    }}>{skill.active ? 'Active' : 'Inactive'}</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{skill.desc}</p>
+                  <div style={{ fontSize: 11, color: '#8e8e93' }}>Tone: <span style={{ color: '#1c1c1e', fontWeight: 500 }}>{skill.tone}</span></div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Goals Tab */}
+          {aiResponderTab === 'goals' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Default Conversation Goal</div>
+                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 12px' }}>Applied to new conversations unless overridden per-conversation</p>
+                <textarea
+                  placeholder="e.g., Get the contact to make a first deposit of $100+ within 48 hours..."
+                  style={{
+                    width: '100%', minHeight: 80, padding: 12, borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'Inter', sans-serif",
+                    resize: 'vertical', outline: 'none',
+                  }}
+                />
+              </div>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Goal Templates</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {['First Deposit', 'Reactivation', 'VIP Upgrade', 'Event Registration', 'Referral Ask', 'Feedback Collection'].map(g => (
+                    <button key={g} style={{
+                      padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.1)',
+                      background: '#fff', fontSize: 12, fontWeight: 500, color: '#1c1c1e', cursor: 'pointer',
+                    }}>{g}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Goal Metrics</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  {[
+                    { label: 'Conversations with Goals', value: columns.filter(c => c.goal).length, total: columns.filter(c => c.contact).length },
+                    { label: 'Goals Achieved (est.)', value: 0, total: columns.filter(c => c.goal).length },
+                    { label: 'Avg Messages to Goal', value: '—', total: null },
+                  ].map(m => (
+                    <div key={m.label} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#1c1c1e' }}>{typeof m.value === 'number' && m.total ? `${m.value}/${m.total}` : String(m.value)}</div>
+                      <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>{m.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Model Tab */}
+          {aiResponderTab === 'model' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>AI Model Selection</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    { id: 'haiku', name: 'Claude Haiku', desc: 'Fast, cheap — great for quick replies', cost: '~$0.0005/msg', speed: '< 1s', recommended: true },
+                    { id: 'sonnet', name: 'Claude Sonnet', desc: 'Balanced quality and speed — best for VIP conversations', cost: '~$0.002/msg', speed: '~2s', recommended: false },
+                    { id: 'opus', name: 'Claude Opus', desc: 'Highest quality — complex negotiations, sensitive topics', cost: '~$0.003/msg', speed: '~4s', recommended: false },
+                  ].map(m => (
+                    <div key={m.id} style={{
+                      padding: 16, borderRadius: 10, border: m.recommended ? '2px solid rgba(55,138,221,0.3)' : '1px solid rgba(0,0,0,0.08)',
+                      display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+                      background: m.recommended ? 'rgba(55,138,221,0.03)' : '#fff',
+                    }}>
+                      <div style={{
+                        width: 18, height: 18, borderRadius: 9, border: '2px solid',
+                        borderColor: m.recommended ? '#378ADD' : '#d1d5db',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {m.recommended && <div style={{ width: 10, height: 10, borderRadius: 5, background: '#378ADD' }} />}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>
+                          {m.name}
+                          {m.recommended && <span style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', marginLeft: 8, textTransform: 'uppercase' }}>Current</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>{m.desc}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{m.cost}</div>
+                        <div style={{ fontSize: 11, color: '#8e8e93' }}>{m.speed}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>System Prompt</div>
+                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 12px' }}>Base personality and rules for all AI responses</p>
+                <textarea
+                  defaultValue="You are a VIP relationship manager responding via iMessage. Keep responses concise, friendly, and professional. Use casual texting tone. Max 2-3 sentences. Never reveal you are AI. Match the contact's energy."
+                  style={{
+                    width: '100%', minHeight: 120, padding: 12, borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'Inter', sans-serif",
+                    resize: 'vertical', outline: 'none', lineHeight: 1.5,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Sub-Agents Tab */}
+          {aiResponderTab === 'agents' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>Sub-Agents</div>
+                    <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>Specialized agents that draft and craft messaging for different scenarios</p>
+                  </div>
+                  <button style={{ ...primaryBtnStyle, fontSize: 12 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Create Agent
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    { name: 'Blinky', role: 'General Responder', desc: 'Handles everyday replies — greetings, status updates, quick questions', mode: 'Draft', conversations: 3, color: '#EF4444' },
+                    { name: 'Pinky', role: 'VIP Closer', desc: 'Focuses on converting prospects — pushes toward deposits, signups, upgrades', mode: 'Draft', conversations: 0, color: '#EC4899' },
+                    { name: 'Inky', role: 'Re-Engagement', desc: 'Follows up with dormant contacts — crafts win-back messages and promos', mode: 'Off', conversations: 0, color: '#3B82F6' },
+                    { name: 'Clyde', role: 'Concierge', desc: 'Handles logistics — scheduling, account questions, support requests', mode: 'Off', conversations: 0, color: '#F59E0B' },
+                  ].map(agent => (
+                    <div key={agent.name} style={{
+                      padding: 16, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)',
+                      display: 'flex', alignItems: 'center', gap: 14,
+                    }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10, background: `${agent.color}15`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 20, flexShrink: 0,
+                      }}>
+                        {agent.name === 'Blinky' ? '👻' : agent.name === 'Pinky' ? '🌸' : agent.name === 'Inky' ? '🐙' : '🍊'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>
+                          {agent.name} <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>— {agent.role}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 2 }}>{agent.desc}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
+                          background: agent.mode === 'Draft' ? 'rgba(217,119,6,0.1)' : agent.mode === 'Auto' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
+                          color: agent.mode === 'Draft' ? '#D97706' : agent.mode === 'Auto' ? '#22C55E' : '#8e8e93',
+                          textTransform: 'uppercase',
+                        }}>{agent.mode}</span>
+                        <span style={{ fontSize: 11, color: '#8e8e93' }}>{agent.conversations} convos</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>How Sub-Agents Work</div>
+                <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
+                  Each sub-agent is assigned to specific conversations and uses its own personality, skill set, and goal to craft messages.
+                  In <strong>Draft</strong> mode, the agent writes a response and waits for your approval.
+                  In <strong>Auto</strong> mode, it sends immediately.
+                  Agents share the conversation history but each brings its own expertise — a Closer writes differently than a Concierge.
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
       default: return renderDashboard();
     }
   };
