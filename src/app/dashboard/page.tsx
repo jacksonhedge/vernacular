@@ -803,8 +803,65 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Column persistence is handled via pinned + dismissed in localStorage
-  // No longer saving all open columns (caused reopening issues)
+  // ── Supabase Realtime: instant message updates ─────────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('messages-realtime')
+      .on(
+        'postgres_changes' as never,
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: { new: Record<string, unknown> }) => {
+          const m = payload.new;
+          const phone = String(m.contact_phone || '');
+          const dir = (String(m.direction || '')).toLowerCase();
+          const newMsg = {
+            id: String(m.id || `rt-${Date.now()}`),
+            text: String(m.message || ''),
+            direction: (dir === 'outbound' ? 'outgoing' : 'incoming') as 'outgoing' | 'incoming',
+            timestamp: String(m.sent_at || m.created_at || ''),
+            isAIDraft: String(m.source_system || '') === 'vernacular-ai' && String(m.status || '') === 'Draft',
+          };
+
+          // Find which conversation this belongs to by matching phone
+          const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+
+          // Update columns (open streams)
+          setColumns(prev => prev.map(col => {
+            if (!col.contact?.phone) return col;
+            const colDigits = col.contact.phone.replace(/\D/g, '').slice(-10);
+            if (colDigits === phoneDigits) {
+              // Skip if message already exists
+              if (col.messages.some(msg => msg.id === newMsg.id)) return col;
+              return { ...col, messages: [...col.messages, newMsg] };
+            }
+            return col;
+          }));
+
+          // Update allConversations too
+          setAllConversations(prev => prev.map(col => {
+            if (!col.contact?.phone) return col;
+            const colDigits = col.contact.phone.replace(/\D/g, '').slice(-10);
+            if (colDigits === phoneDigits) {
+              if (col.messages.some(msg => msg.id === newMsg.id)) return col;
+              return { ...col, messages: [...col.messages, newMsg] };
+            }
+            return col;
+          }));
+
+          // Play sound for inbound
+          if (dir === 'inbound') {
+            playSound('receive');
+          }
+
+          setLastReloadTime(new Date());
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Auto-scroll conversation columns
   // Only auto-scroll message threads when a NEW message is added, not on every refresh
