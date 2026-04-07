@@ -3644,7 +3644,8 @@ button:active { transform: scale(0.98); }`}</style>
 
             {/* Messages */}
             <div ref={el => {
-              if (el) { el.scrollTop = el.scrollHeight; }
+              if (el && !el.dataset.msgCount) { el.scrollTop = el.scrollHeight; el.dataset.msgCount = String(col.messages.length); }
+              else if (el && el.dataset.msgCount !== String(col.messages.length)) { el.scrollTop = el.scrollHeight; el.dataset.msgCount = String(col.messages.length); }
             }} style={{
               flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4,
               background: '#f8f9fa',
