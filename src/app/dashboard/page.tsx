@@ -3500,18 +3500,22 @@ button:active { transform: scale(0.98); }`}</style>
             {!col.contact && showContactPicker === col.id && (
               <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 420, overflow: 'auto' }}>
                 {/* Search */}
-                <input
-                  autoFocus
-                  value={contactPickerSearch}
-                  onChange={e => setContactPickerSearch(e.target.value)}
-                  placeholder="Search by name or phone..."
-                  style={{
-                    width: '100%', padding: '8px 10px', borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
-                    fontFamily: "'Inter', sans-serif", outline: 'none',
-                    marginBottom: 8,
-                  }}
-                />
+                <div style={{ position: 'relative', marginBottom: 8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: 10, top: 9 }}>
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    autoFocus
+                    value={contactPickerSearch}
+                    onChange={e => setContactPickerSearch(e.target.value)}
+                    placeholder="Search contacts..."
+                    style={{
+                      width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8,
+                      border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
+                      fontFamily: "'Inter', sans-serif", outline: 'none',
+                    }}
+                  />
+                </div>
                 {/* Existing Contacts */}
                 {contacts.length > 0 && (
                   <>
