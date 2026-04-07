@@ -10,25 +10,27 @@ export async function GET(request: Request) {
 
     const supabase = createServiceClient();
 
-    // Get queued messages for this station
+    // Atomically claim queued messages: set status='sending' and return them
+    // Only pick up messages with status='Queued' (case-insensitive) and send_attempts=0
     const { data: messages, error } = await supabase
       .from('outbound_queue')
       .select('*')
       .eq('station_name', station)
-      .eq('status', 'queued')
+      .in('status', ['queued', 'Queued'])
+      .eq('send_attempts', 0)
       .order('created_at', { ascending: true })
-      .limit(10);
+      .limit(5);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Mark them as 'sending' so they don't get picked up again
+    // Mark them as 'sending' and increment send_attempts so they can't be picked up again
     if (messages && messages.length > 0) {
       const ids = messages.map(m => m.id);
       await supabase
         .from('outbound_queue')
-        .update({ status: 'sending' })
+        .update({ status: 'sending', send_attempts: 1 })
         .in('id', ids);
     }
 

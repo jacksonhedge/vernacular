@@ -26,7 +26,7 @@ try:
     data = json.load(sys.stdin)
     msgs = data.get('messages', [])
     for m in msgs:
-        phone = m.get('contact_phone', '')
+        phone = m.get('phone', '') or m.get('contact_phone', '')
         text = m.get('message', '')
         msg_id = m.get('id', '')
         if phone and text:
