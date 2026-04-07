@@ -123,7 +123,7 @@ def insert_message(phone: str, text: str, direction: str, sent_at: str):
             "-H", f"apikey: {SUPABASE_KEY}",
             "-H", f"Authorization: Bearer {SUPABASE_KEY}",
             "-H", "Content-Type: application/json",
-            "-H", "Prefer: return=minimal",
+            "-H", "Prefer: return=minimal,resolution=ignore-duplicates",
             "-d", json.dumps(payload),
         ],
         capture_output=True,
