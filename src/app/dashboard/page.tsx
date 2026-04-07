@@ -304,6 +304,7 @@ export default function DashboardPage() {
   const [columns, setColumns] = useState<ConversationColumn[]>([]);
   const [allConversations, setAllConversations] = useState<ConversationColumn[]>([]);
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
+  const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [editingContact, setEditingContact] = useState<{
@@ -1015,6 +1016,7 @@ button:active { transform: scale(0.98); }`}</style>
   const pickContact = (colId: string, contact: Contact) => {
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
     setShowContactPicker(null);
+    setContactPickerSearch('');
   };
 
   // Format phone number to (XXX) XXX-XXXX
@@ -3410,16 +3412,40 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Contact Picker */}
             {!col.contact && showContactPicker === col.id && (
               <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 420, overflow: 'auto' }}>
-                {/* Existing Contacts — shown first */}
+                {/* Search */}
+                <input
+                  autoFocus
+                  value={contactPickerSearch}
+                  onChange={e => setContactPickerSearch(e.target.value)}
+                  placeholder="Search by name or phone..."
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
+                    fontFamily: "'Inter', sans-serif", outline: 'none',
+                    marginBottom: 8,
+                  }}
+                />
+                {/* Existing Contacts */}
                 {contacts.length > 0 && (
                   <>
+                    {(() => {
+                      const q = contactPickerSearch.toLowerCase();
+                      const filtered = contacts.filter(c => {
+                        if (!q) return true;
+                        const name = (c.full_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
+                        const phone = (c.phone || '').replace(/\D/g, '');
+                        const qDigits = q.replace(/\D/g, '');
+                        return name.includes(q) || phone.includes(qDigits || q) || (c.phone || '').toLowerCase().includes(q);
+                      });
+                      return (
+                        <>
                     <div style={{
                       fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
                       letterSpacing: '0.06em', padding: '4px 10px 6px',
                     }}>
-                      Your Contacts
+                      {q ? `Results (${filtered.length})` : `Your Contacts (${contacts.length})`}
                     </div>
-                    {contacts.slice(0, 10).map(c => {
+                    {filtered.slice(0, 20).map(c => {
                       const name = c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
                       const initials = ((c.first_name?.[0] || '') + (c.last_name?.[0] || '')).toUpperCase() || '?';
                       return (
@@ -3458,6 +3484,9 @@ button:active { transform: scale(0.98); }`}</style>
                       );
                     })}
                     <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
+                  </>
+                      );
+                    })()}
                   </>
                 )}
                 {/* New Conversation by Phone */}
