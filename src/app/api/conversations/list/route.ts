@@ -8,26 +8,15 @@ function formatPhone(phone: string): string {
   return phone;
 }
 
-// Normalize phone to last 10 digits for matching
-function normDigits(phone: string): string {
-  const d = phone.replace(/\D/g, '');
-  return d.length === 11 && d[0] === '1' ? d.slice(1) : d;
-}
-
 export async function GET(request: NextRequest) {
   try {
-    // Auth via orgId param — dashboard doesn't send Bearer token
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 });
 
-    if (!orgId) {
-      return NextResponse.json({ error: 'orgId required' }, { status: 400 });
-    }
-
     const supabase = createServiceClient();
 
-    // Get all conversations for this org's stations
+    // Get all stations for this org
     const { data: stations } = await supabase
       .from('stations').select('id').eq('organization_id', orgId);
 
@@ -37,13 +26,13 @@ export async function GET(request: NextRequest) {
 
     const stationIds = stations.map(s => s.id);
 
-    // Fetch conversations with contact info
+    // Fetch conversations sorted by most recent
     const { data: conversations } = await supabase
       .from('conversations')
       .select('id, station_id, contact_id, status, last_message_at, last_message_preview, unread_count')
       .in('station_id', stationIds)
       .order('last_message_at', { ascending: false })
-      .limit(20);
+      .limit(50);
 
     if (!conversations || conversations.length === 0) {
       return NextResponse.json({ conversations: [] });
@@ -59,48 +48,31 @@ export async function GET(request: NextRequest) {
     const contactMap: Record<string, { phone: string; full_name: string; email: string; company: string; tags: string[] }> = {};
     (contacts || []).forEach(c => { contactMap[c.id] = c; });
 
-    // Get ALL recent messages then match by normalized phone digits
-    // Messages use +15865223609 format, contacts use (586) 522-3609 format
+    // Get messages for these conversations directly by conversation_id
+    const convIds = conversations.map(c => c.id);
     const { data: messages } = await supabase
       .from('messages')
-      .select('id, direction, message, status, source_system, sent_at, created_at, contact_phone, station, conversation_id')
-      .order('created_at', { ascending: true })
-      .limit(500);
+      .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id')
+      .in('conversation_id', convIds)
+      .order('created_at', { ascending: true });
 
-    // Build a lookup: normalized phone digits -> contact_id
-    const phoneToContactId: Record<string, string> = {};
-    Object.entries(contactMap).forEach(([cid, c]) => { if (c.phone) phoneToContactId[normDigits(c.phone)] = cid; });
-
-    // Build a lookup: contact_id -> conversation_id
-    const contactIdToConvId: Record<string, string> = {};
-    conversations.forEach(conv => { if (conv.contact_id) contactIdToConvId[conv.contact_id] = conv.id; });
-
+    // Group messages by conversation
     const messagesByConv: Record<string, Array<{
       id: string; text: string; direction: string; timestamp: string; status: string; isAIDraft: boolean;
     }>> = {};
 
     (messages || []).forEach(m => {
-      // First try conversation_id directly, then fall back to phone matching
-      let convId: string | undefined;
-      if (m.conversation_id && contactIdToConvId) {
-        // Check if this conversation_id is one we're tracking
-        const allConvIds = new Set(Object.values(contactIdToConvId));
-        if (allConvIds.has(m.conversation_id)) convId = m.conversation_id;
-      }
-      if (!convId) {
-        const contactId = m.contact_phone ? phoneToContactId[normDigits(m.contact_phone)] : undefined;
-        convId = contactId ? contactIdToConvId[contactId] : undefined;
-      }
-      if (!convId) return;
-      if (!messagesByConv[convId]) messagesByConv[convId] = [];
+      if (!m.conversation_id) return;
+      if (!messagesByConv[m.conversation_id]) messagesByConv[m.conversation_id] = [];
       const time = m.sent_at || m.created_at;
-      messagesByConv[convId].push({
+      const dir = (m.direction || '').toLowerCase();
+      messagesByConv[m.conversation_id].push({
         id: m.id,
         text: m.message || '',
-        direction: m.direction === 'outbound' ? 'outgoing' : 'incoming',
+        direction: dir === 'outbound' ? 'outgoing' : 'incoming',
         timestamp: time ? new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
         status: m.status,
-        isAIDraft: m.source_system === 'ai',
+        isAIDraft: m.source_system === 'vernacular-ai' && (m.status === 'Draft' || m.status === 'draft'),
       });
     });
 
