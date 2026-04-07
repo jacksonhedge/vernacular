@@ -774,9 +774,9 @@ export default function DashboardPage() {
                   }
                   return existing;
                 });
-                // Add any completely new conversations from the API
+                // Add new conversations to the BEGINNING (most recent first), not the end
                 const brandNew = Array.from(freshMap.values());
-                return [...merged, ...brandNew];
+                return [...brandNew, ...merged];
               });
             }
           }
@@ -807,11 +807,19 @@ export default function DashboardPage() {
   }, [columns]);
 
   // Auto-scroll conversation columns
+  // Only auto-scroll message threads when a NEW message is added, not on every refresh
+  const prevColumnCountRef = useRef(0);
   useEffect(() => {
-    Object.values(messageEndRefs.current).forEach(ref => {
-      ref?.scrollIntoView({ behavior: 'smooth' });
-    });
-  }, [columns]);
+    const totalMsgs = columns.reduce((sum, c) => sum + c.messages.length, 0);
+    if (totalMsgs > prevColumnCountRef.current && prevColumnCountRef.current > 0) {
+      // Only scroll the selected conversation's messages, not all of them
+      if (selectedConversationId) {
+        const ref = messageEndRefs.current[selectedConversationId];
+        if (ref) ref.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    prevColumnCountRef.current = totalMsgs;
+  }, [columns, selectedConversationId]);
 
   // Initialize profile form from user data
   useEffect(() => {
