@@ -3496,147 +3496,109 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             )}
 
-            {/* Contact Picker */}
+            {/* iMessage-style To: field */}
             {!col.contact && showContactPicker === col.id && (
-              <div style={{ padding: 12, borderBottom: '1px solid rgba(0,0,0,0.06)', maxHeight: 420, overflow: 'auto' }}>
-                {/* Search */}
-                <div style={{ position: 'relative', marginBottom: 8 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: 10, top: 9 }}>
-                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
+              <div style={{ borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                {/* To: input */}
+                <div style={{ display: 'flex', alignItems: 'center', padding: '10px 14px', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: '#8e8e93', flexShrink: 0 }}>To:</span>
                   <input
                     autoFocus
                     value={contactPickerSearch}
-                    onChange={e => setContactPickerSearch(e.target.value)}
-                    placeholder="Search contacts..."
+                    onChange={e => { setContactPickerSearch(e.target.value); setNewConvPhone(''); setNewConvName(''); }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && contactPickerSearch.trim()) {
+                        // If it looks like a phone number, start conversation directly
+                        const digits = contactPickerSearch.replace(/\D/g, '');
+                        if (digits.length >= 7) {
+                          setNewConvPhone(contactPickerSearch);
+                          startNewConversation(col.id);
+                        }
+                      }
+                    }}
+                    placeholder="Name or phone number..."
                     style={{
-                      width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8,
-                      border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
-                      fontFamily: "'Inter', sans-serif", outline: 'none',
+                      flex: 1, border: 'none', outline: 'none', fontSize: 14,
+                      fontFamily: "'Inter', sans-serif", color: '#1c1c1e',
+                      background: 'transparent',
                     }}
                   />
                 </div>
-                {/* Existing Contacts */}
-                {contacts.length > 0 && (
-                  <>
-                    {(() => {
-                      const q = contactPickerSearch.toLowerCase();
-                      const filtered = contacts.filter(c => {
-                        if (!q) return true;
-                        const name = (c.full_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
-                        const phone = (c.phone || '').replace(/\D/g, '');
-                        const qDigits = q.replace(/\D/g, '');
-                        return name.includes(q) || phone.includes(qDigits || q) || (c.phone || '').toLowerCase().includes(q);
-                      });
-                      return (
-                        <>
-                    <div style={{
-                      fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase',
-                      letterSpacing: '0.06em', padding: '4px 10px 6px',
-                    }}>
-                      {q ? `Results (${filtered.length})` : `Your Contacts (${contacts.length})`}
-                    </div>
-                    {filtered.slice(0, 20).map(c => {
-                      const name = c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
-                      const initials = ((c.first_name?.[0] || '') + (c.last_name?.[0] || '')).toUpperCase() || '?';
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            const contact: Contact = {
+                {/* Dropdown results */}
+                {contactPickerSearch.trim() && (() => {
+                  const q = contactPickerSearch.toLowerCase();
+                  const qDigits = q.replace(/\D/g, '');
+                  const filtered = contacts.filter(c => {
+                    const name = (c.full_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
+                    const phone = (c.phone || '').replace(/\D/g, '');
+                    return name.includes(q) || (qDigits.length >= 3 && phone.includes(qDigits)) || (c.phone || '').toLowerCase().includes(q);
+                  });
+                  const isPhoneInput = qDigits.length >= 7;
+                  return (
+                    <div style={{ maxHeight: 280, overflow: 'auto', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                      {filtered.slice(0, 15).map(c => {
+                        const name = c.full_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';
+                        const initials = ((c.first_name?.[0] || '') + (c.last_name?.[0] || '')).toUpperCase() || '?';
+                        return (
+                          <button key={c.id} onClick={() => {
+                            pickContact(col.id, {
                               id: c.id, name, initials,
                               tag: 'ACTIVE', tagColor: '#22C55E', tagBg: 'rgba(34,197,94,0.1)',
                               phone: c.phone || '',
-                            };
-                            pickContact(col.id, contact);
-                          }}
-                          style={{
+                            });
+                          }} style={{
                             display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                            padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent',
+                            padding: '10px 14px', border: 'none', background: 'transparent',
                             cursor: 'pointer', fontFamily: "'Inter', sans-serif", textAlign: 'left',
-                            transition: 'background 0.1s',
                           }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
                           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 16,
+                              background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontSize: 11, fontWeight: 700, flexShrink: 0,
+                            }}>{initials}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 500, color: '#1c1c1e' }}>{name}</div>
+                              {c.phone && <div style={{ fontSize: 12, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>{c.phone}</div>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {filtered.length === 0 && isPhoneInput && (
+                        <button onClick={() => {
+                          setNewConvPhone(contactPickerSearch);
+                          setTimeout(() => startNewConversation(col.id), 0);
+                        }} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '12px 14px', border: 'none', background: 'transparent',
+                          cursor: 'pointer', fontFamily: "'Inter', sans-serif", textAlign: 'left',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(55,138,221,0.04)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
                           <div style={{
-                            width: 30, height: 30, borderRadius: 15,
-                            background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
+                            width: 32, height: 32, borderRadius: 16,
+                            background: 'rgba(55,138,221,0.1)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontSize: 11, fontWeight: 700,
-                          }}>
-                            {initials}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{name}</div>
-                            {c.phone && <div style={{ fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>{c.phone}</div>}
+                            color: '#378ADD', fontSize: 14, flexShrink: 0,
+                          }}>+</div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: '#378ADD' }}>New message to {formatPhoneNumber(contactPickerSearch)}</div>
+                            <div style={{ fontSize: 11, color: '#8e8e93' }}>Create new contact</div>
                           </div>
                         </button>
-                      );
-                    })}
-                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
-                  </>
-                      );
-                    })()}
-                  </>
-                )}
-                {/* New Conversation by Phone */}
-                <div style={{
-                  fontSize: 10, fontWeight: 700, color: '#378ADD', textTransform: 'uppercase',
-                  letterSpacing: '0.06em', padding: '4px 10px 6px', marginTop: 2,
-                }}>
-                  New Number
-                </div>
-                <div style={{ padding: '4px 10px 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{
-                      fontSize: 15, fontWeight: 700, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace",
-                      padding: '8px 0', flexShrink: 0,
-                    }}>+1</span>
-                    <input
-                      type="tel"
-                      placeholder="(***) ***-****"
-                      value={newConvPhone}
-                      onChange={e => setNewConvPhone(e.target.value)}
-                      style={{
-                        flex: 1, padding: '8px 10px', borderRadius: 8,
-                        border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
-                        fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
-                        background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
-                      }}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
-                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Contact name (optional)"
-                    value={newConvName}
-                    onChange={e => setNewConvName(e.target.value)}
-                    style={{
-                      width: '100%', padding: '6px 10px', borderRadius: 8,
-                      border: '1.5px solid rgba(0,0,0,0.1)', outline: 'none',
-                      fontSize: 12, fontFamily: "'Inter', sans-serif",
-                      background: '#fff', color: '#1c1c1e', boxSizing: 'border-box',
-                    }}
-                    onFocus={e => (e.currentTarget.style.borderColor = '#378ADD')}
-                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)')}
-                  />
-                  <button
-                    onClick={() => startNewConversation(col.id)}
-                    disabled={!newConvPhone}
-                    style={{
-                      width: '100%', padding: '7px 0', borderRadius: 8, border: 'none',
-                      background: newConvPhone ? '#378ADD' : 'rgba(55,138,221,0.3)',
-                      color: '#fff', fontSize: 12, fontWeight: 600,
-                      fontFamily: "'Inter', sans-serif", cursor: newConvPhone ? 'pointer' : 'default',
-                      transition: 'background 0.15s ease',
-                    }}
-                  >
-                    Start Conversation
-                  </button>
-                </div>
-                <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4, marginBottom: 4 }} />
+                      )}
+                      {filtered.length === 0 && !isPhoneInput && (
+                        <div style={{ padding: '20px 14px', textAlign: 'center', color: '#8e8e93', fontSize: 13 }}>
+                          No contacts found. Enter a phone number to start a new conversation.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {/* Imported Conversations Group */}
                 {notionConversations.length > 0 && (
                   <>
