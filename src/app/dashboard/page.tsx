@@ -779,7 +779,10 @@ export default function DashboardPage() {
                   return existing;
                 });
                 // Add new conversations to the BEGINNING, but skip dismissed ones
-                const brandNew = Array.from(freshMap.values()).filter(c => !dismissedColumns.has(c.id));
+                // Read dismissed from localStorage directly (not React state) to avoid stale closure
+                let currentDismissed: Set<string>;
+                try { currentDismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { currentDismissed = new Set(); }
+                const brandNew = Array.from(freshMap.values()).filter(c => !currentDismissed.has(c.id));
                 return [...brandNew, ...merged];
               });
               // Always update allConversations with full data (for contact list)
