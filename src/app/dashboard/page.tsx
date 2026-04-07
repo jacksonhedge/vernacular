@@ -3520,6 +3520,41 @@ button:active { transform: scale(0.98); }`}</style>
                 const isLastOutgoing = msg.direction === 'outgoing' && !msg.isAIDraft &&
                   !col.messages.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
                 const isRecent = msg.id.startsWith('m-');
+
+                // Detect iMessage reactions: Liked "...", Loved "...", etc.
+                // Detect iMessage reactions: "Liked '...'" or "❤️ to '...'" patterns
+                const reactionMatch = msg.text.match(/^(Liked|Loved|Disliked|Laughed at|Emphasized|Questioned)\s+"([\s\S]{0,80})/)
+                  || msg.text.match(/^(❤️|👍|👎|😂|‼️|❓|🔥|😀|🐣)\s+to\s+"([\s\S]{0,80})/);
+                const reactionEmoji: Record<string, string> = { 'Liked': '👍', 'Loved': '❤️', 'Disliked': '👎', 'Laughed at': '😂', 'Emphasized': '‼️', 'Questioned': '❓' };
+
+                if (reactionMatch) {
+                  const emoji = reactionEmoji[reactionMatch[1]] || reactionMatch[1] || '👍';
+                  const quotedText = reactionMatch[2].substring(0, 40);
+                  return (
+                    <div key={msg.id} style={{
+                      display: 'flex', alignItems: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
+                      flexDirection: 'column',
+                    }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 10px', borderRadius: 16,
+                        background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)',
+                        fontSize: 12, color: '#8e8e93', maxWidth: '85%',
+                      }}>
+                        <span style={{ fontSize: 16 }}>{emoji}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>
+                          &ldquo;{quotedText}&rdquo;
+                        </span>
+                      </div>
+                      {showTimestamps && msg.timestamp && (
+                        <span style={{ fontSize: 10, color: '#c4c4c6', marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+                          {(() => { const d = new Date(msg.timestamp); return isNaN(d.getTime()) ? msg.timestamp : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); })()}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                   <div key={msg.id} style={{
                     display: 'flex', flexDirection: 'column',
