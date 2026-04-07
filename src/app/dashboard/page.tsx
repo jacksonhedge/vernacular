@@ -3456,6 +3456,15 @@ button:active { transform: scale(0.98); }`}</style>
                         {showHiddenMessages ? `HIDDEN (${hiddenMessages.size})` : `${hiddenMessages.size} HIDDEN`}
                       </button>
                     )}
+                    <button onClick={() => {
+                      const nm = col.contact!.name;
+                      const ph = col.contact!.phone || '';
+                      const nameIsPhone = isPhoneNumber(nm);
+                      const n = nameIsPhone ? ['', ''] : nm.split(' ');
+                      setEditingContact({ colId: col.id, firstName: nameIsPhone ? '' : (n[0] || ''), lastName: nameIsPhone ? '' : (n.slice(1).join(' ') || ''), name: nameIsPhone ? '' : nm, phone: ph || (nameIsPhone ? formatPhoneNumber(nm) : ''), email: '', company: '', jobTitle: '', linkedin: '', instagram: '', twitter: '', school: '', greekOrg: '', state: '', city: '', dob: '', venmo: '', notes: '' });
+                    }} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: 'rgba(0,0,0,0.04)', color: '#378ADD', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {isPhoneNumber(col.contact?.name || '') ? 'ADD NAME' : 'EDIT'}
+                    </button>
                   </div>
                 </div>
               ) : (
