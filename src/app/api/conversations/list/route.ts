@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       .from('messages')
       .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id')
       .in('conversation_id', convIds)
-      .order('created_at', { ascending: true });
+      .order('sent_at', { ascending: true, nullsFirst: true });
 
     // Group messages by conversation
     const messagesByConv: Record<string, Array<{

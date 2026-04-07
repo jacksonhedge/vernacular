@@ -3512,7 +3512,7 @@ button:active { transform: scale(0.98); }`}</style>
             )}
 
             {/* Messages */}
-            <div style={{
+            <div ref={el => { if (el && !el.dataset.scrolled) { el.scrollTop = el.scrollHeight; el.dataset.scrolled = 'true'; } }} style={{
               flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8,
               background: '#f8f9fa',
             }}>
