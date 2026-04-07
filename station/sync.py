@@ -105,7 +105,8 @@ def extract_text_from_blob(blob_data: bytes) -> str | None:
     return None
 
 
-def insert_message(phone: str, text: str, direction: str, sent_at: str):
+def insert_message(phone: str, text: str, direction: str, sent_at: str,
+                    attachment_type: str | None = None, attachment_name: str | None = None):
     """Insert a message to Supabase."""
     payload = {
         "message": text[:500],
@@ -116,6 +117,10 @@ def insert_message(phone: str, text: str, direction: str, sent_at: str):
         "source_system": "wade-station",
         "sent_at": sent_at,
     }
+    if attachment_type:
+        payload["attachment_type"] = attachment_type
+    if attachment_name:
+        payload["attachment_name"] = attachment_name
     result = subprocess.run(
         [
             "curl", "-s", "-X", "POST",
@@ -132,9 +137,47 @@ def insert_message(phone: str, text: str, direction: str, sent_at: str):
     return result.returncode == 0 and "error" not in result.stdout.lower()
 
 
+def get_attachment_info(db: sqlite3.Connection, message_rowid: int) -> tuple[str | None, str | None]:
+    """Check if a message has an attachment and return (type, filename)."""
+    try:
+        row = db.execute(
+            """
+            SELECT a.mime_type, a.filename, a.transfer_name
+            FROM attachment a
+            JOIN message_attachment_join maj ON a.ROWID = maj.attachment_id
+            WHERE maj.message_id = ?
+            LIMIT 1
+            """,
+            (message_rowid,),
+        ).fetchone()
+        if row:
+            mime = row[0] or ""
+            name = row[2] or row[1] or ""
+            if name:
+                name = name.rsplit("/", 1)[-1]  # strip path, keep filename
+            # Simplify mime to type
+            if "pdf" in mime:
+                atype = "pdf"
+            elif "image" in mime:
+                atype = "image"
+            elif "video" in mime:
+                atype = "video"
+            elif "audio" in mime:
+                atype = "audio"
+            elif mime:
+                atype = "file"
+            else:
+                atype = "file"
+            return atype, name
+    except Exception:
+        pass
+    return None, None
+
+
 def sync_inbound(db: sqlite3.Connection):
     """Sync inbound messages (is_from_me=0) from chat.db."""
     last_rowid = read_state(INBOUND_STATE)
+    # Include messages with NULL text (could be attachments)
     cursor = db.execute(
         """
         SELECT h.id, m.ROWID, m.text,
@@ -143,7 +186,7 @@ def sync_inbound(db: sqlite3.Connection):
         JOIN chat_message_join cmj ON m.ROWID = cmj.message_id
         JOIN chat c ON cmj.chat_id = c.ROWID
         JOIN handle h ON m.handle_id = h.ROWID
-        WHERE m.is_from_me = 0 AND m.ROWID > ? AND m.text IS NOT NULL AND m.text != ''
+        WHERE m.is_from_me = 0 AND m.ROWID > ?
         ORDER BY m.ROWID ASC
         LIMIT ?
         """,
@@ -152,10 +195,6 @@ def sync_inbound(db: sqlite3.Connection):
 
     count = 0
     for phone, rowid, text, msg_time in cursor:
-        if not text or len(text.strip()) < 1:
-            write_state(INBOUND_STATE, rowid)
-            continue
-
         # Skip spam: short codes, emails
         digits = re.sub(r"\D", "", phone)
         if len(digits) < 7 or "@" in phone:
@@ -166,7 +205,17 @@ def sync_inbound(db: sqlite3.Connection):
             write_state(INBOUND_STATE, rowid)
             continue
 
-        if insert_message(phone, text.strip(), "Inbound", msg_time):
+        # Check for attachment if no text
+        att_type, att_name = None, None
+        if not text or len(text.strip()) < 1:
+            att_type, att_name = get_attachment_info(db, rowid)
+            if att_type:
+                text = f"[{att_type.upper()}: {att_name}]" if att_name else f"[{att_type.upper()} attached]"
+            else:
+                write_state(INBOUND_STATE, rowid)
+                continue
+
+        if insert_message(phone, text.strip(), "Inbound", msg_time, att_type, att_name):
             log(f"IN  {normalize_phone(phone)}: {text[:60]}")
             count += 1
 
@@ -200,10 +249,19 @@ def sync_outbound(db: sqlite3.Connection):
         if not msg_text or len(msg_text.strip()) < 1:
             msg_text = extract_text_from_blob(attr_blob) if attr_blob else None
 
-        if msg_text and len(msg_text.strip()) > 1:
-            if insert_message(phone, msg_text.strip(), "Outbound", msg_time):
-                log(f"OUT {normalize_phone(phone)}: {msg_text[:60]}")
-                count += 1
+        att_type, att_name = None, None
+        if not msg_text or len(msg_text.strip()) < 1:
+            # No text and no BLOB — check for attachment
+            att_type, att_name = get_attachment_info(db, rowid)
+            if att_type:
+                msg_text = f"[{att_type.upper()}: {att_name}]" if att_name else f"[{att_type.upper()} sent]"
+            else:
+                write_state(OUTBOUND_STATE, rowid)
+                continue
+
+        if insert_message(phone, msg_text.strip(), "Outbound", msg_time, att_type, att_name):
+            log(f"OUT {normalize_phone(phone)}: {msg_text[:60]}")
+            count += 1
 
         write_state(OUTBOUND_STATE, rowid)
 
