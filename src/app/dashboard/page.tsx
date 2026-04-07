@@ -2601,12 +2601,16 @@ button:active { transform: scale(0.98); }`}</style>
                     <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>All messages in chronological order</p>
                   </div>
                   <button onClick={async () => {
-                    // Fetch all messages from Supabase
+                    // Fetch messages with time filter applied
+                    const filterHours: Record<string, number> = { '24h': 24, '48h': 48, '72h': 72, '1w': 168, '2w': 336 };
+                    const hours = filterHours[messageTimeFilter] || 24;
+                    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
                     const { data } = await supabase
                       .from('messages')
                       .select('id, message, contact_phone, direction, station, status, source_system, sent_at, created_at')
+                      .gte('created_at', since)
                       .order('created_at', { ascending: false })
-                      .limit(200);
+                      .limit(1000);
                     if (data) {
                       setTimelineMessages(data);
                     }
