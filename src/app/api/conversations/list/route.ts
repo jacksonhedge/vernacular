@@ -50,18 +50,26 @@ export async function GET(request: NextRequest) {
 
     // Get messages for these conversations directly by conversation_id
     const convIds = conversations.map(c => c.id);
-    const { data: messages } = await supabase
+    const { data: rawMessages } = await supabase
       .from('messages')
       .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id')
-      .in('conversation_id', convIds)
-      .order('sent_at', { ascending: true, nullsFirst: true });
+      .in('conversation_id', convIds);
+
+    // Sort: by sent_at first, then created_at as tiebreaker (preserves insertion order within same second)
+    const messages = (rawMessages || []).sort((a, b) => {
+      const aTime = a.sent_at || a.created_at || '';
+      const bTime = b.sent_at || b.created_at || '';
+      if (aTime !== bTime) return aTime < bTime ? -1 : 1;
+      // Same sent_at — use created_at as tiebreaker (ROWID order)
+      return (a.created_at || '') < (b.created_at || '') ? -1 : 1;
+    });
 
     // Group messages by conversation
     const messagesByConv: Record<string, Array<{
       id: string; text: string; direction: string; timestamp: string; status: string; isAIDraft: boolean;
     }>> = {};
 
-    (messages || []).forEach(m => {
+    messages.forEach(m => {
       if (!m.conversation_id) return;
       if (!messagesByConv[m.conversation_id]) messagesByConv[m.conversation_id] = [];
       const time = m.sent_at || m.created_at;
