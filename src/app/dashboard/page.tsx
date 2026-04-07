@@ -30,6 +30,9 @@ interface ConversationColumn {
   id: string;
   contact: Contact | null;
   messages: Message[];
+  conversationId?: string;
+  aiMode?: string;
+  goal?: string;
 }
 
 interface DashboardMetrics {
@@ -515,21 +518,21 @@ export default function DashboardPage() {
         { data: integrationData },
       ] = await Promise.all([
         supabase.from('messages').select('*', { count: 'exact', head: true })
-          .eq('direction', 'outbound')
-          .gte('sent_at', todayStart.toISOString()),
+          .eq('direction', 'Outbound')
+          .gte('created_at', todayStart.toISOString()),
         supabase.from('messages').select('*', { count: 'exact', head: true })
-          .eq('direction', 'outbound'),
+          .eq('direction', 'Outbound'),
         supabase.from('conversations').select('*', { count: 'exact', head: true })
           .eq('status', 'active'),
         supabase.from('messages').select('*', { count: 'exact', head: true })
-          .eq('source_system', 'ai'),
+          .eq('source_system', 'vernacular-ai'),
         supabase.from('conversations').select('id', { count: 'exact', head: true }),
         supabase.from('conversations').select('id, unread_count')
           .gt('unread_count', 0),
         supabase.from('messages').select(`
-          id, direction, message, source_system, sent_at, status, contact_phone, station
-        `).order('sent_at', { ascending: false }).limit(10),
-        supabase.from('stations').select('*').eq('organization_id', orgId).order('name'),
+          id, direction, message, source_system, sent_at, status, contact_phone, station, created_at
+        `).order('created_at', { ascending: false }).limit(10),
+        supabase.from('stations').select('*').eq('organization_id', orgId).order('status', { ascending: false }),
         supabase.from('users').select('id, full_name, email, role').eq('organization_id', orgId).order('role'),
         supabase.from('org_settings').select('*').eq('organization_id', orgId).single(),
         supabase.from('contacts').select('*').order('full_name').limit(200),
@@ -645,6 +648,9 @@ export default function DashboardPage() {
               tagBg: unreadCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
               phone: (contact.phone as string) || '',
             },
+            conversationId: conv.conversationId as string,
+            aiMode: (conv.aiMode as string) || 'off',
+            goal: (conv.goal as string) || '',
             messages: (messages || []).map((m: Record<string, unknown>) => ({
               id: m.id as string,
               text: m.text as string,
@@ -698,7 +704,7 @@ export default function DashboardPage() {
         // Re-fetch station statuses
         const { data: stationData } = await supabase
           .from('stations').select('*')
-          .eq('organization_id', orgId).order('name');
+          .eq('organization_id', orgId).order('status', { ascending: false });
         if (stationData) {
           setStations(stationData as Station[]);
         }
@@ -736,6 +742,9 @@ export default function DashboardPage() {
                 const messages = conv.messages as Record<string, unknown>[];
                 return {
                   id: `real-${conv.conversationId}`,
+                  conversationId: conv.conversationId as string,
+                  aiMode: (conv.aiMode as string) || 'off',
+                  goal: (conv.goal as string) || '',
                   contact: {
                     id: (contact.id as string) || '',
                     name: (contact.name as string) || 'Unknown',
@@ -3190,6 +3199,37 @@ button:active { transform: scale(0.98); }`}</style>
                 </svg>
               </button>
             </div>
+
+            {/* Conversation Goal */}
+            {col.contact && (
+              <div style={{
+                padding: '6px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                display: 'flex', alignItems: 'center', gap: 6, background: '#f8f9fa',
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+                </svg>
+                <input
+                  value={col.goal || ''}
+                  onChange={e => {
+                    const newGoal = e.target.value;
+                    setColumns(prev => prev.map(c => c.id === col.id ? { ...c, goal: newGoal } : c));
+                  }}
+                  onBlur={async () => {
+                    const convId = col.conversationId || col.id.replace('real-', '');
+                    if (convId) {
+                      await supabase.from('conversations').update({ goal: col.goal || '' }).eq('id', convId);
+                    }
+                  }}
+                  placeholder="Set conversation goal..."
+                  style={{
+                    flex: 1, border: 'none', background: 'transparent', outline: 'none',
+                    fontSize: 11, color: '#1c1c1e', fontFamily: "'Inter', sans-serif",
+                    fontWeight: 500,
+                  }}
+                />
+              </div>
+            )}
 
             {/* Contact Picker */}
             {!col.contact && showContactPicker === col.id && (

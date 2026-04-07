@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     // Fetch conversations sorted by most recent
     const { data: conversations } = await supabase
       .from('conversations')
-      .select('id, station_id, contact_id, status, last_message_at, last_message_preview, unread_count')
+      .select('id, station_id, contact_id, status, last_message_at, last_message_preview, unread_count, ai_mode, goal')
       .in('station_id', stationIds)
       .order('last_message_at', { ascending: false })
       .limit(50);
@@ -100,6 +100,8 @@ export async function GET(request: NextRequest) {
         lastMessageAt: conv.last_message_at,
         lastMessagePreview: conv.last_message_preview,
         unreadCount: conv.unread_count || 0,
+        aiMode: conv.ai_mode || 'off',
+        goal: conv.goal || '',
         messages: messagesByConv[conv.id] || [],
       };
     });
