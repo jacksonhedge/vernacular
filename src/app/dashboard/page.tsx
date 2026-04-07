@@ -3843,6 +3843,7 @@ button:active { transform: scale(0.98); }`}</style>
                       style={{
                       maxWidth: '85%',
                       padding: '10px 14px',
+                      overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const,
                       borderRadius: msg.direction === 'outgoing' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                       background: msg.isAIDraft
                         ? 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06))'
