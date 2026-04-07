@@ -373,6 +373,7 @@ export default function DashboardPage() {
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
   const [aiResponderTab, setAiResponderTab] = useState<'skills' | 'goals' | 'model' | 'agents'>('skills');
+  const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -3702,7 +3703,12 @@ button:active { transform: scale(0.98); }`}</style>
                     alignItems: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                   }}>
                     {/* Bubble */}
-                    <div style={{
+                    <div
+                      onContextMenu={e => {
+                        e.preventDefault();
+                        setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
+                      }}
+                      style={{
                       maxWidth: '85%',
                       padding: '10px 14px',
                       borderRadius: msg.direction === 'outgoing' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
@@ -3900,6 +3906,52 @@ button:active { transform: scale(0.98); }`}</style>
       </div>
       </div>{/* end stream columns flex-column */}
       </div>}
+
+      {/* Message Context Menu */}
+      {msgContextMenu && (
+        <>
+          <div onClick={() => setMsgContextMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
+          <div style={{
+            position: 'fixed', left: msgContextMenu.x, top: msgContextMenu.y, zIndex: 300,
+            background: '#fff', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 140,
+          }}>
+            {[
+              { label: 'Hide Message', icon: '👁', action: () => {
+                setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
+                setAllConversations(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
+                setMsgContextMenu(null);
+              }},
+              { label: 'Delete Message', icon: '🗑', action: async () => {
+                const realId = msgContextMenu.msgId.replace('rt-', '');
+                await supabase.from('messages').delete().eq('id', realId);
+                setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
+                setAllConversations(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
+                setMsgContextMenu(null);
+              }},
+              { label: 'Copy Text', icon: '📋', action: () => {
+                const col = columns.find(c => c.id === msgContextMenu.colId);
+                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+                if (msg) navigator.clipboard.writeText(msg.text);
+                setMsgContextMenu(null);
+              }},
+            ].map(item => (
+              <button key={item.label} onClick={item.action} style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                padding: '10px 14px', border: 'none', background: 'transparent',
+                cursor: 'pointer', fontSize: 13, fontWeight: 500, color: item.label === 'Delete Message' ? '#DC2626' : '#1c1c1e',
+                textAlign: 'left', fontFamily: "'Inter', sans-serif",
+              }}
+              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+              >
+                <span style={{ fontSize: 14 }}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Invite Member Modal — rendered globally at bottom of component */}
 
