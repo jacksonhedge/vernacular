@@ -3704,8 +3704,7 @@ button:active { transform: scale(0.98); }`}</style>
                   }}>
                     {/* Bubble */}
                     <div
-                      onContextMenu={e => {
-                        e.preventDefault();
+                      onDoubleClick={e => {
                         setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
                       }}
                       style={{
