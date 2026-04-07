@@ -3605,9 +3605,10 @@ button:active { transform: scale(0.98); }`}</style>
               flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8,
               background: '#f8f9fa',
             }}>
-              {col.messages.map((msg, msgIdx) => {
+              {col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off')).map((msg, msgIdx) => {
+                const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off'));
                 const isLastOutgoing = msg.direction === 'outgoing' && !msg.isAIDraft &&
-                  !col.messages.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
+                  !visibleMsgs.slice(msgIdx + 1).some(m => m.direction === 'outgoing' && !m.isAIDraft);
                 const isRecent = msg.id.startsWith('m-');
 
                 // Detect iMessage reactions: Liked "...", Loved "...", etc.
