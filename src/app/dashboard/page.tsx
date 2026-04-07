@@ -1014,7 +1014,42 @@ button:active { transform: scale(0.98); }`}</style>
   };
 
   const pickContact = (colId: string, contact: Contact) => {
-    setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
+    // Check if this contact already has an open conversation
+    const phoneDigits = (contact.phone || '').replace(/\D/g, '').slice(-10);
+    const existingCol = [...columns, ...allConversations].find(c => {
+      if (!c.contact?.phone || c.id === colId) return false;
+      return c.contact.phone.replace(/\D/g, '').slice(-10) === phoneDigits;
+    });
+
+    if (existingCol && existingCol.messages.length > 0) {
+      // Open existing conversation instead of creating duplicate
+      setColumns(prev => {
+        // Remove the empty new column
+        const without = prev.filter(c => c.id !== colId);
+        // Add existing conversation to front if not already open
+        if (without.some(c => c.id === existingCol.id)) {
+          const ex = without.find(c => c.id === existingCol.id)!;
+          return [ex, ...without.filter(c => c.id !== existingCol.id)];
+        }
+        return [existingCol, ...without];
+      });
+      // Un-dismiss if it was dismissed
+      setDismissedColumns(prev => {
+        const next = new Set(prev);
+        next.delete(existingCol.id);
+        localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+        return next;
+      });
+      setSelectedConversationId(existingCol.id);
+      setTimeout(() => {
+        const el = document.getElementById(`stream-col-${existingCol.id}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+      }, 50);
+    } else {
+      // New conversation — set contact on the column
+      setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact } : c));
+    }
+
     setShowContactPicker(null);
     setContactPickerSearch('');
   };
@@ -1034,21 +1069,64 @@ button:active { transform: scale(0.98); }`}</style>
     return digits.length >= 10;
   };
 
-  const startNewConversation = (colId: string) => {
+  const startNewConversation = async (colId: string) => {
     if (!newConvPhone) return;
     const formattedPhone = formatPhoneNumber(newConvPhone);
+    const phoneDigits = formattedPhone.replace(/\D/g, '').slice(-10);
     const name = newConvName || formattedPhone;
     const initials = newConvName ? newConvName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) : '##';
-    const contact: Contact = {
-      id: `new-${Date.now()}`,
-      name,
-      initials,
-      tag: 'NEW',
-      tagColor: '#378ADD',
-      tagBg: 'rgba(55,138,221,0.1)',
-      phone: formattedPhone,
-    };
-    setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact, messages: [] } : c));
+
+    // Check if conversation already exists for this phone
+    const existingCol = [...columns, ...allConversations].find(c => {
+      if (!c.contact?.phone) return false;
+      return c.contact.phone.replace(/\D/g, '').slice(-10) === phoneDigits;
+    });
+
+    if (existingCol && existingCol.messages.length > 0) {
+      // Open existing instead of duplicate
+      setColumns(prev => {
+        const without = prev.filter(c => c.id !== colId);
+        if (without.some(c => c.id === existingCol.id)) {
+          const ex = without.find(c => c.id === existingCol.id)!;
+          return [ex, ...without.filter(c => c.id !== existingCol.id)];
+        }
+        return [existingCol, ...without];
+      });
+      setDismissedColumns(prev => { const next = new Set(prev); next.delete(existingCol.id); localStorage.setItem('vernacular-dismissed', JSON.stringify([...next])); return next; });
+      setSelectedConversationId(existingCol.id);
+    } else {
+      const contact: Contact = {
+        id: `new-${Date.now()}`,
+        name,
+        initials,
+        tag: 'NEW',
+        tagColor: '#378ADD',
+        tagBg: 'rgba(55,138,221,0.1)',
+        phone: formattedPhone,
+      };
+      setColumns(prev => prev.map(c => c.id === colId ? { ...c, contact, messages: [] } : c));
+
+      // Save contact to Supabase
+      const orgId = getOrgId();
+      if (orgId) {
+        const parts = (newConvName || '').split(' ');
+        await fetch('/api/contacts/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: orgId,
+            contacts: [{
+              phone: formattedPhone,
+              fullName: newConvName || undefined,
+              firstName: parts[0] || undefined,
+              lastName: parts.slice(1).join(' ') || undefined,
+            }],
+            source: 'conversation',
+          }),
+        });
+      }
+    }
+
     setShowContactPicker(null);
     setNewConvPhone('');
     setNewConvName('');
