@@ -55,13 +55,15 @@ export async function GET(request: NextRequest) {
       .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id')
       .in('conversation_id', convIds);
 
-    // Sort: by sent_at first, then created_at as tiebreaker (preserves insertion order within same second)
+    // Sort: by sent_at first (as Date for proper comparison), then created_at as tiebreaker
     const messages = (rawMessages || []).sort((a, b) => {
-      const aTime = a.sent_at || a.created_at || '';
-      const bTime = b.sent_at || b.created_at || '';
-      if (aTime !== bTime) return aTime < bTime ? -1 : 1;
-      // Same sent_at — use created_at as tiebreaker (ROWID order)
-      return (a.created_at || '') < (b.created_at || '') ? -1 : 1;
+      const aTime = new Date(a.sent_at || a.created_at || 0).getTime();
+      const bTime = new Date(b.sent_at || b.created_at || 0).getTime();
+      if (aTime !== bTime) return aTime - bTime;
+      // Same sent_at second — use created_at as tiebreaker (preserves ROWID insertion order)
+      const aCreated = new Date(a.created_at || 0).getTime();
+      const bCreated = new Date(b.created_at || 0).getTime();
+      return aCreated - bCreated;
     });
 
     // Group messages by conversation
