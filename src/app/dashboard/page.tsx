@@ -374,6 +374,8 @@ export default function DashboardPage() {
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
   const [aiResponderTab, setAiResponderTab] = useState<'skills' | 'goals' | 'model' | 'agents'>('skills');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
+  const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(new Set());
+  const [showHiddenMessages, setShowHiddenMessages] = useState(false);
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -3355,6 +3357,11 @@ button:active { transform: scale(0.98); }`}</style>
                     <button onClick={() => setShowTimestamps(prev => !prev)} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: showTimestamps ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)', color: showTimestamps ? '#378ADD' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
                       {showTimestamps ? 'TIMES ON' : 'TIMES'}
                     </button>
+                    {hiddenMessages.size > 0 && (
+                      <button onClick={() => setShowHiddenMessages(prev => !prev)} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: showHiddenMessages ? 'rgba(124,58,237,0.1)' : 'rgba(0,0,0,0.04)', color: showHiddenMessages ? '#7C3AED' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {showHiddenMessages ? `HIDDEN (${hiddenMessages.size})` : `${hiddenMessages.size} HIDDEN`}
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -3609,7 +3616,7 @@ button:active { transform: scale(0.98); }`}</style>
               background: '#f8f9fa',
             }}>
               {(() => {
-                const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off'));
+                const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off') && (showHiddenMessages || !hiddenMessages.has(m.id)));
                 // Helper: format date separator like iMessage
                 const formatDateSep = (dateStr: string) => {
                   const d = new Date(dateStr);
@@ -3917,8 +3924,7 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             {[
               { label: 'Hide Message', icon: '👁', action: () => {
-                setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
-                setAllConversations(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
+                setHiddenMessages(prev => new Set(prev).add(msgContextMenu.msgId));
                 setMsgContextMenu(null);
               }},
               { label: 'Delete Message', icon: '🗑', action: async () => {
