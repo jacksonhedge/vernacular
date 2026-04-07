@@ -142,6 +142,58 @@ RELAY_URL=
 ---
 
 ## Roadmap
-- [x] Phase 1 — Web UI live on Vercel, Supabase connected
-- [ ] Phase 2 — Native Mac app, iMessage MCP server per station
-- [ ] Phase 3 — 25-station operations center (electrical, networking, full scale)
+
+### Phase 1 — Web Platform (LIVE)
+- [x] Web UI on Vercel (vernacular.chat/dashboard)
+- [x] Supabase backend (messages, conversations, contacts, stations)
+- [x] Station sync scripts (station/sync.py — inbound + outbound with BLOB extraction)
+- [x] Heartbeat + outbound queue polling
+- [x] AI response drafting (Claude Haiku) with Approve/Edit/Dismiss
+- [x] Credit-based billing system
+- [x] Conversation Goal field per thread
+
+### Phase 2 — macOS Station Manager App
+Native SwiftUI app that runs on each Mac station, replacing the Python scripts.
+
+**Status Dashboard:**
+- Real-time status for each station (online/offline, last heartbeat, message counts)
+- Overview of all stations from any machine (pull from Supabase stations table)
+- Green/yellow/red health indicators per station
+- Message throughput graphs (sent/received per hour)
+
+**Station Controls:**
+- Start/stop sync, heartbeat, outbound sender from the app
+- View live sync logs in-app
+- Configure station name, phone number, sync interval
+- Toggle outbound auto-sending on/off
+
+**iMessage Integration:**
+- Direct chat.db access (replace Python sqlite3 with Swift SQLite)
+- Native NSAttributedString decoding (no more BLOB extraction hacks)
+- Real-time file watcher on chat.db (instant sync vs 30s polling)
+- AppleScript sending with delivery confirmation
+
+**System Tray / Menu Bar:**
+- Persistent menu bar icon showing station status
+- Quick stats: messages synced today, queue depth, last heartbeat
+- Click to open full dashboard
+- Notifications for failed syncs or station going offline
+
+**Multi-Station View:**
+- See all stations (Wade, Albus, Russell, etc.) in one window
+- Remote health monitoring — any station can see all others
+- Alert when a station goes offline for >5 minutes
+
+**Tech Stack:**
+- SwiftUI + Swift 5.9
+- SQLite.swift for chat.db access
+- Supabase Swift SDK for backend
+- Combine for reactive data flow
+- launchd integration for auto-start on boot
+
+### Phase 3 — Operations Center (25+ stations)
+- [ ] Electrical + networking infrastructure for rack of MacBooks
+- [ ] Centralized monitoring dashboard (web + macOS)
+- [ ] Auto-provisioning: plug in a Mac → auto-configure station
+- [ ] Load balancing: route outbound messages to available stations
+- [ ] Failover: if a station dies, redistribute its conversations
