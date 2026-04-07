@@ -2608,8 +2608,8 @@ button:active { transform: scale(0.98); }`}</style>
                     const { data } = await supabase
                       .from('messages')
                       .select('id, message, contact_phone, direction, station, status, source_system, sent_at, created_at')
-                      .gte('created_at', since)
-                      .order('created_at', { ascending: false })
+                      .or(`sent_at.gte.${since},and(sent_at.is.null,created_at.gte.${since})`)
+                      .order('sent_at', { ascending: false, nullsFirst: false })
                       .limit(1000);
                     if (data) {
                       setTimelineMessages(data);
