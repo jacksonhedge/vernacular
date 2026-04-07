@@ -374,7 +374,12 @@ export default function DashboardPage() {
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
   const [aiResponderTab, setAiResponderTab] = useState<'skills' | 'goals' | 'model' | 'agents'>('skills');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
-  const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(new Set());
+  const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-msgs') || '[]')); } catch { return new Set(); }
+    }
+    return new Set();
+  });
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
 
   // Sound effects using Web Audio API
@@ -3924,7 +3929,11 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             {[
               { label: 'Hide Message', icon: '👁', action: () => {
-                setHiddenMessages(prev => new Set(prev).add(msgContextMenu.msgId));
+                setHiddenMessages(prev => {
+                  const next = new Set(prev).add(msgContextMenu.msgId);
+                  localStorage.setItem('vernacular-hidden-msgs', JSON.stringify([...next]));
+                  return next;
+                });
                 setMsgContextMenu(null);
               }},
               { label: 'Delete Message', icon: '🗑', action: async () => {
