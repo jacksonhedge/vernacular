@@ -3744,6 +3744,7 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
         ))}
       </div>
+      </div>{/* end stream columns flex-column */}
       </div>}
 
       {/* Invite Member Modal — rendered globally at bottom of component */}
