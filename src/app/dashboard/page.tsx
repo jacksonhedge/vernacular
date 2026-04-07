@@ -676,34 +676,10 @@ export default function DashboardPage() {
             })),
           };
         });
-        // Use localStorage as primary if user has saved session, otherwise use API
-        try {
-          const raw = localStorage.getItem('vernacular_open_columns');
-          if (raw && raw !== '[]') {
-            const saved = JSON.parse(raw) as ConversationColumn[];
-            if (Array.isArray(saved) && saved.length > 0 && saved.some(s => s.contact)) {
-              // User has a saved session — use it, but update messages from API
-              const apiById = new Map(realColumns.map(c => [c.contact?.phone, c]));
-              const merged = saved.map(s => {
-                if (!s.contact?.phone) return s;
-                const apiCol = apiById.get(s.contact.phone);
-                if (apiCol && apiCol.messages.length > s.messages.length) {
-                  return { ...s, messages: apiCol.messages };
-                }
-                return s;
-              });
-              setColumns(merged);
-            } else {
-              setColumns(realColumns);
-            }
-          } else {
-            setColumns(realColumns);
-          }
-        } catch (e) {
-          console.error('[Vernacular] Failed to parse saved columns, clearing:', e);
-          try { localStorage.removeItem('vernacular_open_columns'); } catch { /* storage unavailable */ }
-          setColumns(realColumns);
-        }
+        // Filter out dismissed conversations on initial load
+        let dismissed: Set<string>;
+        try { dismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { dismissed = new Set(); }
+        setColumns(realColumns.filter(c => !dismissed.has(c.id)));
         setLastReloadTime(new Date());
       }
     }).catch(() => {});
@@ -819,17 +795,8 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Persist open columns to localStorage (save only contact info, not messages)
-  useEffect(() => {
-    if (columns.length > 0) {
-      try {
-        const toSave = columns
-          .filter(c => c.contact)
-          .map(c => ({ id: c.id, contact: c.contact, messages: c.messages.slice(-5) }));
-        localStorage.setItem('vernacular_open_columns', JSON.stringify(toSave));
-      } catch { try { localStorage.removeItem('vernacular_open_columns'); } catch { /* storage unavailable */ } }
-    }
-  }, [columns]);
+  // Column persistence is handled via pinned + dismissed in localStorage
+  // No longer saving all open columns (caused reopening issues)
 
   // Auto-scroll conversation columns
   // Only auto-scroll message threads when a NEW message is added, not on every refresh
@@ -1987,7 +1954,8 @@ button:active { transform: scale(0.98); }`}</style>
                         })),
                       };
                     });
-                    setColumns(realColumns);
+                    // Respect dismissed conversations on reload
+                    setColumns(realColumns.filter(c => !dismissedColumns.has(c.id)));
                     setLastReloadTime(new Date());
                   }
                 }).catch(() => {});
