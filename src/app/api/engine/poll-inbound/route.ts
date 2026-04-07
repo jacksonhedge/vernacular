@@ -102,9 +102,11 @@ export async function GET() {
 
       synced++;
 
-      // Only trigger AI for inbound messages
+      // Only trigger AI for RECENT inbound messages (not historical bulk syncs)
       const isInbound = (msg.direction || '').toLowerCase() === 'inbound';
-      if (!isInbound) continue;
+      const msgAge = Date.now() - new Date(msg.created_at).getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (!isInbound || msgAge > fiveMinutes) continue;
 
       // Check if this conversation has AI mode enabled → trigger AI response
       try {
