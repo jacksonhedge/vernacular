@@ -8,11 +8,10 @@ export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    // Find inbound messages that don't have a conversation_id yet
+    // Find messages that don't have a conversation_id yet (inbound + outbound)
     const { data: unlinked } = await supabase
       .from('messages')
-      .select('id, message, contact_phone, station, created_at')
-      .eq('direction', 'Inbound')
+      .select('id, message, contact_phone, station, direction, created_at')
       .is('conversation_id', null)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -45,9 +44,12 @@ export async function GET() {
 
       if (!contactId) { errors++; errorDetails.push(`${msg.contact_phone}: no contactId`); continue; }
 
-      // Log activity + update engagement
-      await logContactActivity(supabase, contactId, 'replied', `Inbound: "${msg.message.substring(0, 50)}"`);
-      await updateEngagement(supabase, contactId, 'received_reply');
+      // Log activity + update engagement (inbound only)
+      const dir = (msg.direction || '').toLowerCase();
+      if (dir === 'inbound') {
+        await logContactActivity(supabase, contactId, 'replied', `Inbound: "${msg.message.substring(0, 50)}"`);
+        await updateEngagement(supabase, contactId, 'received_reply');
+      }
 
       // Find station
       const { data: station } = await supabase
@@ -99,6 +101,10 @@ export async function GET() {
       }).eq('id', convId);
 
       synced++;
+
+      // Only trigger AI for inbound messages
+      const isInbound = (msg.direction || '').toLowerCase() === 'inbound';
+      if (!isInbound) continue;
 
       // Check if this conversation has AI mode enabled → trigger AI response
       try {
