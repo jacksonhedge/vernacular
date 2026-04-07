@@ -3229,93 +3229,49 @@ button:active { transform: scale(0.98); }`}</style>
               display: 'flex', alignItems: 'center', gap: 10, background: '#fafbfc', minHeight: 52,
             }}>
               {col.contact ? (
-                <>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {col.contact.name}
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {/* Row 1: Name + phone + pin + close */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {col.contact.name}
+                    </span>
+                    {col.contact.phone && (
+                      <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {col.contact.phone}
                       </span>
-                      {col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming' && !col.messages[col.messages.length - 1].isAIDraft && (
-                        <span style={{ fontSize: 10, flexShrink: 0 }}>🔔</span>
-                      )}
-                      {pinnedConversations.has(col.id) && <span style={{ fontSize: 10, flexShrink: 0 }}>📌</span>}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      {/* Channel */}
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3,
-                        background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)',
-                        color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E',
-                        fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-                      }}>
-                        {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMsg'}
-                      </span>
-                      {/* AI Mode */}
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const modes = ['off', 'draft', 'auto'] as const;
-                          const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]);
-                          const nextMode = modes[(currentIdx + 1) % modes.length];
-                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
-                          setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c));
-                          const convId = col.conversationId || col.id.replace('real-', '');
-                          if (convId) {
-                            await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId);
-                          }
-                        }}
-                        title={`AI: ${col.aiMode || 'off'} (click to cycle)`}
-                        style={{
-                          padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700,
-                          background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)',
-                          color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93',
-                          cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-                        }}
-                      >
-                        AI {(col.aiMode || 'off').toUpperCase()}
+                    )}
+                    {col.messages.length > 0 && col.messages[col.messages.length - 1].direction === 'incoming' && !col.messages[col.messages.length - 1].isAIDraft && (
+                      <span style={{ fontSize: 10, flexShrink: 0 }}>🔔</span>
+                    )}
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                      <button onClick={() => { setPinnedConversations(prev => { const next = new Set(prev); if (next.has(col.id)) next.delete(col.id); else next.add(col.id); localStorage.setItem('vernacular-pinned', JSON.stringify([...next])); return next; }); }}
+                        title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin'} style={{ width: 22, height: 22, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: pinnedConversations.has(col.id) ? '#378ADD' : '#c4c4c6' }}>
+                        📌
+                      </button>
+                      <button onClick={() => removeColumn(col.id)} style={{ width: 22, height: 22, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c4c4c6' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                       </button>
                     </div>
                   </div>
-                </>
+                  {/* Row 2: Channel + AI + Times */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3, background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)', color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase' }}>
+                      {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMsg'}
+                    </span>
+                    <button onClick={async (e) => { e.stopPropagation(); const modes = ['off', 'draft', 'auto'] as const; const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]); const nextMode = modes[(currentIdx + 1) % modes.length]; setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c)); setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c)); const convId = col.conversationId || col.id.replace('real-', ''); if (convId) { await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId); } }}
+                      title={`AI: ${col.aiMode || 'off'}`} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)', color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase' }}>
+                      AI {(col.aiMode || 'off').toUpperCase()}
+                    </button>
+                    <button onClick={() => setShowTimestamps(prev => !prev)} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: showTimestamps ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)', color: showTimestamps ? '#378ADD' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {showTimestamps ? 'TIMES ON' : 'TIMES'}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div style={{ flex: 1, fontSize: 13, color: '#8e8e93', fontWeight: 500 }}>
                   Select a contact...
                 </div>
               )}
-              {/* Pin toggle */}
-              <button
-                onClick={() => {
-                  setPinnedConversations(prev => {
-                    const next = new Set(prev);
-                    if (next.has(col.id)) next.delete(col.id); else next.add(col.id);
-                    localStorage.setItem('vernacular-pinned', JSON.stringify([...next]));
-                    return next;
-                  });
-                }}
-                title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin'}
-                style={{
-                  width: 24, height: 24, borderRadius: 6, border: 'none', fontSize: 12,
-                  background: pinnedConversations.has(col.id) ? 'rgba(55,138,221,0.1)' : 'transparent',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: pinnedConversations.has(col.id) ? '#378ADD' : '#8e8e93', flexShrink: 0,
-                }}
-              >
-                📌
-              </button>
-              {/* Close */}
-              <button
-                onClick={() => removeColumn(col.id)}
-                style={{
-                  width: 24, height: 24, borderRadius: 6, border: 'none',
-                  background: 'transparent', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#8e8e93', flexShrink: 0,
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
             </div>
 
             {/* Conversation Goal */}
