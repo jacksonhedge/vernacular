@@ -63,7 +63,7 @@ export async function GET() {
               <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.5)' }} />
               <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.25)' }} />
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
+            <span style={{ color: '#fff', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
               Vernacular
             </span>
           </div>
