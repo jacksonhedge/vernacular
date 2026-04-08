@@ -8248,17 +8248,22 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Permissions + Navigation */}
             <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
-                { key: 'sendMessages' as const, label: '📱 Send', color: '#EF4444' },
-                { key: 'editContacts' as const, label: '👤 Edit', color: '#378ADD' },
-                { key: 'viewConversations' as const, label: '💬 View', color: '#22C55E' },
+                { key: 'sendMessages' as const, label: 'Send Texts', icon: '📱', color: '#EF4444' },
+                { key: 'editContacts' as const, label: 'Edit Contacts', icon: '👤', color: '#378ADD' },
+                { key: 'viewConversations' as const, label: 'View Convos', icon: '💬', color: '#22C55E' },
               ].map(p => (
                 <button key={p.key} onClick={() => setAiPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
+                  title={`${aiPermissions[p.key] ? 'Disable' : 'Enable'}: Craig can ${p.label.toLowerCase()}`}
                   style={{
-                    padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer',
-                    background: aiPermissions[p.key] ? `${p.color}15` : 'rgba(0,0,0,0.03)',
+                    padding: '3px 8px', borderRadius: 6, border: aiPermissions[p.key] ? `1px solid ${p.color}30` : '1px solid rgba(0,0,0,0.06)',
+                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    background: aiPermissions[p.key] ? `${p.color}10` : 'rgba(0,0,0,0.02)',
                     color: aiPermissions[p.key] ? p.color : '#c4c4c6',
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>{p.label}</button>
+                    display: 'flex', alignItems: 'center', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 10 }}>{aiPermissions[p.key] ? '✓' : '✕'}</span>
+                  {p.icon} {p.label}
+                </button>
               ))}
               <span style={{ width: 1, height: 14, background: 'rgba(0,0,0,0.06)', margin: '0 2px' }} />
               {/* Quick nav buttons */}
