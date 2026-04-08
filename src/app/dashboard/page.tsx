@@ -408,6 +408,7 @@ export default function DashboardPage() {
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
   const [craigNavigating, setCraigNavigating] = useState(false);
   const [selectedInitiative, setSelectedInitiative] = useState<string | null>(null);
+  const [dbInitiatives, setDbInitiatives] = useState<Array<{ id: string; title: string; content: string; parent_id: string | null }>>([]);
   const [craigPos, setCraigPos] = useState({ x: 0, y: 0 }); // 0,0 = center (relative)
   const [craigDragging, setCraigDragging] = useState(false);
   const [showTokenUsage, setShowTokenUsage] = useState(false);
@@ -417,6 +418,16 @@ export default function DashboardPage() {
   const [craigChatHistory, setCraigChatHistory] = useState<Array<{ id: string; preview: string; date: string; msgs: number }>>([]);
 
   const [orgKnowledge, setOrgKnowledge] = useState('');
+
+  // Load initiatives from DB
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    supabase.from('org_knowledge').select('id, title, content, parent_id')
+      .eq('organization_id', orgId).eq('category', 'initiative')
+      .then(({ data }) => { if (data) setDbInitiatives(data); });
+  }, [user, activeTab]);
 
   // Load Craig's knowledge: global .md files + org-specific from DB
   useEffect(() => {
@@ -7500,14 +7511,31 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
           </div>
 
-          {/* Initiative Cards Grid */}
+          {/* Initiative Cards Grid — dynamic from DB + defaults */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {[
-              { id: 'support', icon: '💬', name: 'Customer Support Tickets', type: 'Support', desc: 'AI handles inbound support questions, resolves tickets, escalates when needed.', status: 'active', agents: 1, convos: 0, color: '#60A5FA' },
-              { id: 'outreach', icon: '📱', name: 'Sales Outreach', type: 'Outreach', desc: 'Cold outreach and follow-ups to new prospects. AI drafts personalized messages.', status: 'active', agents: 1, convos: 0, color: '#6EE7B7' },
-              { id: 'testing', icon: '🧪', name: 'Tester Recruitment', type: 'Testing', desc: 'Recruit app testers, screen for eligibility, distribute test builds and collect feedback.', status: 'active', agents: 1, convos: 3, color: '#FFC107' },
-              { id: 'vip', icon: '🎰', name: 'VIP Re-engagement', type: 'VIP', desc: 'Win back dormant VIP contacts with exclusive promos and personalized check-ins.', status: 'draft', agents: 0, convos: 0, color: '#A78BFA' },
-            ].map(init => (
+            {(() => {
+              const typeIcons: Record<string, string> = { support: '💬', outreach: '📱', testing: '🧪', vip: '🎰', custom: '⚡' };
+              const typeColors: Record<string, string> = { support: '#60A5FA', outreach: '#6EE7B7', testing: '#FFC107', vip: '#A78BFA', custom: '#F59E0B' };
+              // Parse DB initiatives
+              const dbCards = dbInitiatives.filter(i => !i.parent_id).map(i => {
+                const lines = i.content.split('\n');
+                const type = (lines.find(l => l.startsWith('Type:'))?.replace('Type:', '').trim() || 'custom').toLowerCase();
+                const desc = lines.find(l => l.startsWith('Description:'))?.replace('Description:', '').trim() || i.content.substring(0, 100);
+                const subs = dbInitiatives.filter(s => s.parent_id === i.id);
+                return { id: i.id, icon: typeIcons[type] || '⚡', name: i.title, type: type.charAt(0).toUpperCase() + type.slice(1), desc, status: 'active', agents: 0, convos: 0, color: typeColors[type] || '#F59E0B', subs };
+              });
+              // Default cards (only show if no DB initiatives of that type)
+              const defaults = [
+                { id: 'support', icon: '💬', name: 'Customer Support Tickets', type: 'Support', desc: 'AI handles inbound support questions, resolves tickets, escalates when needed.', status: 'active', agents: 1, convos: 0, color: '#60A5FA', subs: [] },
+                { id: 'outreach', icon: '📱', name: 'Sales Outreach', type: 'Outreach', desc: 'Cold outreach and follow-ups to new prospects. AI drafts personalized messages.', status: 'active', agents: 1, convos: 0, color: '#6EE7B7', subs: [] },
+                { id: 'testing', icon: '🧪', name: 'Tester Recruitment', type: 'Testing', desc: 'Recruit app testers, screen for eligibility, distribute test builds and collect feedback.', status: 'active', agents: 1, convos: 3, color: '#FFC107', subs: [] },
+                { id: 'vip', icon: '🎰', name: 'VIP Re-engagement', type: 'VIP', desc: 'Win back dormant VIP contacts with exclusive promos and personalized check-ins.', status: 'draft', agents: 0, convos: 0, color: '#A78BFA', subs: [] },
+              ];
+              // Merge: DB initiatives first, then defaults that don't overlap
+              const dbTypes = new Set(dbCards.map(c => c.type.toLowerCase()));
+              const merged = [...dbCards, ...defaults.filter(d => !dbTypes.has(d.type.toLowerCase()))];
+              return merged;
+            })().map(init => (
               <div key={init.id} onClick={() => setSelectedInitiative(init.id)}
                 style={{
                   ...cardStyle, padding: 0, cursor: 'pointer', overflow: 'hidden',
@@ -7537,6 +7565,17 @@ button:active { transform: scale(0.98); }`}</style>
                     <span>{init.agents} agent{init.agents !== 1 ? 's' : ''}</span>
                     <span>{init.convos} conversation{init.convos !== 1 ? 's' : ''}</span>
                   </div>
+                  {/* Sub-initiatives */}
+                  {(init as { subs?: Array<{ id: string; title: string }> }).subs && (init as { subs: Array<{ id: string; title: string }> }).subs.length > 0 && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${init.color}15` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Sub-initiatives</div>
+                      {(init as { subs: Array<{ id: string; title: string }> }).subs.map(sub => (
+                        <div key={sub.id} style={{ fontSize: 12, color: '#6b7280', padding: '3px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: init.color }}>└</span> {sub.title}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
