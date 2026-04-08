@@ -7562,6 +7562,85 @@ button:active { transform: scale(0.98); }`}</style>
                   </div>
                 </div>
               </div>
+
+              {/* Contact Management */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      👥 Contact Management
+                    </div>
+                    <button style={{ ...primaryBtnStyle, fontSize: 11 }}>+ Add Contact</button>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>Contacts assigned to this initiative. Import contacts or add manually.</p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>Import VCF</button>
+                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>Import CSV</button>
+                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>From Existing</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {contacts.slice(0, 5).map(c => (
+                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.02)' }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700 }}>
+                          {(c.full_name || c.phone || '?').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{c.full_name || 'Unknown'}</div>
+                          <div style={{ fontSize: 10, color: '#8e8e93' }}>{c.phone}</div>
+                        </div>
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{(c as unknown as Record<string, string>).lifecycle_stage || 'new'}</span>
+                      </div>
+                    ))}
+                    {contacts.length > 5 && (
+                      <div style={{ fontSize: 11, color: '#378ADD', fontWeight: 600, textAlign: 'center', padding: 8, cursor: 'pointer' }}
+                        onClick={() => setActiveTab('contacts')}>
+                        View all {contacts.length} contacts →
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Message Summary — Purple, collapsible */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  borderRadius: 14, overflow: 'hidden',
+                  border: '1px solid rgba(124,58,237,0.15)',
+                  background: 'linear-gradient(135deg, rgba(124,58,237,0.04), rgba(124,58,237,0.02))',
+                }}>
+                  <button onClick={() => {
+                    const el = document.getElementById('msg-summary-body');
+                    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                  }} style={{
+                    width: '100%', padding: '14px 20px', border: 'none', cursor: 'pointer',
+                    background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 4, background: '#7C3AED' }} />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#7C3AED' }}>Message Summary</span>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                  <div id="msg-summary-body" style={{ padding: '0 20px 20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+                      {[
+                        { label: 'Total Messages', value: String(allConversations.reduce((s, c) => s + c.messages.length, 0)), color: '#7C3AED' },
+                        { label: 'Inbound', value: String(allConversations.reduce((s, c) => s + c.messages.filter(m => m.direction === 'incoming').length, 0)), color: '#378ADD' },
+                        { label: 'Outbound', value: String(allConversations.reduce((s, c) => s + c.messages.filter(m => m.direction === 'outgoing').length, 0)), color: '#22C55E' },
+                        { label: 'AI Drafts', value: String(allConversations.reduce((s, c) => s + c.messages.filter(m => m.isAIDraft).length, 0)), color: '#F59E0B' },
+                      ].map(m => (
+                        <div key={m.label} style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: m.color }}>{m.value}</div>
+                          <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 2 }}>{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, padding: '12px 14px', borderRadius: 8, background: 'rgba(124,58,237,0.04)' }}>
+                      <strong style={{ color: '#7C3AED' }}>Summary:</strong> {allConversations.filter(c => c.messages.length > 0).length} active conversations across {contacts.length} contacts. Most active contact: {allConversations.sort((a, b) => b.messages.length - a.messages.length)[0]?.contact?.name || 'N/A'} ({allConversations.sort((a, b) => b.messages.length - a.messages.length)[0]?.messages.length || 0} messages).
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
