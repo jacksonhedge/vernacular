@@ -8588,7 +8588,11 @@ ACTIONS YOU CAN TAKE:
 
 3. DRAFT MESSAGE: Include [DRAFT:contact_name:draft text] to pre-fill a message in their conversation input without sending. Good for when the user wants to review first.
 
-4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Available fields: name, firstName, lastName, email, company, jobTitle, city, state, school, greekOrg, venmo, instagram, twitter, linkedin, notes, relationship. Relationship values: prospect, tester, client, partner, referral, vendor, friend, vip, lead. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
+4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Available fields: name, firstName, lastName, email, company, jobTitle, city, state, school, greekOrg, venmo, instagram, twitter, linkedin, notes, relationship. Relationship values: prospect, tester, client, partner, referral, vendor, friend, vip, lead.
+
+6. CREATE INITIATIVE: Include [INITIATIVE:name|type|description|instructions|goal|app|link|states] to create a new initiative. Types: support, outreach, testing, vip, custom. Example: [INITIATIVE:DraftKings NJ Testing|testing|Recruit testers for DraftKings sportsbook in New Jersey|Screen for 21+ age, NJ residents only. Explain $50 compensation per completed test.|Get contact to complete test deposit|DraftKings|https://draftkings.com/signup|NJ]
+
+7. IMPROVE INITIATIVE: Include [IMPROVE_INITIATIVE:title|improvement] to update an existing initiative's instructions or tone based on conversation learnings. Example: [IMPROVE_INITIATIVE:DraftKings NJ Testing|Add: Always ask if they have a friend who wants to test too — referral bonus of $25] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
@@ -8598,6 +8602,9 @@ RULES:
 - Be concise — 2-3 sentences max. Use emoji occasionally.
 - Always confirm before sending with [SEND:].
 - You are a master of contact data. Update any field the user mentions.
+- When conversations reveal patterns (good responses, objections, what works), suggest improving the relevant initiative with [IMPROVE_INITIATIVE:].
+- If the user describes a new project or campaign, proactively offer to create an initiative.
+- Learn from every conversation — if a user says "that worked well" or "don't say that again", suggest updating the initiative's instructions.
 
 PLATFORM KNOWLEDGE (from craig/*.md files):
 ${craigKnowledge || 'No global knowledge loaded.'}
@@ -8744,6 +8751,49 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                             setInputValues(prev => ({ ...prev, [col.id]: draftText }));
                             setActiveTab('conversations');
                             setSelectedConversationId(col.id);
+                          }
+                        }
+                      }
+
+                      // Check for CREATE INITIATIVE commands
+                      if (reply.includes('[INITIATIVE:')) {
+                        const match = reply.match(/\[INITIATIVE:([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]*)\|?([^|]*)\|?([^|]*)\|?([^\]]*)\]/);
+                        if (match) {
+                          const orgId = getOrgId();
+                          if (orgId) {
+                            const [, name, type, desc, instructions, goal, app, link, states] = match;
+                            await supabase.from('org_knowledge').insert({
+                              organization_id: orgId,
+                              title: name.trim(),
+                              content: `Type: ${type.trim()}\nDescription: ${desc.trim()}\nInstructions: ${instructions.trim()}\nGoal: ${goal?.trim() || ''}${app ? `\nApp: ${app.trim()}` : ''}${link ? `\nLink: ${link.trim()}` : ''}${states ? `\nStates: ${states.trim()}` : ''}`,
+                              category: 'initiative',
+                            });
+                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${name.trim()}" created! View it in AI Responder.` }]);
+                          }
+                        }
+                      }
+
+                      // Check for IMPROVE INITIATIVE commands
+                      if (reply.includes('[IMPROVE_INITIATIVE:')) {
+                        const match = reply.match(/\[IMPROVE_INITIATIVE:([^|]+)\|([^\]]+)\]/);
+                        if (match) {
+                          const orgId = getOrgId();
+                          if (orgId) {
+                            const [, title, improvement] = match;
+                            // Find and update the initiative
+                            const { data: existing } = await supabase.from('org_knowledge')
+                              .select('id, content')
+                              .eq('organization_id', orgId)
+                              .eq('category', 'initiative')
+                              .ilike('title', `%${title.trim()}%`)
+                              .limit(1);
+                            if (existing && existing.length > 0) {
+                              await supabase.from('org_knowledge').update({
+                                content: existing[0].content + `\n\n[Improvement ${new Date().toLocaleDateString()}]: ${improvement.trim()}`,
+                                updated_at: new Date().toISOString(),
+                              }).eq('id', existing[0].id);
+                              setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${title.trim()}" improved! Added: "${improvement.trim().substring(0, 60)}..."` }]);
+                            }
                           }
                         }
                       }
