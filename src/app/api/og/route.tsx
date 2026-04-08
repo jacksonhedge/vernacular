@@ -64,7 +64,7 @@ export async function GET() {
               Vernacular
             </span>
           </div>
-          <span style={{ color: '#fff', fontSize: '38px', fontWeight: 600, letterSpacing: '-0.01em' }}>
+          <span style={{ color: '#fff', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
             The iMessage Internet Protocol
           </span>
         </div>
