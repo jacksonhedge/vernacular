@@ -7836,27 +7836,6 @@ button:active { transform: scale(0.98); }`}</style>
                       </div>
                     ))}
 
-                    {/* Tone Sliders */}
-                    <div style={{ ...cardStyle, padding: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        🎨 Tone
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {[
-                          { label: 'Formality', min: 'Casual', max: 'Professional' },
-                          { label: 'Warmth', min: 'Direct', max: 'Empathetic' },
-                          { label: 'Verbosity', min: 'Brief', max: 'Detailed' },
-                        ].map(s => (
-                          <div key={s.label}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8e8e93', marginBottom: 4 }}>
-                              <span>{s.min}</span><span style={{ fontWeight: 600, color: '#1c1c1e' }}>{s.label}</span><span>{s.max}</span>
-                            </div>
-                            <input type="range" min="1" max="5" defaultValue="3" style={{ width: '100%', accentColor: '#378ADD' }} />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* Files */}
                     <div style={{ ...cardStyle, padding: 20 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>📁 Files</div>
