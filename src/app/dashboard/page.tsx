@@ -3397,7 +3397,7 @@ button:active { transform: scale(0.98); }`}</style>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
         </div>
-        <div ref={streamsScrollRef} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
+        <div ref={streamsScrollRef} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'scroll', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32, WebkitOverflowScrolling: 'touch' }}>
         {(() => {
           // Sort: pinned first, then unread, then the rest
           const sorted = [...columns].sort((a, b) => {
