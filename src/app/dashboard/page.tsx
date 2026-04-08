@@ -8111,16 +8111,18 @@ button:active { transform: scale(0.98); }`}</style>
           position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
         }}>
           <button onClick={() => setShowAICopilot(prev => !prev)} style={{
-            width: 40, height: 40, borderRadius: 20, border: 'none', cursor: 'pointer',
-            background: showAICopilot ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(0,0,0,0.06)',
+            width: 42, height: 42, borderRadius: 21, border: 'none', cursor: 'pointer',
+            background: showAICopilot ? '#F59E0B' : 'rgba(0,0,0,0.06)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: showAICopilot ? '0 4px 16px rgba(245,158,11,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
+            boxShadow: showAICopilot ? '0 4px 16px rgba(245,158,11,0.4)' : '0 1px 4px rgba(0,0,0,0.08)',
             transition: 'all 0.2s',
-          }} title="AI Copilot">
-            <svg width="22" height="22" viewBox="0 0 24 24" style={{ transform: 'rotate(-30deg)' }}>
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill={showAICopilot ? '#fff' : '#F59E0B'} />
-              <path d="M12 2L22 12L12 2z" fill={showAICopilot ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(0,0,0,0.06)'} />
-              <circle cx="10" cy="9" r="1.5" fill={showAICopilot ? '#D97706' : '#fff'} />
+          }} title="AI Copilot (Pac-Man)">
+            <svg width="26" height="26" viewBox="0 0 100 100">
+              <path d={showAICopilot
+                ? "M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 Z"
+                : "M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 L50 50 L95 25 Z"
+              } fill={showAICopilot ? '#fff' : '#F59E0B'} />
+              <circle cx="42" cy="30" r="6" fill={showAICopilot ? '#F59E0B' : '#1a1a2e'} />
             </svg>
           </button>
         </div>
@@ -8148,20 +8150,30 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             </div>
 
-            {/* Permissions */}
-            <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* Permissions + Navigation */}
+            <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
               {[
-                { key: 'sendMessages' as const, label: '📱 Send Texts', color: '#EF4444' },
-                { key: 'editContacts' as const, label: '👤 Edit Contacts', color: '#378ADD' },
-                { key: 'viewConversations' as const, label: '💬 View Convos', color: '#22C55E' },
+                { key: 'sendMessages' as const, label: '📱 Send', color: '#EF4444' },
+                { key: 'editContacts' as const, label: '👤 Edit', color: '#378ADD' },
+                { key: 'viewConversations' as const, label: '💬 View', color: '#22C55E' },
               ].map(p => (
                 <button key={p.key} onClick={() => setAiPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
                   style={{
-                    padding: '3px 8px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                    padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer',
                     background: aiPermissions[p.key] ? `${p.color}15` : 'rgba(0,0,0,0.03)',
                     color: aiPermissions[p.key] ? p.color : '#c4c4c6',
                     fontFamily: "'JetBrains Mono', monospace",
                   }}>{p.label}</button>
+              ))}
+              <span style={{ width: 1, height: 14, background: 'rgba(0,0,0,0.06)', margin: '0 2px' }} />
+              {/* Quick nav buttons */}
+              {(['dashboard', 'conversations', 'contacts', 'ai-drafts'] as NavTab[]).map(tab => (
+                <button key={tab} onClick={() => { setActiveTab(tab); }}
+                  style={{
+                    padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 600, cursor: 'pointer',
+                    background: activeTab === tab ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.03)',
+                    color: activeTab === tab ? '#D97706' : '#8e8e93',
+                  }}>{tab === 'ai-drafts' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1, 5)}</button>
               ))}
             </div>
 
@@ -8211,7 +8223,15 @@ button:active { transform: scale(0.98); }`}</style>
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
                           model: 'haiku',
-                          systemPrompt: `You are an AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'}. They manage iMessage conversations through Mac relay stations. Current permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}. Be concise — 2-3 sentences max. If they ask to send a message and you have permission, confirm the action.`,
+                          systemPrompt: `You are Pac-Man, the AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
+
+Current tab: ${activeTab}
+Permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}, ${aiPermissions.viewConversations ? 'CAN view conversations' : 'CANNOT view conversations'}
+Stations: ${stations.map(s => s.name + ' (' + s.status + ')').join(', ') || 'none'}
+Contacts: ${contacts.length} total
+Active conversations: ${allConversations.filter(c => c.messages.length > 0).length}
+
+You can suggest navigating to different tabs. Be concise — 2-3 sentences max. Use emoji occasionally. If they ask to send a message and sendMessages permission is OFF, tell them to enable it first.`,
                         }),
                       });
                       const data = await res.json();
