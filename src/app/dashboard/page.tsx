@@ -8597,15 +8597,18 @@ CONTACTS (real data — you CAN see this):
 ${contacts.slice(0, 30).map(c => `- ${c.full_name || 'Unknown'} | ${c.phone || 'no phone'}`).join('\n')}
 ${contacts.length > 30 ? `... and ${contacts.length - 30} more` : ''}
 
-OPEN CONVERSATIONS (real data):
-${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs, last: "${c.messages[c.messages.length - 1]?.text?.substring(0, 40) || ''}"`).join('\n')}
+OPEN CONVERSATIONS (real data — you CAN see all of this):
+${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Channel: ${c.channel || 'iMessage'} | Last msg: "${c.messages[c.messages.length - 1]?.text?.substring(0, 40) || ''}" (${c.messages[c.messages.length - 1]?.direction || '?'}, ${c.messages[c.messages.length - 1]?.timestamp || '?'})`).join('\n')}
 
 IMPORTANT RULES:
-- You have REAL access to the contact and conversation data above. Use it.
-- NEVER say "I don't have access" — you DO have the data listed above.
-- If asked about a contact, search the list above. If not found, say "I don't see that contact in your ${contacts.length} contacts."
-- If asked to update a contact, use [UPDATE:phone:field:value] and the system will execute it.
+- You have REAL access to the contact and conversation data above. USE IT.
+- ABSOLUTELY NEVER say "I don't have access" or "I can't see that" — you CAN. The data is listed above.
+- ABSOLUTELY NEVER say "As an AI assistant I don't have visibility into..." — YOU DO. Read the data above.
+- If asked about a contact, search the CONTACTS list above.
+- If asked about a conversation's settings, read the OPEN CONVERSATIONS list — it shows AI mode, goal, channel, timestamps.
+- If asked to update a contact, use [UPDATE:phone:field:value].
 - NEVER fabricate data. Only reference what's listed above.
+- If something isn't in the data above, say "I don't see that in your data" — NOT "I don't have access."
 - When asked to save a contact's name: LOOK at the outbound messages for that contact. If the user wrote "Hey Sean..." then the name is Sean. Extract the name from the message, don't use the phone number as the name.
 - If you can detect a name from messages, save it as "(Maybe) [Name]". Example: outbound says "Hey Kyle whats up" → [UPDATE:(669) 215-9518:name:(Maybe) Kyle]
 - After updating a contact, the conversations tab will show the updated name on next refresh.
