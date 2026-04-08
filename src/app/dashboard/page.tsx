@@ -414,12 +414,27 @@ export default function DashboardPage() {
   const [tokenStats, setTokenStats] = useState<{ total: number; cost: string; count: number }>({ total: 0, cost: '$0.00', count: 0 });
   const [craigKnowledge, setCraigKnowledge] = useState('');
 
-  // Load Craig's knowledge files
+  const [orgKnowledge, setOrgKnowledge] = useState('');
+
+  // Load Craig's knowledge: global .md files + org-specific from DB
   useEffect(() => {
     fetch('/api/ai/craig-knowledge').then(r => r.json()).then(d => {
       if (d.knowledge) setCraigKnowledge(d.knowledge);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    supabase.from('org_knowledge').select('title, content, category')
+      .eq('organization_id', orgId).eq('enabled', true)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setOrgKnowledge(data.map(k => `[${k.category}] ${k.title}:\n${k.content}`).join('\n\n'));
+        }
+      });
+  }, [user]);
   const craigDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // Sound effects using Web Audio API
@@ -8277,8 +8292,11 @@ RULES:
 - Always confirm before sending with [SEND:].
 - You are a master of contact data. Update any field the user mentions.
 
-KNOWLEDGE BASE (from craig/*.md files):
-${craigKnowledge || 'No knowledge files loaded.'}`,
+PLATFORM KNOWLEDGE (from craig/*.md files):
+${craigKnowledge || 'No global knowledge loaded.'}
+
+CLIENT-SPECIFIC KNOWLEDGE (for ${(org?.name as string) || 'this org'} only):
+${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → Initiatives → Knowledge Base.'}`,
                         }),
                       });
                       const data = await res.json();
