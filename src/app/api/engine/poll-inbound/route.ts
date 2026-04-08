@@ -70,6 +70,42 @@ export async function GET() {
         }
       }
 
+      // Auto-detect time references in messages → create schedule entry
+      const timePatterns = [
+        /(?:at|around|by)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM)?)/i,
+        /(?:tonight|tomorrow|today)\s*(?:at\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?/i,
+        /(\d{1,2}(?::\d{2})?\s*(?:am|pm|AM|PM))/i,
+        /(?:this|next)\s+(?:morning|afternoon|evening|weekend)/i,
+      ];
+      const lowerMsg = msgText.toLowerCase();
+      const hasTimeRef = timePatterns.some(p => p.test(msgText));
+      const isScheduleContext = hasTimeRef && (
+        lowerMsg.includes('meet') || lowerMsg.includes('call') || lowerMsg.includes('test') ||
+        lowerMsg.includes('available') || lowerMsg.includes('free') || lowerMsg.includes('works') ||
+        lowerMsg.includes('good') || lowerMsg.includes('can do') || lowerMsg.includes('let') ||
+        lowerMsg.includes('sure') || lowerMsg.includes('down') || lowerMsg.includes('tonight') ||
+        lowerMsg.includes('tomorrow') || lowerMsg.includes('today')
+      );
+
+      if (isScheduleContext) {
+        const { data: contactInfo } = await supabase.from('contacts').select('full_name, phone').eq('id', contactId).single();
+        const timeMatch = msgText.match(/(?:at|around)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i) ||
+                          msgText.match(/(tonight|tomorrow|today)(?:\s+at\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?))?/i);
+        const timeStr = timeMatch ? timeMatch[0] : 'time TBD';
+
+        await supabase.from('scheduled_events').insert({
+          organization_id: stationOrgId,
+          contact_id: contactId,
+          contact_name: contactInfo?.full_name || msg.contact_phone,
+          contact_phone: contactInfo?.phone || msg.contact_phone,
+          title: `${contactInfo?.full_name || 'Contact'} — ${timeStr}`,
+          description: `Auto-detected from message: "${msgText.substring(0, 100)}"`,
+          status: 'tentative',
+          source: 'ai_detected',
+          detected_from_message: msgText,
+        });
+      }
+
       // Log activity + update engagement (inbound only)
       const dir = (msg.direction || '').toLowerCase();
       if (dir === 'inbound') {
