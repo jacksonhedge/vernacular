@@ -160,40 +160,92 @@ export default function LandingPage() {
 
       {/* Solutions */}
       <section id="solutions" style={{
-        maxWidth: 1200, margin: '0 auto', padding: '80px 48px', position: 'relative', zIndex: 10,
+        position: 'relative', zIndex: 10, padding: '100px 0',
+        background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.03) 30%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 70%, transparent 100%)',
       }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 12 }}>Four solutions</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>Each with a dedicated Mac station, phone number, and AI personas.</p>
+        {/* Cloud background */}
+        <div style={{
+          position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0,
+        }}>
+          <div style={{ position: 'absolute', top: '10%', left: '5%', width: '45%', height: '60%', background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.07) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(60px)' }} />
+          <div style={{ position: 'absolute', top: '20%', right: '0%', width: '50%', height: '50%', background: 'radial-gradient(ellipse at center, rgba(168,212,240,0.08) 0%, transparent 60%)', borderRadius: '50%', filter: 'blur(80px)' }} />
+          <div style={{ position: 'absolute', bottom: '5%', left: '20%', width: '60%', height: '40%', background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 65%)', borderRadius: '50%', filter: 'blur(70px)' }} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          {[
-            { icon: '🎰', name: 'VIP Manager', price: '$1,500/mo', unit: 'per line', desc: 'High-value relationship management for sportsbooks and premium brands.', features: ['VIP concierge AI persona', 'Promo & deposit tracking', 'Re-engagement automation'], gradient: 'linear-gradient(135deg, rgba(167,139,250,0.15), rgba(167,139,250,0.05))' },
-            { icon: '📱', name: 'Sales & Outreach', price: '$1,500/mo', unit: 'per seat', desc: 'Cold outreach that lands in iMessage, not spam folders.', features: ['AI draft + approve workflow', 'Contact management', 'Campaign tracking'], gradient: 'linear-gradient(135deg, rgba(110,231,183,0.15), rgba(110,231,183,0.05))' },
-            { icon: '🧪', name: 'App Testing', price: '$1,222/mo', unit: 'per seat', desc: 'Recruit testers, distribute builds, collect feedback.', features: ['Tester recruitment AI', 'Feedback collection', 'QA coordination'], gradient: 'linear-gradient(135deg, rgba(255,193,7,0.15), rgba(255,193,7,0.05))' },
-            { icon: '💬', name: 'Customer Support', price: '$100/mo', unit: '+ $1.25/ticket', desc: 'AI chat widget with one-tap iMessage handoff.', features: ['Embeddable chat widget', 'FAQ knowledge base', 'Per-ticket billing'], gradient: 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(96,165,250,0.05))' },
-          ].map(s => (
-            <div key={s.name} style={{
-              padding: '28px 28px', borderRadius: 20,
-              background: s.gradient, border: '1px solid rgba(255,255,255,0.08)',
-              backdropFilter: 'blur(10px)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <span style={{ fontSize: 28 }}>{s.icon}</span>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{s.name}</div>
-                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontFamily: "'JetBrains Mono', monospace" }}>{s.price} <span style={{ fontWeight: 400 }}>{s.unit}</span></span>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#a8d4f0', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 16 }}>Solutions</div>
+            <h2 style={{ fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 16 }}>Built for how you<br />actually message</h2>
+            <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.45)', maxWidth: 460, margin: '0 auto', lineHeight: 1.6 }}>
+              Four purpose-built solutions, each with its own dedicated phone line, AI agents, and workflow.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            {[
+              {
+                icon: '🎰', name: 'VIP Manager', tagline: 'White-glove relationship management',
+                desc: 'Keep your highest-value clients engaged with personalized outreach, exclusive promos, and proactive check-ins — all through blue bubble iMessage.',
+                features: ['Dedicated VIP concierge AI persona', 'Proactive re-engagement campaigns', 'Deposit & activity tracking', 'Event invitations & promo delivery'],
+                color: '#A78BFA', bg: 'rgba(167,139,250,0.06)', border: 'rgba(167,139,250,0.12)',
+              },
+              {
+                icon: '📱', name: 'Sales & Outreach', tagline: 'Outreach that actually gets read',
+                desc: 'Skip the spam folder. Land directly in iMessage with personalized cold outreach that feels human because AI helps you write it.',
+                features: ['AI drafts, you approve', 'Smart follow-up sequences', 'Contact enrichment & CRM', 'Response rate analytics'],
+                color: '#6EE7B7', bg: 'rgba(110,231,183,0.06)', border: 'rgba(110,231,183,0.12)',
+              },
+              {
+                icon: '🧪', name: 'App Testing', tagline: 'QA coordination via text',
+                desc: 'Recruit beta testers, distribute builds, and collect structured feedback — all through iMessage conversations your testers already use.',
+                features: ['Tester recruitment automation', 'Build link distribution', 'Structured feedback collection', 'Device & eligibility screening'],
+                color: '#FFC107', bg: 'rgba(255,193,7,0.06)', border: 'rgba(255,193,7,0.12)',
+              },
+              {
+                icon: '💬', name: 'Customer Support', tagline: 'AI support that escalates to humans',
+                desc: 'An embeddable chat widget that resolves common questions instantly. When it can&apos;t, one tap hands off to a real iMessage conversation.',
+                features: ['Embeddable AI chat widget', 'Teachable FAQ knowledge base', 'One-tap iMessage handoff', 'Per-resolved-ticket billing'],
+                color: '#60A5FA', bg: 'rgba(96,165,250,0.06)', border: 'rgba(96,165,250,0.12)',
+              },
+            ].map(s => (
+              <div key={s.name} style={{
+                padding: '36px 32px', borderRadius: 24,
+                background: s.bg, border: `1px solid ${s.border}`,
+                backdropFilter: 'blur(20px)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 40px ${s.border}`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14,
+                    background: `linear-gradient(135deg, ${s.bg}, ${s.border})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                    border: `1px solid ${s.border}`,
+                  }}>{s.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 700 }}>{s.name}</div>
+                    <div style={{ fontSize: 13, color: s.color, fontWeight: 500 }}>{s.tagline}</div>
+                  </div>
                 </div>
+                <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, marginBottom: 20 }}>{s.desc}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {s.features.map(f => (
+                    <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'rgba(255,255,255,0.65)' }}>
+                      <div style={{ width: 5, height: 5, borderRadius: 3, background: s.color, flexShrink: 0 }} />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+                <a href="/signup" style={{
+                  display: 'inline-block', marginTop: 20, padding: '10px 24px', borderRadius: 20,
+                  background: `${s.border}`, color: '#fff', textDecoration: 'none',
+                  fontSize: 13, fontWeight: 600, transition: 'opacity 0.15s',
+                }}>Learn More</a>
               </div>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5, marginBottom: 14 }}>{s.desc}</p>
-              {s.features.map(f => (
-                <div key={f} style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', padding: '3px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.3)' }}>→</span> {f}
-                </div>
-              ))}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
