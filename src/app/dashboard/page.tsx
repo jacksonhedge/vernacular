@@ -2940,7 +2940,7 @@ button:active { transform: scale(0.98); }`}</style>
       {/* Streams (Columns) View */}
       {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, position: 'relative' }}>
         {/* Contact List Panel — fixed, never moves or shrinks */}
-        <div style={{ width: 280, minWidth: 280, maxWidth: 280, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.08)', background: '#fff', flexShrink: 0, flexGrow: 0, overflow: 'hidden' }}>
+        <div style={{ width: 280, minWidth: 280, maxWidth: 280, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.08)', background: '#fff', flexShrink: 0, flexGrow: 0 }}>
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             <div style={{ position: 'relative' }}>
