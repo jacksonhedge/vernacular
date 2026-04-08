@@ -24,10 +24,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
 // Costs in cents per action
 export const ACTION_COSTS_CENTS = {
   new_conversation: 99,        // $0.99
-  send_imessage: 3,            // $0.03
-  send_email: 3,               // $0.03
+  send_imessage: 0.1,          // $0.001
+  send_email: 0.1,             // $0.001
   receive_message: 0,          // free
-  ai_draft: 10,                // $0.10
+  ai_draft: 0.31,              // $0.0031
   ai_auto_response: 25,        // $0.25
   ai_draft_approved: 25,       // $0.25
   support_ticket_resolved: 125, // $1.25

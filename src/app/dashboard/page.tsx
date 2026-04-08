@@ -5302,9 +5302,9 @@ button:active { transform: scale(0.98); }`}</style>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 12, color: '#666' }}>
                   {[
                     ['New conversation', '$0.99'],
-                    ['Text sent', '$0.03'],
+                    ['Text sent (typed)', '$0.001'],
                     ['Text received', 'Free'],
-                    ['AI draft generated', '$0.10'],
+                    ['AI draft generated', '$0.0031'],
                     ['AI approved / auto-send', '$0.25'],
                     ['Ticket resolved', '$1.25'],
                     ['Contact import', '$0.05'],
