@@ -56,12 +56,15 @@ export const MONTHLY_MINIMUMS_CENTS: Record<string, number> = {
 
 // Setup fees in cents
 export const SETUP_FEES_CENTS: Record<string, number> = {
-  vip_manager: 100000,        // $1,000
-  sales_outreach: 100000,     // $1,000
-  app_testing: 100000,        // $1,000
-  customer_support: 50000,    // $500
+  vip_manager: 100000,        // $1,000 base setup
+  sales_outreach: 100000,     // $1,000 base setup
+  app_testing: 100000,        // $1,000 base setup
+  customer_support: 100000,   // $1,000 base setup
   general: 0,
 };
+
+// AI setup fee — additional $1,000 if client wants AI messaging
+export const AI_SETUP_FEE_CENTS = 100000; // $1,000
 
 export type BillingAction = keyof typeof ACTION_COSTS_CENTS;
 
