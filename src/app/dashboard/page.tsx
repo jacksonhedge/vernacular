@@ -3387,7 +3387,7 @@ button:active { transform: scale(0.98); }`}</style>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
         </div>
-        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
+        <div onWheel={e => { if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) { e.currentTarget.scrollLeft += e.deltaY; } }} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
         {(() => {
           // Sort: pinned first, then unread, then the rest
           const sorted = [...columns].sort((a, b) => {
