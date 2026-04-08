@@ -151,13 +151,15 @@ const MOCK_CONTACTS: Contact[] = [
 // ── Nav Config ──────────────────────────────────────────────────────────────
 
 // Which plans can access which tabs. Empty = available to all.
+// Which plans can access which tabs. Empty = available to all.
+// Every solution type gets a dedicated phone line, so Phone Lines is always visible.
 const TAB_PERMISSIONS: Record<NavTab, string[]> = {
   'dashboard': [],           // all plans
   'conversations': [],       // all plans
   'contacts': [],            // all plans
   'team': [],                // all plans
-  'stations': ['vip_manager', 'sales_outreach', 'app_testing'], // seat-based only
-  'ai-drafts': ['vip_manager', 'sales_outreach', 'app_testing', 'customer_support'],
+  'stations': [],            // all plans — every type gets a dedicated line
+  'ai-drafts': [],           // all plans — AI is core to every solution
   'integrations': [],        // all plans
   'profile': [],             // all plans
   'settings': [],            // all plans
