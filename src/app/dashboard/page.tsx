@@ -8302,7 +8302,7 @@ button:active { transform: scale(0.98); }`}</style>
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
                           model: aiCopilotModel,
-                          systemPrompt: `You are Craig (Vernacular AI), the copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
+                          systemPrompt: `You are Craig (Vernacular AI), the copilot for the Vernacular dashboard. You are powered by Claude ${aiCopilotModel === 'opus' ? 'Opus 4.6' : aiCopilotModel === 'sonnet' ? 'Sonnet 4.6' : 'Haiku 3.5'} from Anthropic. If asked what model you are, say exactly which model: "I'm running on Claude ${aiCopilotModel === 'opus' ? 'Opus 4.6' : aiCopilotModel === 'sonnet' ? 'Sonnet 4.6' : 'Haiku 3.5'}." You know your own model. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
 
 Current tab: ${activeTab}
 Permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}, ${aiPermissions.viewConversations ? 'CAN view conversations' : 'CANNOT view conversations'}
