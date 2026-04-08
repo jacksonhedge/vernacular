@@ -405,6 +405,7 @@ export default function DashboardPage() {
   const [aiCopilotInput, setAiCopilotInput] = useState('');
   const [aiCopilotLoading, setAiCopilotLoading] = useState(false);
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
+  const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -8145,7 +8146,18 @@ button:active { transform: scale(0.98); }`}</style>
                   <div style={{ fontSize: 10, color: '#8e8e93' }}>Powered by Claude</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as 'haiku' | 'sonnet' | 'opus')}
+                  style={{
+                    padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                    fontSize: 10, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                    background: aiCopilotModel === 'opus' ? 'rgba(124,58,237,0.08)' : aiCopilotModel === 'sonnet' ? 'rgba(55,138,221,0.08)' : 'rgba(0,0,0,0.03)',
+                    color: aiCopilotModel === 'opus' ? '#7C3AED' : aiCopilotModel === 'sonnet' ? '#378ADD' : '#8e8e93',
+                  }}>
+                  <option value="haiku">⚡ Haiku</option>
+                  <option value="sonnet">🎯 Sonnet</option>
+                  <option value="opus">🧠 Opus</option>
+                </select>
                 <button onClick={() => setShowAICopilot(false)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.04)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>✕</button>
               </div>
             </div>
@@ -8222,7 +8234,7 @@ button:active { transform: scale(0.98); }`}</style>
                           messages: [...aiCopilotMessages, { role: 'user', content: text }].map(m => ({
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
-                          model: 'haiku',
+                          model: aiCopilotModel,
                           systemPrompt: `You are Pac-Man, the AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
 
 Current tab: ${activeTab}
