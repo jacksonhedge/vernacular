@@ -52,17 +52,19 @@ export async function GET() {
           </div>
         </div>
 
-        {/* Branding — bigger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: '#fff' }} />
-            <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.6)' }} />
-            <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.3)' }} />
+        {/* Branding */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: '#fff' }} />
+              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.6)' }} />
+              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.3)' }} />
+            </div>
+            <span style={{ color: '#fff', fontSize: '36px', fontWeight: 800, letterSpacing: '-0.02em' }}>
+              Vernacular
+            </span>
           </div>
-          <span style={{ color: '#fff', fontSize: '38px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            Vernacular
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '30px', fontWeight: 500 }}>
+          <span style={{ color: '#fff', fontSize: '38px', fontWeight: 600, letterSpacing: '-0.01em' }}>
             The iMessage Internet Protocol
           </span>
         </div>
