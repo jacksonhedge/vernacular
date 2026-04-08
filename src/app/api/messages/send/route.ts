@@ -66,13 +66,32 @@ export async function POST(request: Request) {
     // Notion removed — all messaging goes through Supabase outbound_queue now
 
     // 2. Find or create contact in Supabase (shared utility)
+    // Auto-detect name from outbound message if no contactName provided
+    let detectedName = contactName;
+    if (!detectedName && message) {
+      // Match patterns like "Hey Sean", "Hi Kyle", "Yo Jonah", "What's up Brady"
+      const nameMatch = message.match(/^(?:hey|hi|hello|yo|sup|what'?s up|howdy|hiya)\s+([A-Z][a-z]+)/i);
+      if (nameMatch) {
+        detectedName = `(Maybe) ${nameMatch[1]}`;
+      }
+    }
+
     const contactId = await findOrCreateContact(supabase, {
       phone: phoneNumber,
-      full_name: contactName || undefined,
+      full_name: detectedName || undefined,
       source: 'conversation',
       source_system: system,
       organization_id: organizationId,
     });
+
+    // If we detected a name and the contact exists but has no name, update it
+    if (detectedName && contactId) {
+      const { data: existingContact } = await supabase
+        .from('contacts').select('full_name').eq('id', contactId).single();
+      if (existingContact && (!existingContact.full_name || existingContact.full_name.startsWith('+1') || existingContact.full_name === 'Unknown')) {
+        await supabase.from('contacts').update({ full_name: detectedName }).eq('id', contactId);
+      }
+    }
 
     // Log activity + update engagement
     if (contactId) {
