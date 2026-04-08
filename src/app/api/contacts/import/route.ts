@@ -23,11 +23,13 @@ export async function POST(request: NextRequest) {
           // Check for duplicate by phone
           if (contact.phone) {
             contact.phone = formatPhone(contact.phone);
-            // Look up by phone (ilike on last 7 digits — most reliable matching)
+            // Look up by phone (ilike on last 7 digits — most reliable)
+            const digits = contact.phone.replace(/\D/g, '');
+            const last7 = digits.slice(-7);
             const { data: existing } = await supabase
               .from('contacts')
               .select('id, organization_id')
-              .or(phoneIlikeFilter(contact.phone))
+              .ilike('phone', `%${last7}%`)
               .limit(1);
 
             if (existing && existing.length > 0) {
