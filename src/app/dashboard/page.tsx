@@ -412,6 +412,14 @@ export default function DashboardPage() {
   const [craigDragging, setCraigDragging] = useState(false);
   const [showTokenUsage, setShowTokenUsage] = useState(false);
   const [tokenStats, setTokenStats] = useState<{ total: number; cost: string; count: number }>({ total: 0, cost: '$0.00', count: 0 });
+  const [craigKnowledge, setCraigKnowledge] = useState('');
+
+  // Load Craig's knowledge files
+  useEffect(() => {
+    fetch('/api/ai/craig-knowledge').then(r => r.json()).then(d => {
+      if (d.knowledge) setCraigKnowledge(d.knowledge);
+    }).catch(() => {});
+  }, []);
   const craigDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // Sound effects using Web Audio API
@@ -8267,7 +8275,10 @@ RULES:
 - For contact updates, just do it — no confirmation needed.
 - Be concise — 2-3 sentences max. Use emoji occasionally.
 - Always confirm before sending with [SEND:].
-- You are a master of contact data. Update any field the user mentions.`,
+- You are a master of contact data. Update any field the user mentions.
+
+KNOWLEDGE BASE (from craig/*.md files):
+${craigKnowledge || 'No knowledge files loaded.'}`,
                         }),
                       });
                       const data = await res.json();
