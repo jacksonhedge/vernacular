@@ -8272,32 +8272,29 @@ button:active { transform: scale(0.98); }`}</style>
                   const phone = editingContact.phone;
                   const orgId = getOrgId();
 
-                  // Save to Supabase contacts
-                  if (orgId && phone) {
-                    await fetch('/api/contacts/import', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        organizationId: orgId,
-                        contacts: [{
-                          phone,
-                          fullName: fullName || undefined,
-                          firstName: editingContact.firstName || undefined,
-                          lastName: editingContact.lastName || undefined,
-                          email: editingContact.email || undefined,
-                          company: editingContact.company || undefined,
-                          jobTitle: editingContact.jobTitle || undefined,
-                          linkedinUrl: editingContact.linkedin || undefined,
-                          instagram: editingContact.instagram || undefined,
-                          twitter: editingContact.twitter || undefined,
-                          school: editingContact.school || undefined,
-                          greekOrg: editingContact.greekOrg || undefined,
-                          venmo: editingContact.venmo || undefined,
-                          notes: editingContact.notes || undefined,
-                        }],
-                        source: 'edit',
-                      }),
-                    });
+                  // Save directly to Supabase contacts (bypass import route)
+                  if (phone) {
+                    const digits = phone.replace(/\D/g, '').slice(-7);
+                    const updateData: Record<string, unknown> = {};
+                    if (fullName) {
+                      updateData.full_name = fullName;
+                      const parts = fullName.split(' ');
+                      updateData.first_name = parts[0] || null;
+                      updateData.last_name = parts.slice(1).join(' ') || null;
+                    }
+                    if (editingContact.email) updateData.email = editingContact.email;
+                    if (editingContact.company) updateData.company = editingContact.company;
+                    if (editingContact.jobTitle) updateData.job_title = editingContact.jobTitle;
+                    if (editingContact.linkedin) updateData.linkedin_url = editingContact.linkedin;
+                    if (editingContact.instagram) updateData.instagram_handle = editingContact.instagram;
+                    if (editingContact.twitter) updateData.twitter_handle = editingContact.twitter;
+                    if (editingContact.school) updateData.school = editingContact.school;
+                    if (editingContact.greekOrg) updateData.greek_org = editingContact.greekOrg;
+                    if (editingContact.venmo) updateData.venmo_handle = editingContact.venmo;
+                    if (editingContact.notes) updateData.notes = editingContact.notes;
+                    updateData.updated_at = new Date().toISOString();
+
+                    await supabase.from('contacts').update(updateData).ilike('phone', `%${digits}%`);
                   }
 
                   // Update column header with new name
