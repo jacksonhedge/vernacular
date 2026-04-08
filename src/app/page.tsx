@@ -126,10 +126,10 @@ export default function LandingPage() {
           position: 'absolute', right: 48, top: 60, width: 360,
           display: 'flex', flexDirection: 'column', gap: 12,
         }}>
-          <Bubble align="right" delay={400}>Hey! This is Jackson from Betting Hero. Wanted to check if you&apos;re interested in testing a new sportsbook app this week?</Bubble>
-          <Bubble align="left" delay={1200}>Yeah for sure, what&apos;s involved?</Bubble>
-          <Bubble align="right" delay={2000}>Just download the app, make a test deposit of $20, and give us feedback. We&apos;ll send you $50 for your time 🙌</Bubble>
-          <Bubble align="left" delay={2800}>I&apos;m in, send me the link</Bubble>
+          <Bubble align="left" delay={400}>Hey, I&apos;m having trouble resetting my password. Can you help?</Bubble>
+          <Bubble align="right" delay={1200}>Of course! I just sent a reset link to your email. You should see it within 60 seconds. Let me know if it doesn&apos;t come through 👍</Bubble>
+          <Bubble align="left" delay={2000}>Got it, that worked. Thanks!</Bubble>
+          <Bubble align="right" delay={2800}>Happy to help. Anything else I can do for you?</Bubble>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Delivered via iMessage · Blue Bubble</span>
           </div>
