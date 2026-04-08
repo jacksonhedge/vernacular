@@ -53,20 +53,20 @@ export async function GET() {
         </div>
 
         {/* Branding */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: '#fff' }} />
-              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.6)' }} />
-              <div style={{ width: '16px', height: '16px', borderRadius: '8px', background: 'rgba(255,255,255,0.3)' }} />
-            </div>
-            <span style={{ color: '#fff', fontSize: '36px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-              Vernacular
-            </span>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '12px' }}>
           <span style={{ color: '#fff', fontSize: '52px', fontWeight: 800, letterSpacing: '-0.03em' }}>
             The iMessage Internet Protocol
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.8)' }} />
+              <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.5)' }} />
+              <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.25)' }} />
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.01em' }}>
+              Vernacular
+            </span>
+          </div>
         </div>
       </div>
     ),
