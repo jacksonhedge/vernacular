@@ -407,6 +407,7 @@ export default function DashboardPage() {
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
   const [craigNavigating, setCraigNavigating] = useState(false);
+  const [selectedInitiative, setSelectedInitiative] = useState<string | null>(null);
   const [craigPos, setCraigPos] = useState({ x: 0, y: 0 }); // 0,0 = center (relative)
   const [craigDragging, setCraigDragging] = useState(false);
   const [showTokenUsage, setShowTokenUsage] = useState(false);
@@ -7415,243 +7416,150 @@ button:active { transform: scale(0.98); }`}</style>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Responder</h2>
-              <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Configure AI-powered messaging agents for your conversations</p>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Initiatives</h2>
+              <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Each initiative is an AI-powered project with its own memory, tone, and knowledge.</p>
             </div>
+            <button onClick={() => setSelectedInitiative('new')} style={{ ...primaryBtnStyle, fontSize: 13 }}>+ Create Initiative</button>
           </div>
 
-          {/* Sub-tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 3, width: 'fit-content' }}>
-            {([
-              { key: 'agents' as const, label: 'Agents' },
-              { key: 'goals' as const, label: 'Goals' },
-              { key: 'knowledge' as const, label: 'Knowledge Base' },
-              { key: 'usage' as const, label: 'Usage' },
-            ]).map(t => (
-              <button key={t.key} onClick={() => setAiResponderTab(t.key)} style={{
-                padding: '8px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600,
-                background: aiResponderTab === t.key ? '#fff' : 'transparent',
-                color: aiResponderTab === t.key ? '#1c1c1e' : '#8e8e93',
-                boxShadow: aiResponderTab === t.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}>{t.label}</button>
+          {/* Initiative Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {[
+              { id: 'support', icon: '💬', name: 'Customer Support Tickets', type: 'Support', desc: 'AI handles inbound support questions, resolves tickets, escalates when needed.', status: 'active', agents: 1, convos: 0, color: '#60A5FA' },
+              { id: 'outreach', icon: '📱', name: 'Sales Outreach', type: 'Outreach', desc: 'Cold outreach and follow-ups to new prospects. AI drafts personalized messages.', status: 'active', agents: 1, convos: 0, color: '#6EE7B7' },
+              { id: 'testing', icon: '🧪', name: 'Tester Recruitment', type: 'Testing', desc: 'Recruit app testers, screen for eligibility, distribute test builds and collect feedback.', status: 'active', agents: 1, convos: 3, color: '#FFC107' },
+              { id: 'vip', icon: '🎰', name: 'VIP Re-engagement', type: 'VIP', desc: 'Win back dormant VIP contacts with exclusive promos and personalized check-ins.', status: 'draft', agents: 0, convos: 0, color: '#A78BFA' },
+            ].map(init => (
+              <div key={init.id} onClick={() => setSelectedInitiative(init.id)}
+                style={{
+                  ...cardStyle, padding: 0, cursor: 'pointer', overflow: 'hidden',
+                  border: `1px solid ${init.color}20`, transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${init.color}15`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                {/* Color bar */}
+                <div style={{ height: 4, background: init.color }} />
+                <div style={{ padding: '20px 20px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 24 }}>{init.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>{init.name}</div>
+                      <div style={{ fontSize: 11, color: init.color, fontWeight: 600 }}>{init.type}</div>
+                    </div>
+                    <span style={{
+                      fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
+                      background: init.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
+                      color: init.status === 'active' ? '#22C55E' : '#8e8e93',
+                      textTransform: 'uppercase',
+                    }}>{init.status}</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: '0 0 12px' }}>{init.desc}</p>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#8e8e93' }}>
+                    <span>{init.agents} agent{init.agents !== 1 ? 's' : ''}</span>
+                    <span>{init.convos} conversation{init.convos !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
 
-          {/* Knowledge Base Tab */}
-          {aiResponderTab === 'knowledge' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* FAQ Section */}
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>FAQs</div>
-                    <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>Teach the AI common questions and answers. Matched FAQs skip the API entirely.</p>
-                  </div>
-                  <button style={{ ...primaryBtnStyle, fontSize: 12 }}>+ Add FAQ</button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { q: 'How do I reset my password?', a: 'Go to Settings → Security → Reset Password. You\'ll receive an email link.', uses: 12 },
-                    { q: 'What are your business hours?', a: 'We\'re available Mon-Fri, 9 AM - 6 PM EST. AI support is available 24/7.', uses: 8 },
-                    { q: 'How do I get started with testing?', a: 'Download the app, create an account, and our coordinator will walk you through the first test.', uses: 5 },
-                  ].map(faq => (
-                    <div key={faq.q} style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', background: '#fafbfc' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 4 }}>{faq.q}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{faq.a}</div>
-                      <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>Used {faq.uses} times</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* Selected Initiative Detail */}
+          {selectedInitiative && selectedInitiative !== 'new' && (
+            <div style={{ marginTop: 20 }}>
+              <button onClick={() => setSelectedInitiative(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
+                color: '#378ADD', fontWeight: 600, marginBottom: 16, padding: 0,
+              }}>← Back to Initiatives</button>
 
-              {/* Upload Knowledge Files */}
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>Knowledge Files</div>
-                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 16px' }}>Upload documents for the AI to reference when crafting responses. PDFs, text files, CSVs.</p>
-                <div style={{
-                  padding: 24, borderRadius: 12, border: '2px dashed rgba(0,0,0,0.1)',
-                  textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.01)',
-                }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#378ADD' }}>Drop files here or click to upload</div>
-                  <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>PDF, TXT, CSV, DOCX — max 10MB each</div>
-                </div>
-              </div>
-
-              {/* Previous Successful Conversations (for App Testing) */}
-              {activeAccountView === 'app_testing' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {/* Memory */}
                 <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>Successful Test Conversations</div>
-                  <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 16px' }}>Reference conversations where testers were successfully recruited and completed testing.</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🧠 Memory
+                  </div>
+                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>What the AI remembers about this initiative. Auto-populated from conversations.</p>
+                  <textarea placeholder="e.g., Brady Walsh prefers texts over calls. Completed 3 tests successfully. Located in Michigan." style={{
+                    width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.08)', fontSize: 12, outline: 'none', resize: 'vertical',
+                    fontFamily: "'Inter', sans-serif",
+                  }} />
+                </div>
+
+                {/* Tone */}
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🎨 Tone
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {[
-                      { contact: 'Brady Walsh', outcome: 'Completed $100 deposit test', msgs: 9, date: 'Apr 6' },
-                      { contact: '+1 (978) 376-5177', outcome: 'Agreed to testing, awaiting deposit', msgs: 4, date: 'Apr 5' },
-                    ].map(c => (
-                      <div key={c.contact} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)', background: 'rgba(34,197,94,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{c.contact}</div>
-                          <div style={{ fontSize: 11, color: '#22C55E' }}>{c.outcome}</div>
+                      { label: 'Formality', min: 'Casual', max: 'Professional' },
+                      { label: 'Warmth', min: 'Direct', max: 'Empathetic' },
+                      { label: 'Verbosity', min: 'Brief', max: 'Detailed' },
+                    ].map(s => (
+                      <div key={s.label}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8e8e93', marginBottom: 4 }}>
+                          <span>{s.min}</span><span style={{ fontWeight: 600, color: '#1c1c1e' }}>{s.label}</span><span>{s.max}</span>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 11, color: '#8e8e93' }}>{c.msgs} messages</div>
-                          <div style={{ fontSize: 10, color: '#c4c4c6' }}>{c.date}</div>
-                        </div>
+                        <input type="range" min="1" max="5" defaultValue="3" style={{ width: '100%', accentColor: '#378ADD' }} />
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Goals Tab */}
-          {aiResponderTab === 'goals' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Default Conversation Goal</div>
-                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 12px' }}>Applied to new conversations unless overridden per-conversation</p>
-                <textarea
-                  placeholder="e.g., Get the contact to make a first deposit of $100+ within 48 hours..."
-                  style={{
-                    width: '100%', minHeight: 80, padding: 12, borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'Inter', sans-serif",
-                    resize: 'vertical', outline: 'none',
-                  }}
-                />
-              </div>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Goal Templates</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {['First Deposit', 'Reactivation', 'VIP Upgrade', 'Event Registration', 'Referral Ask', 'Feedback Collection'].map(g => (
-                    <button key={g} style={{
-                      padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.1)',
-                      background: '#fff', fontSize: 12, fontWeight: 500, color: '#1c1c1e', cursor: 'pointer',
-                    }}>{g}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>Goal Metrics</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                  {[
-                    { label: 'Conversations with Goals', value: columns.filter(c => c.goal).length, total: columns.filter(c => c.contact).length },
-                    { label: 'Goals Achieved (est.)', value: 0, total: columns.filter(c => c.goal).length },
-                    { label: 'Avg Messages to Goal', value: '—', total: null },
-                  ].map(m => (
-                    <div key={m.label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: '#1c1c1e' }}>{typeof m.value === 'number' && m.total ? `${m.value}/${m.total}` : String(m.value)}</div>
-                      <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>{m.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Usage Tab */}
-          {aiResponderTab === 'usage' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                {[
-                  { label: 'AI Drafts This Month', value: '0', icon: '✏️' },
-                  { label: 'AI Auto-Sends', value: '0', icon: '🤖' },
-                  { label: 'Tokens Used', value: '0', icon: '⚡' },
-                ].map(m => (
-                  <div key={m.label} style={{ ...cardStyle, padding: 20, textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, marginBottom: 6 }}>{m.icon}</div>
-                    <div style={{ fontSize: 28, fontWeight: 800, color: '#1c1c1e' }}>{m.value}</div>
-                    <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>{m.label}</div>
+                {/* Instructions */}
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    📋 Instructions
                   </div>
-                ))}
-              </div>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>AI Cost Breakdown</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { action: 'AI draft generated', cost: '$0.0031', count: 0 },
-                    { action: 'AI approved & sent', cost: '$0.25', count: 0 },
-                    { action: 'AI auto-response', cost: '$0.25', count: 0 },
-                  ].map(r => (
-                    <div key={r.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: 13 }}>
-                      <span style={{ color: '#6b7280' }}>{r.action}</span>
-                      <div style={{ display: 'flex', gap: 16 }}>
-                        <span style={{ color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{r.count}×</span>
-                        <span style={{ fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{r.cost}</span>
-                      </div>
-                    </div>
-                  ))}
+                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>System prompt and rules for this initiative.</p>
+                  <textarea placeholder="e.g., You are recruiting app testers for sports betting apps. Screen for state eligibility (must be 21+). Explain compensation ($50 per test). Never promise specific earnings." style={{
+                    width: '100%', minHeight: 100, padding: 10, borderRadius: 8,
+                    border: '1px solid rgba(0,0,0,0.08)', fontSize: 12, outline: 'none', resize: 'vertical',
+                    fontFamily: "'Inter', sans-serif", lineHeight: 1.5,
+                  }} />
                 </div>
-                <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 8, background: 'rgba(55,138,221,0.04)', border: '1px solid rgba(55,138,221,0.1)' }}>
-                  <div style={{ fontSize: 12, color: '#378ADD', fontWeight: 600 }}>
-                    AI is powered by Claude — optimized for speed and cost. You don&apos;t need to choose a model.
+
+                {/* Files */}
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    📁 Files
+                  </div>
+                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>Knowledge documents for this initiative.</p>
+                  <div style={{
+                    padding: 20, borderRadius: 10, border: '2px dashed rgba(0,0,0,0.08)',
+                    textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.01)',
+                  }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>📄</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#378ADD' }}>Drop files or click to upload</div>
+                    <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 4 }}>PDF, TXT, CSV, DOCX</div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Sub-Agents Tab */}
-          {aiResponderTab === 'agents' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>Sub-Agents</div>
-                    <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>Specialized agents that draft and craft messaging for different scenarios</p>
-                  </div>
-                  <button style={{ ...primaryBtnStyle, fontSize: 12 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Create Agent
-                  </button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { name: 'Blinky', role: 'General Responder', desc: 'Handles everyday replies — greetings, status updates, quick questions', mode: 'Draft', conversations: 3, color: '#EF4444' },
-                    { name: 'Pinky', role: 'VIP Closer', desc: 'Focuses on converting prospects — pushes toward deposits, signups, upgrades', mode: 'Draft', conversations: 0, color: '#EC4899' },
-                    { name: 'Inky', role: 'Re-Engagement', desc: 'Follows up with dormant contacts — crafts win-back messages and promos', mode: 'Off', conversations: 0, color: '#3B82F6' },
-                    { name: 'Clyde', role: 'Concierge', desc: 'Handles logistics — scheduling, account questions, support requests', mode: 'Off', conversations: 0, color: '#F59E0B' },
-                  ].map(agent => (
-                    <div key={agent.name} style={{
-                      padding: 16, borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)',
-                      display: 'flex', alignItems: 'center', gap: 14,
-                    }}>
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 10, background: `${agent.color}15`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 20, flexShrink: 0,
-                      }}>
-                        {agent.name === 'Blinky' ? '👻' : agent.name === 'Pinky' ? '🌸' : agent.name === 'Inky' ? '🐙' : '🍊'}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>
-                          {agent.name} <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>— {agent.role}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 2 }}>{agent.desc}</div>
-                      </div>
-                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
-                          background: agent.mode === 'Draft' ? 'rgba(217,119,6,0.1)' : agent.mode === 'Auto' ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
-                          color: agent.mode === 'Draft' ? '#D97706' : agent.mode === 'Auto' ? '#22C55E' : '#8e8e93',
-                          textTransform: 'uppercase',
-                        }}>{agent.mode}</span>
-                        <span style={{ fontSize: 11, color: '#8e8e93' }}>{agent.conversations} convos</span>
-                      </div>
+              {/* Examples Section */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 4 }}>📊 Examples &amp; Learning</div>
+                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 16px' }}>Good and bad examples help the AI learn your preferences.</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>✅ Good Examples</div>
+                      <textarea placeholder={"Example of a GOOD AI response:\n\"Hey! Just saw you signed up — wanted to personally welcome you and see if you have any questions about getting started.\""} style={{
+                        width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
+                        border: '1px solid rgba(34,197,94,0.2)', fontSize: 12, outline: 'none',
+                        resize: 'vertical', fontFamily: "'Inter', sans-serif", background: 'rgba(34,197,94,0.02)',
+                      }} />
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>How Sub-Agents Work</div>
-                <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
-                  Each sub-agent is assigned to specific conversations and uses its own personality, skill set, and goal to craft messages.
-                  In <strong>Draft</strong> mode, the agent writes a response and waits for your approval.
-                  In <strong>Auto</strong> mode, it sends immediately.
-                  Agents share the conversation history but each brings its own expertise — a Closer writes differently than a Concierge.
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', marginBottom: 8 }}>❌ Bad Examples</div>
+                      <textarea placeholder={"Example of a BAD AI response:\n\"Dear valued customer, we are writing to inform you that your account has been created. Please proceed to...\""} style={{
+                        width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
+                        border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, outline: 'none',
+                        resize: 'vertical', fontFamily: "'Inter', sans-serif", background: 'rgba(239,68,68,0.02)',
+                      }} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
