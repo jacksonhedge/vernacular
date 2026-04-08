@@ -8395,7 +8395,7 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
 
             {/* Input — Notion style */}
-            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', background: 'rgba(0,0,0,0.02)' }}>
               <input
                 value={aiCopilotInput}
                 onChange={e => setAiCopilotInput(e.target.value)}
