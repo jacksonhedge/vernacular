@@ -3387,7 +3387,7 @@ button:active { transform: scale(0.98); }`}</style>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
         </div>
-        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '8px 16px 16px', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', gap: 0, overflow: 'auto', overflowX: 'auto', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
         {(() => {
           // Sort: pinned first, then unread, then the rest
           const sorted = [...columns].sort((a, b) => {
@@ -3405,9 +3405,9 @@ button:active { transform: scale(0.98); }`}</style>
           return visible;
         })().map(col => (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
-            width: 360, minWidth: 360, height: '100%', display: 'flex', flexDirection: 'column',
+            width: 340, minWidth: 340, height: '100%', display: 'flex', flexDirection: 'column',
             background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)',
-            marginRight: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+            marginRight: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
           }}>
             {/* Column Header */}
             <div style={{
