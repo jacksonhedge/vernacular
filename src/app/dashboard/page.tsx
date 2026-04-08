@@ -8454,7 +8454,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
               {/* Bottom toolbar — Notion style */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <button title="Attach files" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 16 }}>+</button>
+                  <button title="Add images, PDFs, or CSVs — Coming Soon" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d4d4d4', fontSize: 16 }}>+</button>
                   <button title="Settings" onClick={() => {
                     const permsEl = document.getElementById('craig-perms');
                     if (permsEl) permsEl.style.display = permsEl.style.display === 'none' ? 'flex' : 'none';
@@ -8463,17 +8463,25 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as 'haiku' | 'sonnet' | 'opus')}
+                  <select value={aiCopilotModel} onChange={e => {
+                    const val = e.target.value;
+                    if (val === 'haiku' || val === 'sonnet' || val === 'opus') setAiCopilotModel(val);
+                  }}
                     style={{
                       padding: '4px 8px', borderRadius: 6, border: 'none',
-                      fontSize: 12, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none',
                       background: 'transparent', color: '#8e8e93',
                     }}>
                     <option value="haiku">Auto</option>
-                    <option value="sonnet">Sonnet</option>
-                    <option value="opus">Opus</option>
+                    <option value="haiku" style={{ color: '#1c1c1e' }}>Claude Haiku 3.5</option>
+                    <option value="sonnet" style={{ color: '#1c1c1e' }}>Claude Sonnet 4.6</option>
+                    <option value="opus" style={{ color: '#1c1c1e' }}>Claude Opus 4.6</option>
+                    <option disabled style={{ color: '#c4c4c6' }}>─────────</option>
+                    <option disabled style={{ color: '#c4c4c6' }}>GPT-5.2 — Coming Soon</option>
+                    <option disabled style={{ color: '#c4c4c6' }}>GPT-5.4 — Coming Soon</option>
+                    <option disabled style={{ color: '#c4c4c6' }}>Gemini 3.1 Pro — Coming Soon</option>
                   </select>
-                  <button style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93' }}>
+                  <button title="Voice input — Coming Soon" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d4d4d4' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
                   </button>
                   <button onClick={() => {
