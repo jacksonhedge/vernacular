@@ -8117,7 +8117,7 @@ button:active { transform: scale(0.98); }`}</style>
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: showAICopilot ? '0 4px 16px rgba(245,158,11,0.4)' : '0 1px 4px rgba(0,0,0,0.08)',
             transition: 'all 0.2s',
-          }} title="AI Copilot (Pac-Man)">
+          }} title="Craig — AI Copilot">
             <svg width="26" height="26" viewBox="0 0 100 100">
               <path d={showAICopilot
                 ? "M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 Z"
@@ -8140,10 +8140,13 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Header */}
             <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 18 }}>🟡</span>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ fontSize: 18 }}>🟡</span>
+                  <div style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: 4, background: '#22C55E', border: '2px solid #fff' }} />
+                </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>AI Copilot</div>
-                  <div style={{ fontSize: 10, color: '#8e8e93' }}>Powered by Claude</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Craig</div>
+                  <div style={{ fontSize: 10, color: '#22C55E', fontWeight: 600 }}>● Online</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -8194,7 +8197,7 @@ button:active { transform: scale(0.98); }`}</style>
               {aiCopilotMessages.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 20, color: '#8e8e93' }}>
                   <div style={{ fontSize: 28, marginBottom: 8 }}>🟡</div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Ask me anything</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Hey, I&apos;m Craig</div>
                   <div style={{ fontSize: 11, marginTop: 4 }}>&quot;Send Brady a follow-up&quot; · &quot;How many texts today?&quot; · &quot;Draft a promo message&quot;</div>
                 </div>
               )}
@@ -8235,7 +8238,7 @@ button:active { transform: scale(0.98); }`}</style>
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
                           model: aiCopilotModel,
-                          systemPrompt: `You are Pac-Man, the AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
+                          systemPrompt: `You are Craig, the AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
 
 Current tab: ${activeTab}
 Permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}, ${aiPermissions.viewConversations ? 'CAN view conversations' : 'CANNOT view conversations'}
