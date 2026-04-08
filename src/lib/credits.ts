@@ -40,6 +40,9 @@ export const ACTION_COSTS_CENTS = {
   contact_enrichment: 25,      // $0.25
   bulk_blast: 5,               // $0.05
   ai_chat: 10,                 // $0.10
+  ai_chat_history_load: 5,     // $0.05 — loading previous AI chat
+  ai_tone_analysis: 50,        // $0.50 — tone profile generation
+  ai_contact_update: 1,        // $0.01 — AI-initiated contact update
 } as const;
 
 // Monthly minimums in cents by account type
