@@ -150,6 +150,19 @@ const MOCK_CONTACTS: Contact[] = [
 
 // ── Nav Config ──────────────────────────────────────────────────────────────
 
+// Which plans can access which tabs. Empty = available to all.
+const TAB_PERMISSIONS: Record<NavTab, string[]> = {
+  'dashboard': [],           // all plans
+  'conversations': [],       // all plans
+  'contacts': [],            // all plans
+  'team': [],                // all plans
+  'stations': ['vip_manager', 'sales_outreach', 'app_testing'], // seat-based only
+  'ai-drafts': ['vip_manager', 'sales_outreach', 'app_testing', 'customer_support'],
+  'integrations': [],        // all plans
+  'profile': [],             // all plans
+  'settings': [],            // all plans
+};
+
 const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: string }[] = [
   {
     label: 'Dashboard',
@@ -8005,7 +8018,14 @@ button:active { transform: scale(0.98); }`}</style>
 
         {/* Nav Items */}
         <nav style={{ flex: 1, padding: '6px 10px', overflowY: 'auto' }}>
-          {NAV_ITEMS.map(item => {
+          {NAV_ITEMS.filter(item => {
+            const perms = TAB_PERMISSIONS[item.tab];
+            if (!perms || perms.length === 0) return true; // available to all
+            const orgTypes: string[] = (org?.account_type as string[]) || ['general'];
+            // Show if org has ANY matching plan, or if viewing 'all' and org has any plan
+            if (activeAccountView === 'all') return perms.some(p => orgTypes.includes(p)) || orgTypes.includes('general');
+            return perms.includes(activeAccountView);
+          }).map(item => {
             const isActive = activeTab === item.tab;
             const isHovered = hoveredNav === item.label;
             return (
