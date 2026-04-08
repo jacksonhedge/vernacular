@@ -3388,7 +3388,7 @@ button:active { transform: scale(0.98); }`}</style>
             const totalCols = columns.filter(c => c.contact).length;
             if (totalCols <= 2) return null;
             return (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, margin: '0 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 8px', width: 120, minWidth: 120, maxWidth: 120 }}>
                 <button onClick={() => {
                   const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
                   if (el) el.scrollBy({ left: -350, behavior: 'smooth' });
