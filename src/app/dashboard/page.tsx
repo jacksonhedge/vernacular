@@ -3959,20 +3959,24 @@ button:active { transform: scale(0.98); }`}</style>
                       </button>
                     );
                   })()}
-                  <input
+                  <textarea
                     value={inputValues[col.id] || ''}
                     onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter') sendMessage(col.id); }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(col.id); } }}
+                    onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px'; }}
                     placeholder={(() => {
                       const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
                       const ghost = ghostConfig[Math.max(0, colIdx) % ghostConfig.length];
                       const mode = aiResponseMode[col.id] || 'off';
                       return mode === 'auto' ? `${ghost.name} auto-responding...` : mode === 'draft' ? `${ghost.name} will draft replies...` : 'Type a message...';
                     })()}
+                    rows={1}
                     style={{
                       flex: 1, padding: '9px 12px', borderRadius: 8,
                       border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
                       fontFamily: "'Inter', sans-serif", outline: 'none', background: '#f8f9fa',
+                      resize: 'none', overflow: 'hidden', lineHeight: 1.4,
+                      minHeight: 36, maxHeight: 120,
                     }}
                   />
                   {/* Schedule button */}
