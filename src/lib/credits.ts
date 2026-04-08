@@ -1,50 +1,90 @@
 /**
- * Credit tracking and deduction for Vernacular billing.
- * Every billable action goes through this module.
+ * Vernacular Billing — Usage-based pricing with monthly minimums.
+ *
+ * Pricing Model:
+ * - VIP Manager:     $1,500/mo minimum per line, overage billed per action
+ * - Sales/Outreach:  $1,500/mo minimum per seat, overage billed per action
+ * - App Testing:     $1,222/mo minimum per seat, overage billed per action
+ * - Customer Support: $500 setup fee, then $1.25 per resolved ticket (no monthly minimum)
+ *
+ * Usage costs (included in monthly minimum, overage charged above):
+ * - New conversation opened:        $0.99
+ * - Text sent (human):              $0.03
+ * - Text received:                  $0.00 (free)
+ * - AI draft generated:             $0.10
+ * - AI draft approved & sent:       $0.25
+ * - AI auto-send:                   $0.25
+ * - Support ticket resolved:        $1.25
+ * - Contact import:                 $0.05
+ * - Widget handoff to iMessage:     $0.50
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
 
-// Credit costs per action
-export const CREDIT_COSTS = {
-  send_imessage: 3,
-  send_email: 3,
-  receive_message: 0,
-  new_contact: 250,
-  new_contact_widget: 300,
-  ai_draft: 15,
-  ai_auto_response: 20,
-  ai_sentiment: 10,
-  widget_handoff: 50,
-  contact_enrichment: 500,
-  bulk_blast: 5,
-  contact_import: 250,
+// Costs in cents per action
+export const ACTION_COSTS_CENTS = {
+  new_conversation: 99,        // $0.99
+  send_imessage: 3,            // $0.03
+  send_email: 3,               // $0.03
+  receive_message: 0,          // free
+  ai_draft: 10,                // $0.10
+  ai_auto_response: 25,        // $0.25
+  ai_draft_approved: 25,       // $0.25
+  support_ticket_resolved: 125, // $1.25
+  contact_import: 5,           // $0.05
+  new_contact: 5,              // $0.05
+  new_contact_widget: 5,       // $0.05
+  widget_handoff: 50,          // $0.50
+  ai_sentiment: 5,             // $0.05
+  contact_enrichment: 25,      // $0.25
+  bulk_blast: 5,               // $0.05
+  ai_chat: 10,                 // $0.10
 } as const;
 
-export type CreditAction = keyof typeof CREDIT_COSTS;
+// Monthly minimums in cents by account type
+export const MONTHLY_MINIMUMS_CENTS: Record<string, number> = {
+  vip_manager: 150000,        // $1,500
+  sales_outreach: 150000,     // $1,500
+  app_testing: 122200,        // $1,222
+  customer_support: 0,        // No monthly minimum (per-ticket only)
+  general: 0,                 // No minimum
+};
+
+// Setup fees in cents
+export const SETUP_FEES_CENTS: Record<string, number> = {
+  vip_manager: 100000,        // $1,000
+  sales_outreach: 100000,     // $1,000
+  app_testing: 100000,        // $1,000
+  customer_support: 50000,    // $500
+  general: 0,
+};
+
+export type BillingAction = keyof typeof ACTION_COSTS_CENTS;
+
+// Legacy alias
+export const CREDIT_COSTS = ACTION_COSTS_CENTS;
+export type CreditAction = BillingAction;
 
 /**
- * Deduct credits from an organization's balance.
- * Logs the usage to credit_usage table.
- * Returns true if credits were available, false if over limit.
+ * Log a billable action and update the org's running total.
  */
 export async function deductCredits(
   supabase: SupabaseClient,
   orgId: string,
-  action: CreditAction,
+  action: BillingAction,
   description?: string,
   contactId?: string,
   messageId?: string,
-): Promise<{ success: boolean; creditsUsed: number; remaining: number }> {
-  const cost = CREDIT_COSTS[action];
+): Promise<{ success: boolean; creditsUsed: number; remaining: number; costCents: number }> {
+  const costCents = ACTION_COSTS_CENTS[action] || 0;
 
-  if (cost === 0) return { success: true, creditsUsed: 0, remaining: -1 };
+  if (costCents === 0) return { success: true, creditsUsed: 0, remaining: -1, costCents: 0 };
 
-  // Log the usage
+  // Log the usage with dollar amount
   await supabase.from('credit_usage').insert({
     organization_id: orgId,
     action,
-    credits_used: cost,
+    credits_used: costCents,
     description: description || action.replace(/_/g, ' '),
     contact_id: contactId || null,
     message_id: messageId || null,
@@ -57,8 +97,8 @@ export async function deductCredits(
     .eq('id', orgId)
     .single();
 
-  const newUsed = (org?.credits_used_this_month || 0) + cost;
-  const balance = org?.credits_balance || 50000;
+  const newUsed = (org?.credits_used_this_month || 0) + costCents;
+  const balance = org?.credits_balance || 0;
 
   await supabase
     .from('organizations')
@@ -67,31 +107,49 @@ export async function deductCredits(
 
   return {
     success: true,
-    creditsUsed: cost,
+    creditsUsed: costCents,
     remaining: balance - newUsed,
+    costCents,
   };
 }
 
 /**
- * Get credit usage summary for an organization
+ * Get billing summary for an organization.
+ * Shows monthly minimum, usage, overage.
  */
 export async function getCreditSummary(
   supabase: SupabaseClient,
   orgId: string,
 ): Promise<{
-  balance: number;
-  used: number;
-  remaining: number;
-  breakdown: Record<string, number>;
+  monthlyMinimumCents: number;
+  usageCents: number;
+  overageCents: number;
+  totalDueCents: number;
+  breakdown: Record<string, { count: number; totalCents: number }>;
 }> {
   const { data: org } = await supabase
     .from('organizations')
-    .select('credits_balance, credits_used_this_month')
+    .select('credits_used_this_month, account_type')
     .eq('id', orgId)
     .single();
 
-  const balance = org?.credits_balance || 50000;
-  const used = org?.credits_used_this_month || 0;
+  const usageCents = org?.credits_used_this_month || 0;
+  const accountTypes: string[] = org?.account_type || ['general'];
+
+  // Use highest monthly minimum if org has multiple types
+  const monthlyMinimumCents = Math.max(
+    ...accountTypes.map(t => MONTHLY_MINIMUMS_CENTS[t] || 0)
+  );
+
+  // Overage = usage above monthly minimum (only if there IS a minimum)
+  const overageCents = monthlyMinimumCents > 0
+    ? Math.max(0, usageCents - monthlyMinimumCents)
+    : 0;
+
+  // Total due = max(minimum, usage) for seat-based, or just usage for per-ticket
+  const totalDueCents = monthlyMinimumCents > 0
+    ? Math.max(monthlyMinimumCents, usageCents)
+    : usageCents;
 
   // Get breakdown by action type this month
   const { data: usage } = await supabase
@@ -100,10 +158,12 @@ export async function getCreditSummary(
     .eq('organization_id', orgId)
     .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
 
-  const breakdown: Record<string, number> = {};
+  const breakdown: Record<string, { count: number; totalCents: number }> = {};
   for (const row of usage || []) {
-    breakdown[row.action] = (breakdown[row.action] || 0) + row.credits_used;
+    if (!breakdown[row.action]) breakdown[row.action] = { count: 0, totalCents: 0 };
+    breakdown[row.action].count++;
+    breakdown[row.action].totalCents += row.credits_used;
   }
 
-  return { balance, used, remaining: balance - used, breakdown };
+  return { monthlyMinimumCents, usageCents, overageCents, totalDueCents, breakdown };
 }
