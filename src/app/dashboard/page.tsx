@@ -7511,6 +7511,96 @@ button:active { transform: scale(0.98); }`}</style>
           </div>
 
           {/* Selected Initiative Detail */}
+          {/* Create New Initiative */}
+          {selectedInitiative === 'new' && (
+            <div style={{ marginTop: 20 }}>
+              <button onClick={() => setSelectedInitiative(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
+                color: '#378ADD', fontWeight: 600, marginBottom: 16, padding: 0,
+              }}>← Back to Initiatives</button>
+
+              <div style={{ ...cardStyle, padding: 24 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1c1c1e', marginBottom: 20 }}>Create New Initiative</div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>Initiative Name</label>
+                    <input id="init-name" placeholder="e.g., VIP Re-engagement Campaign" style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 14, outline: 'none', fontFamily: "'Inter', sans-serif",
+                    }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>Type</label>
+                    <select id="init-type" style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 14, outline: 'none', background: '#fff', cursor: 'pointer',
+                    }}>
+                      <option value="support">💬 Customer Support</option>
+                      <option value="outreach">📱 Sales & Outreach</option>
+                      <option value="testing">🧪 App Testing</option>
+                      <option value="vip">🎰 VIP Management</option>
+                      <option value="custom">⚡ Custom</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>Description</label>
+                    <textarea id="init-desc" placeholder="What is this initiative about? What should the AI do?" rows={3} style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif", resize: 'vertical',
+                    }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>Instructions (System Prompt)</label>
+                    <textarea id="init-instructions" placeholder="e.g., You are recruiting app testers. Screen for 21+ age. Explain $50 compensation per test. Never promise specific earnings." rows={4} style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif", resize: 'vertical', lineHeight: 1.5,
+                    }} />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 6 }}>Default Conversation Goal</label>
+                    <input id="init-goal" placeholder="e.g., Get the contact to complete a test deposit" style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 14, outline: 'none', fontFamily: "'Inter', sans-serif",
+                    }} />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    <button onClick={async () => {
+                      const name = (document.getElementById('init-name') as HTMLInputElement)?.value;
+                      const type = (document.getElementById('init-type') as HTMLSelectElement)?.value;
+                      const desc = (document.getElementById('init-desc') as HTMLTextAreaElement)?.value;
+                      const instructions = (document.getElementById('init-instructions') as HTMLTextAreaElement)?.value;
+                      const goal = (document.getElementById('init-goal') as HTMLInputElement)?.value;
+                      if (!name) { window.alert('Name is required'); return; }
+                      const orgId = getOrgId();
+                      if (orgId) {
+                        await supabase.from('org_knowledge').insert({
+                          organization_id: orgId,
+                          title: name,
+                          content: `Type: ${type}\nDescription: ${desc}\nInstructions: ${instructions}\nGoal: ${goal}`,
+                          category: 'initiative',
+                        });
+                      }
+                      window.alert(`Initiative "${name}" created!`);
+                      setSelectedInitiative(null);
+                    }} style={{ ...primaryBtnStyle, flex: 1, justifyContent: 'center', fontSize: 14, padding: '12px 0' }}>
+                      Create Initiative
+                    </button>
+                    <button onClick={() => setSelectedInitiative(null)} style={{
+                      flex: 1, padding: '12px 0', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                      background: '#fff', fontSize: 14, fontWeight: 600, color: '#6b7280', cursor: 'pointer',
+                    }}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {selectedInitiative && selectedInitiative !== 'new' && (
             <div style={{ marginTop: 20 }}>
               <button onClick={() => setSelectedInitiative(null)} style={{

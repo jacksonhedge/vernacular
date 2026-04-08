@@ -53,6 +53,23 @@ export async function GET() {
 
       if (!contactId) { errors++; errorDetails.push(`${msg.contact_phone}: no contactId`); continue; }
 
+      // Auto-detect Venmo, email, and other profile info from inbound messages
+      const msgText = msg.message || '';
+      const venmoMatch = msgText.match(/@([A-Za-z0-9_-]{3,30})/);
+      const emailMatch = msgText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+      if (venmoMatch || emailMatch) {
+        const updateData: Record<string, string> = {};
+        if (venmoMatch && (msgText.toLowerCase().includes('venmo') || msgText.toLowerCase().includes('pay me') || msgText.toLowerCase().includes('send to'))) {
+          updateData.venmo_handle = venmoMatch[1];
+        }
+        if (emailMatch) {
+          updateData.email = emailMatch[1];
+        }
+        if (Object.keys(updateData).length > 0) {
+          await supabase.from('contacts').update(updateData).eq('id', contactId);
+        }
+      }
+
       // Log activity + update engagement (inbound only)
       const dir = (msg.direction || '').toLowerCase();
       if (dir === 'inbound') {
