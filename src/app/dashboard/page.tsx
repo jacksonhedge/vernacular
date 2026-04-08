@@ -8227,8 +8227,21 @@ button:active { transform: scale(0.98); }`}</style>
                   {m.role === 'assistant' && (
                     <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
                       <button onClick={() => {
+                        // Find the user message that triggered this response
+                        const prevUserMsg = aiCopilotMessages.slice(0, i).reverse().find(msg => msg.role === 'user');
+                        const thread = aiCopilotMessages.slice(Math.max(0, i - 4), i + 1).map(msg => `${msg.role}: ${msg.text}`).join('\n');
                         fetch('/api/ai/draft-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ aiDraft: m.text, action: 'approved', wasGood: true, tags: ['liked'] })
+                          body: JSON.stringify({
+                            aiDraft: m.text,
+                            action: 'approved',
+                            wasGood: true,
+                            tags: ['liked', 'copilot'],
+                            inboundMessage: prevUserMsg?.text || '',
+                            organizationId: (user?.organizations as Record<string, unknown>)?.id || null,
+                            modelUsed: aiCopilotModel,
+                            personaName: 'Craig',
+                            conversationGoal: `Thread:\n${thread}`,
+                          })
                         });
                         setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text + ' 👍' } : msg));
                       }} title="Good response" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#c4c4c6', padding: '2px 4px', borderRadius: 4 }}
@@ -8237,8 +8250,21 @@ button:active { transform: scale(0.98); }`}</style>
                       <button onClick={() => {
                         const reason = window.prompt('What was wrong with this response?');
                         if (reason !== null) {
+                          const prevUserMsg = aiCopilotMessages.slice(0, i).reverse().find(msg => msg.role === 'user');
+                          const thread = aiCopilotMessages.slice(Math.max(0, i - 4), i + 1).map(msg => `${msg.role}: ${msg.text}`).join('\n');
                           fetch('/api/ai/draft-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ aiDraft: m.text, action: 'rejected', wasGood: false, rejectionReason: reason, tags: ['disliked'] })
+                            body: JSON.stringify({
+                              aiDraft: m.text,
+                              action: 'rejected',
+                              wasGood: false,
+                              rejectionReason: reason,
+                              tags: ['disliked', 'copilot'],
+                              inboundMessage: prevUserMsg?.text || '',
+                              organizationId: (user?.organizations as Record<string, unknown>)?.id || null,
+                              modelUsed: aiCopilotModel,
+                              personaName: 'Craig',
+                              conversationGoal: `Thread:\n${thread}`,
+                            })
                           });
                           setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text + ' 👎' } : msg));
                         }
