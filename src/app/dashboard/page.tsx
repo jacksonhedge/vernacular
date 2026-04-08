@@ -406,6 +406,7 @@ export default function DashboardPage() {
   const [aiCopilotLoading, setAiCopilotLoading] = useState(false);
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
+  const [craigNavigating, setCraigNavigating] = useState(false);
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -8246,11 +8247,40 @@ Stations: ${stations.map(s => s.name + ' (' + s.status + ')').join(', ') || 'non
 Contacts: ${contacts.length} total
 Active conversations: ${allConversations.filter(c => c.messages.length > 0).length}
 
-You can suggest navigating to different tabs. Be concise — 2-3 sentences max. Use emoji occasionally. If they ask to send a message and sendMessages permission is OFF, tell them to enable it first.`,
+When the user asks to go to a page, say "Navigating to [tab name]..." or "Taking you to [tab name]..." — the system will detect this and actually switch tabs. Available tabs: dashboard, conversations, contacts, team, phone lines, ai responder, integrations, profile, settings.
+
+Be concise — 2-3 sentences max. Use emoji occasionally. If they ask to send a message and sendMessages permission is OFF, tell them to enable it first.`,
                         }),
                       });
                       const data = await res.json();
-                      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: data.content || 'Sorry, I couldn\'t process that.' }]);
+                      const reply = data.content || 'Sorry, I couldn\'t process that.';
+                      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+
+                      // Check for navigation commands in Craig's response
+                      const navMap: Record<string, NavTab> = {
+                        'dashboard': 'dashboard', 'conversations': 'conversations', 'contacts': 'contacts',
+                        'team': 'team', 'phone lines': 'stations', 'stations': 'stations',
+                        'ai responder': 'ai-drafts', 'integrations': 'integrations',
+                        'profile': 'profile', 'settings': 'settings',
+                      };
+                      const lowerReply = reply.toLowerCase();
+                      for (const [keyword, tab] of Object.entries(navMap)) {
+                        if ((lowerReply.includes('navigat') || lowerReply.includes('going to') || lowerReply.includes('switching to') || lowerReply.includes('taking you')) && lowerReply.includes(keyword)) {
+                          setCraigNavigating(true);
+                          setTimeout(() => { setActiveTab(tab); setCraigNavigating(false); }, 800);
+                          break;
+                        }
+                      }
+
+                      // Check for direct navigation requests in user input
+                      const lowerInput = text.toLowerCase();
+                      for (const [keyword, tab] of Object.entries(navMap)) {
+                        if ((lowerInput.includes('go to') || lowerInput.includes('open') || lowerInput.includes('show me') || lowerInput.includes('navigate') || lowerInput.includes('switch to')) && lowerInput.includes(keyword)) {
+                          setCraigNavigating(true);
+                          setTimeout(() => { setActiveTab(tab); setCraigNavigating(false); }, 800);
+                          break;
+                        }
+                      }
                     } catch {
                       setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: 'Something went wrong.' }]);
                     }
@@ -8304,6 +8334,28 @@ You can suggest navigating to different tabs. Be concise — 2-3 sentences max. 
         )}
 
         {renderContent()}
+
+        {/* Craig navigation overlay */}
+        {craigNavigating && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 40,
+            background: 'rgba(245,158,11,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'craigNav 0.8s ease-in-out',
+            pointerEvents: 'none',
+          }}>
+            <div style={{
+              background: 'rgba(245,158,11,0.15)', borderRadius: 20, padding: '16px 32px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: '0 4px 20px rgba(245,158,11,0.2)',
+            }}>
+              <span style={{ fontSize: 24 }}>🟡</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#D97706' }}>Craig is navigating...</span>
+            </div>
+          </div>
+        )}
+
+        <style>{`@keyframes craigNav { 0% { opacity: 0; } 30% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }`}</style>
       </main>
 
       {/* Global Invite Modal */}
