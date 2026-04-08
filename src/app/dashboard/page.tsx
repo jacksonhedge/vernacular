@@ -2036,43 +2036,6 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
         {conversationViewMode === 'streams' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {/* AI Mode Toggle */}
-            <button onClick={() => {
-              if (!aiModeEnabled) { setShowAiModePanel(true); } else { setAiModeEnabled(false); setShowAiModePanel(false); }
-            }} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: aiModeEnabled
-                ? 'linear-gradient(135deg, #7C3AED, #6D28D9)'
-                : 'rgba(0,0,0,0.06)',
-              color: aiModeEnabled ? '#fff' : '#1c1c1e',
-              fontSize: 12, fontWeight: 700, fontFamily: "'Inter', sans-serif",
-              boxShadow: aiModeEnabled ? '0 2px 8px rgba(124,58,237,0.35)' : 'none',
-              transition: 'all 0.2s',
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 4V2" /><path d="M15 16v-2" /><path d="M8 9h2" /><path d="M20 9h2" />
-                <path d="M17.8 11.8L22 8l-4-4-14 14 4 4 9.8-9.8" />
-              </svg>
-              AI Mode {aiModeEnabled ? 'ON' : 'OFF'}
-              {aiModeEnabled && (
-                <div style={{
-                  width: 6, height: 6, borderRadius: 3, background: '#22C55E',
-                  boxShadow: '0 0 6px rgba(34,197,94,0.6)',
-                }} />
-              )}
-            </button>
-            {aiModeEnabled && (
-              <button onClick={() => setShowAiModePanel(!showAiModePanel)} style={{
-                padding: '6px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: showAiModePanel ? 'rgba(124,58,237,0.1)' : 'rgba(0,0,0,0.04)',
-                color: '#7C3AED', fontSize: 11, fontWeight: 600,
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
-              </button>
-            )}
             {/* Time Filter */}
             <select value={messageTimeFilter} onChange={e => setMessageTimeFilter(e.target.value as typeof messageTimeFilter)} style={{
               padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
@@ -2150,58 +2113,6 @@ button:active { transform: scale(0.98); }`}</style>
               );
             })()}
             <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.08)' }} />
-            <button onClick={() => {
-              // Reload from Supabase API (not Notion mock data)
-              const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
-              if (orgId) {
-                fetch(`/api/conversations/list?orgId=${orgId}`).then(r => r.json()).then(data => {
-                  if (data.conversations) {
-                    const realColumns: ConversationColumn[] = data.conversations.map((conv: Record<string, unknown>) => {
-                      const contact = conv.contact as Record<string, unknown>;
-                      const unreadCount = conv.unreadCount as number;
-                      const messages = conv.messages as Record<string, unknown>[];
-                      return {
-                        id: `real-${conv.conversationId}`,
-                        contact: {
-                          id: (contact.id as string) || '',
-                          name: (contact.name as string) || 'Unknown',
-                          initials: (contact.initials as string) || '??',
-                          tag: unreadCount > 0 ? 'UNREAD' : 'ACTIVE',
-                          tagColor: unreadCount > 0 ? '#EF4444' : '#22C55E',
-                          tagBg: unreadCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
-                          phone: (contact.phone as string) || '',
-                        },
-                        messages: (messages || []).map((m: Record<string, unknown>) => ({
-                          id: m.id as string, text: m.text as string,
-                          direction: m.direction as 'outgoing' | 'incoming',
-                          timestamp: m.timestamp as string,
-                          isAIDraft: m.isAIDraft as boolean | undefined,
-                        })),
-                      };
-                    });
-                    // Respect dismissed conversations on reload
-                    setColumns(realColumns.filter(c => !dismissedColumns.has(c.id)));
-                    setLastReloadTime(new Date());
-                  }
-                }).catch(() => {});
-              }
-            }} disabled={loadingNotion} style={{
-              ...primaryBtnStyle,
-              background: loadingNotion ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.06)',
-              color: loadingNotion ? '#8e8e93' : '#1c1c1e',
-              boxShadow: 'none',
-            }}>
-              {loadingNotion ? (
-                'Reloading...'
-              ) : (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" /><path d="M14 14h6v6h-6z" />
-                  </svg>
-                  Reload
-                </>
-              )}
-            </button>
             <button onClick={addColumn} style={primaryBtnStyle}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
