@@ -3390,8 +3390,9 @@ button:active { transform: scale(0.98); }`}</style>
         })().map(col => (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
             width: 340, minWidth: 340, height: '100%', display: 'flex', flexDirection: 'column',
-            background: '#fff', borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)',
-            marginRight: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
+            background: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? 'linear-gradient(180deg, #FFFBEB, #FEF3C7, #fff)' : '#fff',
+            borderRadius: 12, border: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '2px solid rgba(245,158,11,0.3)' : '1px solid rgba(0,0,0,0.08)',
+            marginRight: 12, overflow: 'hidden', boxShadow: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '0 2px 12px rgba(245,158,11,0.15)' : '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
           }}>
             {/* Column Header */}
             <div style={{
@@ -8257,9 +8258,16 @@ ACTIONS YOU CAN TAKE:
 
 3. DRAFT MESSAGE: Include [DRAFT:contact_name:draft text] to pre-fill a message in their conversation input without sending. Good for when the user wants to review first.
 
-4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Fields: name, email, company, city, state, school, notes. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe]
+4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Available fields: name, firstName, lastName, email, company, jobTitle, city, state, school, greekOrg, venmo, instagram, twitter, linkedin, notes. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
-If sendMessages permission is OFF and they ask to send, tell them to enable it. Be concise — 2-3 sentences max. Use emoji occasionally. Always confirm before sending with [SEND:]. For contact updates, just do it — no confirmation needed.`,
+5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
+
+RULES:
+- If sendMessages permission is OFF, use AI_DRAFT instead of SEND (drafts don't need permission).
+- For contact updates, just do it — no confirmation needed.
+- Be concise — 2-3 sentences max. Use emoji occasionally.
+- Always confirm before sending with [SEND:].
+- You are a master of contact data. Update any field the user mentions.`,
                         }),
                       });
                       const data = await res.json();
@@ -8351,7 +8359,41 @@ If sendMessages permission is OFF and they ask to send, tell them to enable it. 
                         }
                       }
 
-                      // Check for draft message commands
+                      // Check for AI_DRAFT commands (creates visible tan bubble with approve/dismiss)
+                      if (reply.includes('[AI_DRAFT:')) {
+                        const draftMatch = reply.match(/\[AI_DRAFT:([^:]+):([^\]]+)\]/);
+                        if (draftMatch) {
+                          const draftFor = draftMatch[1].trim();
+                          const draftText = draftMatch[2].trim();
+                          // Find or create conversation column
+                          let col = [...columns, ...allConversations].find(c =>
+                            (c.contact?.name || '').toLowerCase().includes(draftFor.toLowerCase()) ||
+                            (c.contact?.phone || '').includes(draftFor)
+                          );
+                          if (col) {
+                            // Add AI draft message to the conversation
+                            const draftMsg = { id: `ai-draft-${Date.now()}`, text: draftText, direction: 'outgoing' as const, timestamp: new Date().toISOString(), isAIDraft: true };
+                            setColumns(prev => {
+                              const exists = prev.some(c => c.id === col!.id);
+                              if (exists) {
+                                return prev.map(c => c.id === col!.id ? { ...c, messages: [...c.messages, draftMsg] } : c);
+                              }
+                              return [{ ...col!, messages: [...col!.messages, draftMsg] }, ...prev];
+                            });
+                            setAllConversations(prev => prev.map(c => c.id === col!.id ? { ...c, messages: [...c.messages, draftMsg] } : c));
+                            setActiveTab('conversations');
+                            setSelectedConversationId(col.id);
+                            // Un-dismiss if needed
+                            setDismissedColumns(prev => {
+                              const next = new Set(prev); next.delete(col!.id);
+                              localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                              return next;
+                            });
+                          }
+                        }
+                      }
+
+                      // Check for draft message commands (pre-fill input)
                       if (reply.includes('[DRAFT:')) {
                         const draftMatch = reply.match(/\[DRAFT:([^:]+):([^\]]+)\]/);
                         if (draftMatch) {
