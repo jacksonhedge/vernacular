@@ -1729,8 +1729,12 @@ button:active { transform: scale(0.98); }`}</style>
 
         {/* Station Status */}
         <div style={{ ...cardStyle, padding: 0, display: 'flex', flexDirection: 'column', maxHeight: 400 }}>
-          <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+          <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={panelHeaderStyle}>Phone Line Status</div>
+            <button onClick={() => setActiveTab('stations')} style={{
+              padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600,
+              background: 'rgba(55,138,221,0.1)', color: '#378ADD', cursor: 'pointer',
+            }}>Request Phone Line</button>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: '4px 0' }}>
             {stations.length === 0 ? (
