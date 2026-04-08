@@ -8321,6 +8321,9 @@ IMPORTANT RULES:
 - If asked about a contact, search the list above. If not found, say "I don't see that contact in your ${contacts.length} contacts."
 - If asked to update a contact, use [UPDATE:phone:field:value] and the system will execute it.
 - NEVER fabricate data. Only reference what's listed above.
+- When asked to save a contact's name: LOOK at the outbound messages for that contact. If the user wrote "Hey Sean..." then the name is Sean. Extract the name from the message, don't use the phone number as the name.
+- If you can detect a name from messages, save it as "(Maybe) [Name]". Example: outbound says "Hey Kyle whats up" → [UPDATE:(669) 215-9518:name:(Maybe) Kyle]
+- After updating a contact, the conversations tab will show the updated name on next refresh.
 
 ACTIONS YOU CAN TAKE:
 
