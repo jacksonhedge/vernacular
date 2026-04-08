@@ -3415,9 +3415,11 @@ button:active { transform: scale(0.98); }`}</style>
         })().map(col => (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
             width: 340, minWidth: 340, height: '100%', display: 'flex', flexDirection: 'column',
-            background: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? 'linear-gradient(180deg, #FFFBEB, #FEF3C7, #fff)' : '#fff',
-            borderRadius: 12, border: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '2px solid rgba(245,158,11,0.3)' : '1px solid rgba(0,0,0,0.08)',
-            marginRight: 12, overflow: 'hidden', boxShadow: col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '0 2px 12px rgba(245,158,11,0.15)' : '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
+            background: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '#fff' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? 'linear-gradient(180deg, #FFFBEB, #FEF3C7, #fff)' : '#fff',
+            borderRadius: 12,
+            border: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '2px solid #FBBF24' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '2px solid rgba(245,158,11,0.3)' : '1px solid rgba(0,0,0,0.08)',
+            marginRight: 12, overflow: 'hidden',
+            boxShadow: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '0 0 0 1px #FBBF24, 0 2px 12px rgba(251,191,36,0.2)' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '0 2px 12px rgba(245,158,11,0.15)' : '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
           }}>
             {/* Column Header */}
             <div style={{
@@ -3475,6 +3477,23 @@ button:active { transform: scale(0.98); }`}</style>
                     }} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: 'rgba(0,0,0,0.04)', color: '#378ADD', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
                       {isPhoneNumber(col.contact?.name || '') ? 'ADD NAME' : 'EDIT'}
                     </button>
+                    {/* Initiative dropdown */}
+                    <select
+                      defaultValue=""
+                      onChange={async e => {
+                        const convId = col.conversationId || col.id.replace('real-', '');
+                        if (convId && e.target.value) {
+                          await supabase.from('conversations').update({ goal: e.target.value }).eq('id', convId);
+                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, goal: e.target.value } : c));
+                        }
+                      }}
+                      style={{ padding: '1px 4px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: 'rgba(124,58,237,0.06)', color: '#7C3AED', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", maxWidth: 80 }}>
+                      <option value="">INITIATIVE</option>
+                      <option value="Customer Support Tickets">💬 Support</option>
+                      <option value="Sales Outreach">📱 Sales</option>
+                      <option value="Tester Recruitment">🧪 Testing</option>
+                      <option value="VIP Re-engagement">🎰 VIP</option>
+                    </select>
                   </div>
                 </div>
               ) : (
@@ -3838,7 +3857,18 @@ button:active { transform: scale(0.98); }`}</style>
                       fontSize: 13, lineHeight: 1.5, fontWeight: 400,
                       border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : (isLastOutgoing && isRecent) ? '2px solid rgba(124,58,237,0.5)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
                       boxShadow: (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
+                      position: 'relative',
                     }}>
+                      {/* AI tag on AI-sent outgoing messages */}
+                      {msg.direction === 'outgoing' && !msg.isAIDraft && msg.id.startsWith('sent-') && (
+                        <span style={{
+                          position: 'absolute', top: -6, right: 6,
+                          fontSize: 8, fontWeight: 800, color: '#fff',
+                          background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                          padding: '1px 5px', borderRadius: 4,
+                          letterSpacing: '0.06em', boxShadow: '0 1px 3px rgba(245,158,11,0.3)',
+                        }}>AI</span>
+                      )}
                       {msg.isAIDraft && (
                         <div style={{
                           fontSize: 10, fontWeight: 700, color: '#F59E0B', marginBottom: 6,
