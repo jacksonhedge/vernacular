@@ -8322,13 +8322,12 @@ button:active { transform: scale(0.98); }`}</style>
                 <button onClick={() => {
                   setShowCraigHistory(prev => !prev);
                   if (!showCraigHistory) {
-                    // Load chat history from localStorage
                     try {
                       const saved = JSON.parse(localStorage.getItem('vernacular-craig-history') || '[]');
                       setCraigChatHistory(saved);
                     } catch { /* silent */ }
                   }
-                }} title="Previous chats" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: showCraigHistory ? 'rgba(55,138,221,0.1)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showCraigHistory ? '#378ADD' : '#8e8e93', fontSize: 12 }}>
+                }} title="Previous chats" style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: showCraigHistory ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showCraigHistory ? '#7C3AED' : '#A78BFA', fontSize: 12 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
                 </button>
                 <button onClick={async () => {
@@ -8341,9 +8340,14 @@ button:active { transform: scale(0.98); }`}</style>
                       setTokenStats({ total, cost: `$${cost.toFixed(4)}`, count: (data || []).length });
                     } catch { /* silent */ }
                   }
-                }} title="Token usage" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 12 }}>⚡</button>
-                <button title="Settings" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>···</button>
-                <button onClick={() => setShowAICopilot(false)} title="Close" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 12 }}>—</button>
+                }} title="Token usage" style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: showTokenUsage ? 'rgba(245,158,11,0.15)' : 'rgba(245,158,11,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showTokenUsage ? '#D97706' : '#F59E0B', fontSize: 13 }}>⚡</button>
+                <button title="Settings" onClick={() => {
+                  const permsEl = document.getElementById('craig-perms');
+                  if (permsEl) permsEl.style.display = permsEl.style.display === 'none' ? 'flex' : 'none';
+                }} style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(55,138,221,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#378ADD', fontSize: 14 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                </button>
+                <button onClick={() => setShowAICopilot(false)} title="Close" style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(239,68,68,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444', fontSize: 14 }}>✕</button>
               </div>
             </div>
 
@@ -8764,11 +8768,11 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
               {/* Bottom toolbar — Notion style */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <button title="Add images, PDFs, or CSVs — Coming Soon" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d4d4d4', fontSize: 16 }}>+</button>
-                  <button title="Settings" onClick={() => {
+                  <button title="Add images, PDFs, or CSVs — Coming Soon" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(34,197,94,0.06)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86EFAC', fontSize: 18, fontWeight: 300 }}>+</button>
+                  <button title="Permissions" onClick={() => {
                     const permsEl = document.getElementById('craig-perms');
                     if (permsEl) permsEl.style.display = permsEl.style.display === 'none' ? 'flex' : 'none';
-                  }} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93' }}>
+                  }} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(245,158,11,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F59E0B' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
                   </button>
                 </div>
@@ -8791,7 +8795,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                     <option disabled style={{ color: '#c4c4c6' }}>GPT-5.4 — Coming Soon</option>
                     <option disabled style={{ color: '#c4c4c6' }}>Gemini 3.1 Pro — Coming Soon</option>
                   </select>
-                  <button title="Voice input — Coming Soon" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#d4d4d4' }}>
+                  <button title="Voice input — Coming Soon" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(124,58,237,0.06)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C4B5FD' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
                   </button>
                   <button onClick={() => {
