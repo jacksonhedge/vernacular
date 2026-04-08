@@ -2938,8 +2938,8 @@ button:active { transform: scale(0.98); }`}</style>
 
       {/* Streams (Columns) View */}
       {conversationViewMode === 'streams' && <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        {/* Contact List Panel */}
-        <div style={{ width: 300, minWidth: 300, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.08)', background: '#fff' }}>
+        {/* Contact List Panel — fixed, doesn't scroll with streams */}
+        <div style={{ width: 300, minWidth: 300, display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(0,0,0,0.08)', background: '#fff', flexShrink: 0, overflow: 'hidden' }}>
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
             <div style={{ position: 'relative' }}>
