@@ -8229,13 +8229,25 @@ button:active { transform: scale(0.98); }`}</style>
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
                           model: aiCopilotModel,
-                          systemPrompt: `You are Craig, the AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
+                          systemPrompt: `You are Craig (Vernacular AI), the copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
 
 Current tab: ${activeTab}
 Permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}, ${aiPermissions.viewConversations ? 'CAN view conversations' : 'CANNOT view conversations'}
 Stations: ${stations.map(s => s.name + ' (' + s.status + ')').join(', ') || 'none'}
-Contacts: ${contacts.length} total
-Active conversations: ${allConversations.filter(c => c.messages.length > 0).length}
+
+CONTACTS (real data — you CAN see this):
+${contacts.slice(0, 30).map(c => `- ${c.full_name || 'Unknown'} | ${c.phone || 'no phone'}`).join('\n')}
+${contacts.length > 30 ? `... and ${contacts.length - 30} more` : ''}
+
+OPEN CONVERSATIONS (real data):
+${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs, last: "${c.messages[c.messages.length - 1]?.text?.substring(0, 40) || ''}"`).join('\n')}
+
+IMPORTANT RULES:
+- You have REAL access to the contact and conversation data above. Use it.
+- NEVER say "I don't have access" — you DO have the data listed above.
+- If asked about a contact, search the list above. If not found, say "I don't see that contact in your ${contacts.length} contacts."
+- If asked to update a contact, use [UPDATE:phone:field:value] and the system will execute it.
+- NEVER fabricate data. Only reference what's listed above.
 
 ACTIONS YOU CAN TAKE:
 
@@ -8245,7 +8257,9 @@ ACTIONS YOU CAN TAKE:
 
 3. DRAFT MESSAGE: Include [DRAFT:contact_name:draft text] to pre-fill a message in their conversation input without sending. Good for when the user wants to review first.
 
-If sendMessages permission is OFF and they ask to send, tell them to enable it. Be concise — 2-3 sentences max. Use emoji occasionally. Always confirm before sending with [SEND:].`,
+4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Fields: name, email, company, city, state, school, notes. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe]
+
+If sendMessages permission is OFF and they ask to send, tell them to enable it. Be concise — 2-3 sentences max. Use emoji occasionally. Always confirm before sending with [SEND:]. For contact updates, just do it — no confirmation needed.`,
                         }),
                       });
                       const data = await res.json();
@@ -8304,6 +8318,35 @@ If sendMessages permission is OFF and they ask to send, tell them to enable it. 
                               role: 'assistant',
                               text: `❌ Failed to send to ${name}`,
                             }]);
+                          }
+                        }
+                      }
+
+                      // Check for contact update commands [UPDATE:phone:field:value]
+                      if (reply.includes('[UPDATE:')) {
+                        const updateMatch = reply.match(/\[UPDATE:([^:]+):([^:]+):([^\]]+)\]/);
+                        if (updateMatch) {
+                          const phone = updateMatch[1].trim();
+                          const field = updateMatch[2].trim();
+                          const value = updateMatch[3].trim();
+                          const fieldMap: Record<string, string> = {
+                            name: 'fullName', fullName: 'fullName', full_name: 'fullName',
+                            email: 'email', company: 'company', city: 'city', state: 'state',
+                            school: 'school', notes: 'notes',
+                          };
+                          const apiField = fieldMap[field] || field;
+                          try {
+                            await fetch('/api/contacts/update', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ phone, [apiField]: value }),
+                            });
+                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Updated ${field} to "${value}" for ${phone}` }]);
+                            // Refresh contacts
+                            const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
+                            if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
+                          } catch {
+                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `❌ Failed to update contact` }]);
                           }
                         }
                       }
