@@ -407,6 +407,11 @@ export default function DashboardPage() {
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
   const [craigNavigating, setCraigNavigating] = useState(false);
+  const [craigPos, setCraigPos] = useState({ x: 0, y: 0 }); // 0,0 = center (relative)
+  const [craigDragging, setCraigDragging] = useState(false);
+  const [showTokenUsage, setShowTokenUsage] = useState(false);
+  const [tokenStats, setTokenStats] = useState<{ total: number; cost: string; count: number }>({ total: 0, cost: '$0.00', count: 0 });
+  const craigDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -8108,11 +8113,34 @@ button:active { transform: scale(0.98); }`}</style>
 
       {/* ── Main Area ────────────────────────────────────────────────────── */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-        {/* Pac-Man AI Copilot — always visible */}
-        <div style={{
-          position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
-        }}>
-          <button onClick={() => setShowAICopilot(prev => !prev)} style={{
+        {/* Craig — draggable AI Copilot */}
+        <div
+          style={{
+            position: 'absolute', top: `calc(8px + ${craigPos.y}px)`, left: `calc(50% + ${craigPos.x}px)`, transform: 'translateX(-50%)', zIndex: 50,
+            cursor: craigDragging ? 'grabbing' : 'grab',
+          }}
+          onMouseDown={e => {
+            if ((e.target as HTMLElement).tagName === 'SELECT') return;
+            setCraigDragging(true);
+            craigDragRef.current = { startX: e.clientX, startY: e.clientY, origX: craigPos.x, origY: craigPos.y };
+            const onMove = (ev: MouseEvent) => {
+              if (!craigDragRef.current) return;
+              setCraigPos({
+                x: craigDragRef.current.origX + (ev.clientX - craigDragRef.current.startX),
+                y: craigDragRef.current.origY + (ev.clientY - craigDragRef.current.startY),
+              });
+            };
+            const onUp = () => {
+              setCraigDragging(false);
+              craigDragRef.current = null;
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+        >
+          <button onClick={() => { if (!craigDragging) setShowAICopilot(prev => !prev); }} style={{
             width: 42, height: 42, borderRadius: 21, border: 'none', cursor: 'pointer',
             background: showAICopilot ? '#F59E0B' : 'rgba(0,0,0,0.06)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -8162,9 +8190,47 @@ button:active { transform: scale(0.98); }`}</style>
                   <option value="sonnet">🎯 Sonnet</option>
                   <option value="opus">🧠 Opus</option>
                 </select>
+                <button onClick={async () => {
+                  setShowTokenUsage(prev => !prev);
+                  if (!showTokenUsage) {
+                    try {
+                      const { data } = await supabase.from('ai_usage').select('tokens_total, cost_estimate').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
+                      const total = (data || []).reduce((s, r) => s + (r.tokens_total || 0), 0);
+                      const cost = (data || []).reduce((s, r) => s + (Number(r.cost_estimate) || 0), 0);
+                      setTokenStats({ total, cost: `$${cost.toFixed(4)}`, count: (data || []).length });
+                    } catch { /* silent */ }
+                  }
+                }} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer', background: showTokenUsage ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.04)', color: showTokenUsage ? '#D97706' : '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>
+                  ⚡ TOKENS
+                </button>
                 <button onClick={() => setShowAICopilot(false)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.04)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>✕</button>
               </div>
             </div>
+
+            {/* Token Usage Panel */}
+            {showTokenUsage && (
+              <div style={{ padding: '10px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)', background: 'rgba(245,158,11,0.03)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.06em' }}>This Month</div>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#1c1c1e' }}>{tokenStats.total.toLocaleString()}</div>
+                        <div style={{ fontSize: 9, color: '#8e8e93' }}>tokens used</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#1c1c1e' }}>{tokenStats.cost}</div>
+                        <div style={{ fontSize: 9, color: '#8e8e93' }}>estimated cost</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: '#1c1c1e' }}>{tokenStats.count}</div>
+                        <div style={{ fontSize: 9, color: '#8e8e93' }}>AI calls</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Permissions + Navigation */}
             <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
