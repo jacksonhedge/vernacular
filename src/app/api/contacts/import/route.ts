@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { formatPhone, phoneOrFilter } from '@/lib/phone';
+import { formatPhone, phoneIlikeFilter } from '@/lib/phone';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,11 +23,11 @@ export async function POST(request: NextRequest) {
           // Check for duplicate by phone
           if (contact.phone) {
             contact.phone = formatPhone(contact.phone);
-            // Look up by phone (ignore org_id — contacts may have null org from sync)
+            // Look up by phone (ilike on last 7 digits — most reliable matching)
             const { data: existing } = await supabase
               .from('contacts')
               .select('id, organization_id')
-              .or(phoneOrFilter(contact.phone))
+              .or(phoneIlikeFilter(contact.phone))
               .limit(1);
 
             if (existing && existing.length > 0) {
