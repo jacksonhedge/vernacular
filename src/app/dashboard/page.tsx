@@ -3358,8 +3358,8 @@ button:active { transform: scale(0.98); }`}</style>
           </div>{/* end right side (dot grid + list) */}
         </div>{/* end icon rail + right content */}
         </div>{/* end Contact List Panel */}
-        {/* Stream Columns */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* Stream Columns — minWidth:0 prevents flex child from expanding beyond allocated space */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
         {/* Stream Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 0', flexShrink: 0 }}>
           <button onClick={() => setShowReadStreams(prev => !prev)} style={{
