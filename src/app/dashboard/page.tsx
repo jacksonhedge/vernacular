@@ -7754,96 +7754,78 @@ button:active { transform: scale(0.98); }`}</style>
                 color: '#378ADD', fontWeight: 600, marginBottom: 16, padding: 0,
               }}>← Back to Initiatives</button>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {/* Memory */}
-                <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    🧠 Memory
-                  </div>
-                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>What the AI remembers about this initiative. Auto-populated from conversations.</p>
-                  <textarea placeholder="e.g., Brady Walsh prefers texts over calls. Completed 3 tests successfully. Located in Michigan." style={{
-                    width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.08)', fontSize: 12, outline: 'none', resize: 'vertical',
-                    fontFamily: "'Inter', sans-serif",
-                  }} />
-                </div>
-
-                {/* Tone */}
-                <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    🎨 Tone
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {[
-                      { label: 'Formality', min: 'Casual', max: 'Professional' },
-                      { label: 'Warmth', min: 'Direct', max: 'Empathetic' },
-                      { label: 'Verbosity', min: 'Brief', max: 'Detailed' },
-                    ].map(s => (
-                      <div key={s.label}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8e8e93', marginBottom: 4 }}>
-                          <span>{s.min}</span><span style={{ fontWeight: 600, color: '#1c1c1e' }}>{s.label}</span><span>{s.max}</span>
+              {/* Initiative Items — individual memories, instructions, examples */}
+              {(() => {
+                const sections = [
+                  { type: 'memory', icon: '🧠', title: 'Memories', color: '#378ADD', placeholder: 'e.g., Sean prefers evening texts. Brady completed 3 tests. NJ testers respond better to casual tone.' },
+                  { type: 'instruction', icon: '📋', title: 'Instructions', color: '#F59E0B', placeholder: 'e.g., Always screen for 21+ age. Never promise specific earnings. Ask about state before sending link.' },
+                  { type: 'good_example', icon: '✅', title: 'Good Examples', color: '#22C55E', placeholder: 'e.g., "Hey! Just saw you signed up — wanted to personally welcome you and see if you have any questions."' },
+                  { type: 'bad_example', icon: '❌', title: 'Bad Examples', color: '#EF4444', placeholder: 'e.g., "Dear valued customer, we are writing to inform you that your account has been created..."' },
+                ];
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {sections.map(section => (
+                      <div key={section.type} style={{ ...cardStyle, padding: 20 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {section.icon} {section.title}
+                          </div>
+                          <button onClick={async () => {
+                            const text = window.prompt(`Add ${section.title.toLowerCase().slice(0, -1)}:`);
+                            if (text) {
+                              const orgId = getOrgId();
+                              await supabase.from('initiative_items').insert({
+                                initiative_id: selectedInitiative,
+                                organization_id: orgId,
+                                item_type: section.type,
+                                content: text,
+                              });
+                              window.alert(`Added to ${section.title}!`);
+                            }
+                          }} style={{
+                            padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600,
+                            background: `${section.color}10`, color: section.color, cursor: 'pointer',
+                          }}>+ Add</button>
                         </div>
-                        <input type="range" min="1" max="5" defaultValue="3" style={{ width: '100%', accentColor: '#378ADD' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: 11, color: '#c4c4c6', fontStyle: 'italic' }}>{section.placeholder}</div>
+                        </div>
                       </div>
                     ))}
-                  </div>
-                </div>
 
-                {/* Instructions */}
-                <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    📋 Instructions
-                  </div>
-                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>System prompt and rules for this initiative.</p>
-                  <textarea placeholder="e.g., You are recruiting app testers for sports betting apps. Screen for state eligibility (must be 21+). Explain compensation ($50 per test). Never promise specific earnings." style={{
-                    width: '100%', minHeight: 100, padding: 10, borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.08)', fontSize: 12, outline: 'none', resize: 'vertical',
-                    fontFamily: "'Inter', sans-serif", lineHeight: 1.5,
-                  }} />
-                </div>
-
-                {/* Files */}
-                <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    📁 Files
-                  </div>
-                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>Knowledge documents for this initiative.</p>
-                  <div style={{
-                    padding: 20, borderRadius: 10, border: '2px dashed rgba(0,0,0,0.08)',
-                    textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.01)',
-                  }}>
-                    <div style={{ fontSize: 24, marginBottom: 6 }}>📄</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#378ADD' }}>Drop files or click to upload</div>
-                    <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 4 }}>PDF, TXT, CSV, DOCX</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Examples Section */}
-              <div style={{ marginTop: 16 }}>
-                <div style={{ ...cardStyle, padding: 20 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 4 }}>📊 Examples &amp; Learning</div>
-                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 16px' }}>Good and bad examples help the AI learn your preferences.</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', marginBottom: 8 }}>✅ Good Examples</div>
-                      <textarea placeholder={"Example of a GOOD AI response:\n\"Hey! Just saw you signed up — wanted to personally welcome you and see if you have any questions about getting started.\""} style={{
-                        width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
-                        border: '1px solid rgba(34,197,94,0.2)', fontSize: 12, outline: 'none',
-                        resize: 'vertical', fontFamily: "'Inter', sans-serif", background: 'rgba(34,197,94,0.02)',
-                      }} />
+                    {/* Tone Sliders */}
+                    <div style={{ ...cardStyle, padding: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        🎨 Tone
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {[
+                          { label: 'Formality', min: 'Casual', max: 'Professional' },
+                          { label: 'Warmth', min: 'Direct', max: 'Empathetic' },
+                          { label: 'Verbosity', min: 'Brief', max: 'Detailed' },
+                        ].map(s => (
+                          <div key={s.label}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8e8e93', marginBottom: 4 }}>
+                              <span>{s.min}</span><span style={{ fontWeight: 600, color: '#1c1c1e' }}>{s.label}</span><span>{s.max}</span>
+                            </div>
+                            <input type="range" min="1" max="5" defaultValue="3" style={{ width: '100%', accentColor: '#378ADD' }} />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#EF4444', marginBottom: 8 }}>❌ Bad Examples</div>
-                      <textarea placeholder={"Example of a BAD AI response:\n\"Dear valued customer, we are writing to inform you that your account has been created. Please proceed to...\""} style={{
-                        width: '100%', minHeight: 80, padding: 10, borderRadius: 8,
-                        border: '1px solid rgba(239,68,68,0.2)', fontSize: 12, outline: 'none',
-                        resize: 'vertical', fontFamily: "'Inter', sans-serif", background: 'rgba(239,68,68,0.02)',
-                      }} />
+
+                    {/* Files */}
+                    <div style={{ ...cardStyle, padding: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>📁 Files</div>
+                      <div style={{ padding: 20, borderRadius: 10, border: '2px dashed rgba(0,0,0,0.08)', textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.01)' }}>
+                        <div style={{ fontSize: 24, marginBottom: 6 }}>📄</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#378ADD' }}>Drop files or click to upload</div>
+                        <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 4 }}>PDF, TXT, CSV, DOCX</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Contact Management */}
               <div style={{ marginTop: 16 }}>
