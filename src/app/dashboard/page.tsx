@@ -8328,9 +8328,15 @@ Stations: ${stations.map(s => s.name + ' (' + s.status + ')').join(', ') || 'non
 Contacts: ${contacts.length} total
 Active conversations: ${allConversations.filter(c => c.messages.length > 0).length}
 
-When the user asks to go to a page, say "Navigating to [tab name]..." or "Taking you to [tab name]..." — the system will detect this and actually switch tabs. Available tabs: dashboard, conversations, contacts, team, phone lines, ai responder, integrations, profile, settings.
+ACTIONS YOU CAN TAKE:
 
-Be concise — 2-3 sentences max. Use emoji occasionally. If they ask to send a message and sendMessages permission is OFF, tell them to enable it first.`,
+1. NAVIGATE: Say "Navigating to [tab name]..." and the dashboard will switch. Tabs: dashboard, conversations, contacts, team, phone lines, ai responder, integrations, profile, settings.
+
+2. SEND MESSAGE: If sendMessages permission is ON, include [SEND:contact_name_or_phone:message text] in your response. Example: [SEND:Brady Walsh:Hey! Just following up on our conversation.] — This will actually send the iMessage through the station.
+
+3. DRAFT MESSAGE: Include [DRAFT:contact_name:draft text] to pre-fill a message in their conversation input without sending. Good for when the user wants to review first.
+
+If sendMessages permission is OFF and they ask to send, tell them to enable it. Be concise — 2-3 sentences max. Use emoji occasionally. Always confirm before sending with [SEND:].`,
                         }),
                       });
                       const data = await res.json();
@@ -8350,6 +8356,65 @@ Be concise — 2-3 sentences max. Use emoji occasionally. If they ask to send a 
                           setCraigNavigating(true);
                           setTimeout(() => { setActiveTab(tab); setCraigNavigating(false); }, 800);
                           break;
+                        }
+                      }
+
+                      // Check for send message commands in Craig's response
+                      if (aiPermissions.sendMessages && reply.includes('[SEND:')) {
+                        // Parse: [SEND:phone:message]
+                        const sendMatch = reply.match(/\[SEND:([^:]+):([^\]]+)\]/);
+                        if (sendMatch) {
+                          const sendPhone = sendMatch[1].trim();
+                          const sendText = sendMatch[2].trim();
+                          const orgId = getOrgId();
+                          // Find contact by name or phone
+                          const contact = contacts.find(c =>
+                            (c.full_name || '').toLowerCase().includes(sendPhone.toLowerCase()) ||
+                            (c.phone || '').includes(sendPhone)
+                          );
+                          const phone = contact?.phone || sendPhone;
+                          const name = contact?.full_name || sendPhone;
+
+                          try {
+                            await fetch('/api/messages/send', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                phoneNumber: phone,
+                                message: sendText,
+                                contactName: name,
+                                organizationId: orgId,
+                              }),
+                            });
+                            setAiCopilotMessages(prev => [...prev, {
+                              role: 'assistant',
+                              text: `✅ Sent to ${name}: "${sendText}"`,
+                            }]);
+                          } catch {
+                            setAiCopilotMessages(prev => [...prev, {
+                              role: 'assistant',
+                              text: `❌ Failed to send to ${name}`,
+                            }]);
+                          }
+                        }
+                      }
+
+                      // Check for draft message commands
+                      if (reply.includes('[DRAFT:')) {
+                        const draftMatch = reply.match(/\[DRAFT:([^:]+):([^\]]+)\]/);
+                        if (draftMatch) {
+                          const draftFor = draftMatch[1].trim();
+                          const draftText = draftMatch[2].trim();
+                          // Find the conversation column and pre-fill the input
+                          const col = columns.find(c =>
+                            (c.contact?.name || '').toLowerCase().includes(draftFor.toLowerCase()) ||
+                            (c.contact?.phone || '').includes(draftFor)
+                          );
+                          if (col) {
+                            setInputValues(prev => ({ ...prev, [col.id]: draftText }));
+                            setActiveTab('conversations');
+                            setSelectedConversationId(col.id);
+                          }
                         }
                       }
 
