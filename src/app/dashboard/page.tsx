@@ -185,6 +185,16 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
     ),
   },
   {
+    label: 'AI Responder',
+    tab: 'ai-drafts',
+    color: '#D97706',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
+      </svg>
+    ),
+  },
+  {
     label: 'Contacts',
     tab: 'contacts',
     icon: (
@@ -208,16 +218,6 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><path d="M6 10l2-2 2 2" /><path d="M14 10l2-2 2 2" />
-      </svg>
-    ),
-  },
-  {
-    label: 'AI Responder',
-    tab: 'ai-drafts',
-    color: '#D97706',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
       </svg>
     ),
   },
@@ -389,7 +389,7 @@ export default function DashboardPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
-  const [aiResponderTab, setAiResponderTab] = useState<'skills' | 'goals' | 'model' | 'agents'>('skills');
+  const [aiResponderTab, setAiResponderTab] = useState<'agents' | 'goals' | 'knowledge' | 'usage'>('agents');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
   const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -7486,7 +7486,7 @@ button:active { transform: scale(0.98); }`}</style>
       case 'stations': return renderStations();
       case 'ai-drafts': return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Responder</h2>
               <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Configure AI-powered messaging agents for your conversations</p>
@@ -7496,10 +7496,10 @@ button:active { transform: scale(0.98); }`}</style>
           {/* Sub-tabs */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 3, width: 'fit-content' }}>
             {([
-              { key: 'skills' as const, label: 'Skills' },
+              { key: 'agents' as const, label: 'Agents' },
               { key: 'goals' as const, label: 'Goals' },
-              { key: 'model' as const, label: 'Model' },
-              { key: 'agents' as const, label: 'Sub-Agents' },
+              { key: 'knowledge' as const, label: 'Knowledge Base' },
+              { key: 'usage' as const, label: 'Usage' },
             ]).map(t => (
               <button key={t.key} onClick={() => setAiResponderTab(t.key)} style={{
                 padding: '8px 18px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600,
@@ -7511,34 +7511,71 @@ button:active { transform: scale(0.98); }`}</style>
             ))}
           </div>
 
-          {/* Skills Tab */}
-          {aiResponderTab === 'skills' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[
-                { name: 'Greeting', desc: 'Respond to initial contact or "hey" messages', tone: 'Friendly, casual', active: true },
-                { name: 'Follow-up', desc: 'Re-engage contacts who haven\'t replied in 24-72 hours', tone: 'Persistent but respectful', active: true },
-                { name: 'Objection Handling', desc: 'Address concerns about pricing, timing, or competition', tone: 'Empathetic, solution-focused', active: false },
-                { name: 'Scheduling', desc: 'Coordinate meeting times, send calendar links', tone: 'Efficient, direct', active: false },
-                { name: 'VIP Onboarding', desc: 'Walk new VIPs through account setup and first deposit', tone: 'Premium, white-glove', active: false },
-                { name: 'Promo Delivery', desc: 'Share bonus codes, free bets, and exclusive offers', tone: 'Exciting, urgent', active: false },
-              ].map(skill => (
-                <div key={skill.name} style={{
-                  ...cardStyle, padding: 20, display: 'flex', flexDirection: 'column', gap: 8,
-                  border: skill.active ? '2px solid rgba(34,197,94,0.3)' : '1px solid rgba(0,0,0,0.08)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>{skill.name}</span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4,
-                      background: skill.active ? 'rgba(34,197,94,0.1)' : 'rgba(0,0,0,0.04)',
-                      color: skill.active ? '#22C55E' : '#8e8e93',
-                      textTransform: 'uppercase',
-                    }}>{skill.active ? 'Active' : 'Inactive'}</span>
+          {/* Knowledge Base Tab */}
+          {aiResponderTab === 'knowledge' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* FAQ Section */}
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>FAQs</div>
+                    <p style={{ fontSize: 12, color: '#8e8e93', margin: '4px 0 0' }}>Teach the AI common questions and answers. Matched FAQs skip the API entirely.</p>
                   </div>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{skill.desc}</p>
-                  <div style={{ fontSize: 11, color: '#8e8e93' }}>Tone: <span style={{ color: '#1c1c1e', fontWeight: 500 }}>{skill.tone}</span></div>
+                  <button style={{ ...primaryBtnStyle, fontSize: 12 }}>+ Add FAQ</button>
                 </div>
-              ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { q: 'How do I reset my password?', a: 'Go to Settings → Security → Reset Password. You\'ll receive an email link.', uses: 12 },
+                    { q: 'What are your business hours?', a: 'We\'re available Mon-Fri, 9 AM - 6 PM EST. AI support is available 24/7.', uses: 8 },
+                    { q: 'How do I get started with testing?', a: 'Download the app, create an account, and our coordinator will walk you through the first test.', uses: 5 },
+                  ].map(faq => (
+                    <div key={faq.q} style={{ padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.06)', background: '#fafbfc' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e', marginBottom: 4 }}>{faq.q}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>{faq.a}</div>
+                      <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>Used {faq.uses} times</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Upload Knowledge Files */}
+              <div style={{ ...cardStyle, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>Knowledge Files</div>
+                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 16px' }}>Upload documents for the AI to reference when crafting responses. PDFs, text files, CSVs.</p>
+                <div style={{
+                  padding: 24, borderRadius: 12, border: '2px dashed rgba(0,0,0,0.1)',
+                  textAlign: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.01)',
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#378ADD' }}>Drop files here or click to upload</div>
+                  <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>PDF, TXT, CSV, DOCX — max 10MB each</div>
+                </div>
+              </div>
+
+              {/* Previous Successful Conversations (for App Testing) */}
+              {activeAccountView === 'app_testing' && (
+                <div style={{ ...cardStyle, padding: 20 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>Successful Test Conversations</div>
+                  <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 16px' }}>Reference conversations where testers were successfully recruited and completed testing.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {[
+                      { contact: 'Brady Walsh', outcome: 'Completed $100 deposit test', msgs: 9, date: 'Apr 6' },
+                      { contact: '+1 (978) 376-5177', outcome: 'Agreed to testing, awaiting deposit', msgs: 4, date: 'Apr 5' },
+                    ].map(c => (
+                      <div key={c.contact} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.2)', background: 'rgba(34,197,94,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{c.contact}</div>
+                          <div style={{ fontSize: 11, color: '#22C55E' }}>{c.outcome}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 11, color: '#8e8e93' }}>{c.msgs} messages</div>
+                          <div style={{ fontSize: 10, color: '#c4c4c6' }}>{c.date}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -7586,55 +7623,44 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
           )}
 
-          {/* Model Tab */}
-          {aiResponderTab === 'model' && (
+          {/* Usage Tab */}
+          {aiResponderTab === 'usage' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                {[
+                  { label: 'AI Drafts This Month', value: '0', icon: '✏️' },
+                  { label: 'AI Auto-Sends', value: '0', icon: '🤖' },
+                  { label: 'Tokens Used', value: '0', icon: '⚡' },
+                ].map(m => (
+                  <div key={m.label} style={{ ...cardStyle, padding: 20, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, marginBottom: 6 }}>{m.icon}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#1c1c1e' }}>{m.value}</div>
+                    <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 4 }}>{m.label}</div>
+                  </div>
+                ))}
+              </div>
               <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>AI Model Selection</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>AI Cost Breakdown</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { id: 'haiku', name: 'Claude Haiku', desc: 'Fast, cheap — great for quick replies', cost: '~$0.0005/msg', speed: '< 1s', recommended: true },
-                    { id: 'sonnet', name: 'Claude Sonnet', desc: 'Balanced quality and speed — best for VIP conversations', cost: '~$0.002/msg', speed: '~2s', recommended: false },
-                    { id: 'opus', name: 'Claude Opus', desc: 'Highest quality — complex negotiations, sensitive topics', cost: '~$0.003/msg', speed: '~4s', recommended: false },
-                  ].map(m => (
-                    <div key={m.id} style={{
-                      padding: 16, borderRadius: 10, border: m.recommended ? '2px solid rgba(55,138,221,0.3)' : '1px solid rgba(0,0,0,0.08)',
-                      display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-                      background: m.recommended ? 'rgba(55,138,221,0.03)' : '#fff',
-                    }}>
-                      <div style={{
-                        width: 18, height: 18, borderRadius: 9, border: '2px solid',
-                        borderColor: m.recommended ? '#378ADD' : '#d1d5db',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {m.recommended && <div style={{ width: 10, height: 10, borderRadius: 5, background: '#378ADD' }} />}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>
-                          {m.name}
-                          {m.recommended && <span style={{ fontSize: 10, fontWeight: 700, color: '#378ADD', marginLeft: 8, textTransform: 'uppercase' }}>Current</span>}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>{m.desc}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{m.cost}</div>
-                        <div style={{ fontSize: 11, color: '#8e8e93' }}>{m.speed}</div>
+                    { action: 'AI draft generated', cost: '$0.0031', count: 0 },
+                    { action: 'AI approved & sent', cost: '$0.25', count: 0 },
+                    { action: 'AI auto-response', cost: '$0.25', count: 0 },
+                  ].map(r => (
+                    <div key={r.action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.04)', fontSize: 13 }}>
+                      <span style={{ color: '#6b7280' }}>{r.action}</span>
+                      <div style={{ display: 'flex', gap: 16 }}>
+                        <span style={{ color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{r.count}×</span>
+                        <span style={{ fontWeight: 600, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{r.cost}</span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div style={{ ...cardStyle, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e', marginBottom: 12 }}>System Prompt</div>
-                <p style={{ fontSize: 12, color: '#8e8e93', margin: '0 0 12px' }}>Base personality and rules for all AI responses</p>
-                <textarea
-                  defaultValue="You are a VIP relationship manager responding via iMessage. Keep responses concise, friendly, and professional. Use casual texting tone. Max 2-3 sentences. Never reveal you are AI. Match the contact's energy."
-                  style={{
-                    width: '100%', minHeight: 120, padding: 12, borderRadius: 8,
-                    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'Inter', sans-serif",
-                    resize: 'vertical', outline: 'none', lineHeight: 1.5,
-                  }}
-                />
+                <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 8, background: 'rgba(55,138,221,0.04)', border: '1px solid rgba(55,138,221,0.1)' }}>
+                  <div style={{ fontSize: 12, color: '#378ADD', fontWeight: 600 }}>
+                    AI is powered by Claude — optimized for speed and cost. You don&apos;t need to choose a model.
+                  </div>
+                </div>
               </div>
             </div>
           )}
