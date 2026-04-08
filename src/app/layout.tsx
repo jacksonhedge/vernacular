@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "Vernacular",
     images: [
       {
-        url: "https://vernacular.chat/og-image.png",
+        url: "https://vernacular.chat/api/og",
         width: 1200,
         height: 630,
         alt: "Vernacular — The iMessage Internet Protocol",
