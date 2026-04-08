@@ -3848,11 +3848,16 @@ button:active { transform: scale(0.98); }`}</style>
                   }}>
                     {/* Bubble */}
                     <div
-                      onDoubleClick={e => {
-                        setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
-                      }}
+                      style={{ position: 'relative', maxWidth: '85%' }}
+                      onMouseEnter={e => { const btn = e.currentTarget.querySelector('[data-msg-menu]') as HTMLElement; if (btn) btn.style.opacity = '1'; }}
+                      onMouseLeave={e => { const btn = e.currentTarget.querySelector('[data-msg-menu]') as HTMLElement; if (btn) btn.style.opacity = '0'; }}
+                    >
+                      <button data-msg-menu onClick={e => { e.stopPropagation(); setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id }); }}
+                        style={{ position: 'absolute', top: 4, right: msg.direction === 'outgoing' ? undefined : 'auto', left: msg.direction === 'outgoing' ? -28 : undefined, width: 22, height: 22, borderRadius: 11, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#8e8e93', opacity: 0, transition: 'opacity 0.15s', zIndex: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        ···
+                      </button>
+                    <div
                       style={{
-                      maxWidth: '85%',
                       padding: '10px 14px',
                       overflowWrap: 'break-word' as const, wordBreak: 'break-word' as const,
                       borderRadius: msg.direction === 'outgoing' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
@@ -3942,6 +3947,7 @@ button:active { transform: scale(0.98); }`}</style>
                       )}
                     </div>
                   </div>
+                  </div>{/* end hover wrapper */}
                   </div>
                 );
               });
