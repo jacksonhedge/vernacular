@@ -8095,40 +8095,30 @@ button:active { transform: scale(0.98); }`}</style>
           </button>
         </div>
 
-        {/* AI Copilot Panel */}
+        {/* Vernacular AI Panel — Notion-style */}
         {showAICopilot && (
           <div style={{
             position: 'absolute', top: 56, left: '50%', transform: 'translateX(-50%)',
-            width: 420, maxHeight: 500, zIndex: 50,
+            width: 440, maxHeight: 520, zIndex: 50,
             background: '#fff', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
             border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
           }}>
-            {/* Header */}
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: 3, background: '#378ADD' }} />
-                  <div style={{ width: 6, height: 6, borderRadius: 3, background: 'rgba(55,138,221,0.6)' }} />
-                  <div style={{ width: 6, height: 6, borderRadius: 3, background: 'rgba(55,138,221,0.3)' }} />
+            {/* Context tag + top bar */}
+            <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px',
+                borderRadius: 6, background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)',
+                fontSize: 12, fontWeight: 500, color: '#6b7280',
+              }}>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: 3, background: '#378ADD' }} />
+                  <div style={{ width: 5, height: 5, borderRadius: 3, background: 'rgba(55,138,221,0.5)' }} />
+                  <div style={{ width: 5, height: 5, borderRadius: 3, background: 'rgba(55,138,221,0.2)' }} />
                 </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Vernacular AI</div>
-                  <div style={{ fontSize: 10, color: '#22C55E', fontWeight: 600 }}>● Online</div>
-                </div>
+                {(org?.name as string) || 'Vernacular'}
               </div>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as 'haiku' | 'sonnet' | 'opus')}
-                  style={{
-                    padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
-                    fontSize: 10, fontWeight: 600, cursor: 'pointer', outline: 'none',
-                    background: aiCopilotModel === 'opus' ? 'rgba(124,58,237,0.08)' : aiCopilotModel === 'sonnet' ? 'rgba(55,138,221,0.08)' : 'rgba(0,0,0,0.03)',
-                    color: aiCopilotModel === 'opus' ? '#7C3AED' : aiCopilotModel === 'sonnet' ? '#378ADD' : '#8e8e93',
-                  }}>
-                  <option value="haiku">⚡ Haiku</option>
-                  <option value="sonnet">🎯 Sonnet</option>
-                  <option value="opus">🧠 Opus</option>
-                </select>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <button onClick={async () => {
                   setShowTokenUsage(prev => !prev);
                   if (!showTokenUsage) {
@@ -8139,10 +8129,9 @@ button:active { transform: scale(0.98); }`}</style>
                       setTokenStats({ total, cost: `$${cost.toFixed(4)}`, count: (data || []).length });
                     } catch { /* silent */ }
                   }
-                }} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer', background: showTokenUsage ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.04)', color: showTokenUsage ? '#D97706' : '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>
-                  ⚡ TOKENS
-                </button>
-                <button onClick={() => setShowAICopilot(false)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.04)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>✕</button>
+                }} title="Token usage" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 12 }}>⚡</button>
+                <button title="Settings" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>···</button>
+                <button onClick={() => setShowAICopilot(false)} title="Close" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 12 }}>—</button>
               </div>
             </div>
 
@@ -8171,49 +8160,48 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             )}
 
-            {/* Permissions + Navigation */}
-            <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Permissions — toggleable via settings button */}
+            <div id="craig-perms" style={{ padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'none', flexDirection: 'column', gap: 6 }}>
               {[
-                { key: 'sendMessages' as const, label: 'Send Texts', icon: '📱', color: '#EF4444' },
-                { key: 'editContacts' as const, label: 'Edit Contacts', icon: '👤', color: '#378ADD' },
-                { key: 'viewConversations' as const, label: 'View Convos', icon: '💬', color: '#22C55E' },
+                { key: 'sendMessages' as const, label: 'Can send messages', icon: '✏️' },
+                { key: 'editContacts' as const, label: 'Can edit contacts', icon: '👤' },
+                { key: 'viewConversations' as const, label: 'View conversations', icon: '💬' },
               ].map(p => (
-                <button key={p.key} onClick={() => setAiPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
-                  title={`${aiPermissions[p.key] ? 'Disable' : 'Enable'}: Craig can ${p.label.toLowerCase()}`}
-                  style={{
-                    padding: '3px 8px', borderRadius: 6, border: aiPermissions[p.key] ? `1px solid ${p.color}30` : '1px solid rgba(0,0,0,0.06)',
-                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                    background: aiPermissions[p.key] ? `${p.color}10` : 'rgba(0,0,0,0.02)',
-                    color: aiPermissions[p.key] ? p.color : '#c4c4c6',
-                    display: 'flex', alignItems: 'center', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 10 }}>{aiPermissions[p.key] ? '✓' : '✕'}</span>
-                  {p.icon} {p.label}
-                </button>
-              ))}
-              <span style={{ width: 1, height: 14, background: 'rgba(0,0,0,0.06)', margin: '0 2px' }} />
-              {/* Quick nav buttons */}
-              {(['dashboard', 'conversations', 'contacts', 'ai-drafts'] as NavTab[]).map(tab => (
-                <button key={tab} onClick={() => { setActiveTab(tab); }}
-                  style={{
-                    padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 600, cursor: 'pointer',
-                    background: activeTab === tab ? 'rgba(245,158,11,0.1)' : 'rgba(0,0,0,0.03)',
-                    color: activeTab === tab ? '#D97706' : '#8e8e93',
-                  }}>{tab === 'ai-drafts' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1, 5)}</button>
+                <div key={p.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0' }}>
+                  <span style={{ fontSize: 13, color: '#1c1c1e', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{p.icon}</span> {p.label}
+                  </span>
+                  <button onClick={() => setAiPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
+                    style={{
+                      width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: aiPermissions[p.key] ? '#378ADD' : 'rgba(0,0,0,0.12)',
+                      position: 'relative', transition: 'background 0.2s',
+                    }}>
+                    <div style={{
+                      width: 16, height: 16, borderRadius: 8, background: '#fff',
+                      position: 'absolute', top: 2,
+                      left: aiPermissions[p.key] ? 18 : 2,
+                      transition: 'left 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+                    }} />
+                  </button>
+                </div>
               ))}
             </div>
 
             {/* Messages */}
             <div style={{ flex: 1, overflow: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 300, minHeight: 120 }}>
               {aiCopilotMessages.length === 0 && (
-                <div style={{ textAlign: 'center', padding: 20, color: '#8e8e93' }}>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 8 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 5, background: '#378ADD' }} />
-                    <div style={{ width: 10, height: 10, borderRadius: 5, background: 'rgba(55,138,221,0.6)' }} />
-                    <div style={{ width: 10, height: 10, borderRadius: 5, background: 'rgba(55,138,221,0.3)' }} />
+                <div style={{ textAlign: 'center', padding: '30px 20px', color: '#8e8e93' }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#c4c4c6', marginBottom: 12 }}>Ask Vernacular AI anything</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
+                    {['"Update Kyle\'s name to Kyle Ashe"', '"Draft a message for Brady"', '"Go to Contacts"', '"How many texts this month?"'].map(s => (
+                      <button key={s} onClick={() => setAiCopilotInput(s.replace(/"/g, ''))} style={{
+                        padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)',
+                        background: 'rgba(0,0,0,0.02)', fontSize: 12, color: '#6b7280', cursor: 'pointer',
+                        fontFamily: "'Inter', sans-serif",
+                      }}>{s}</button>
+                    ))}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Vernacular AI</div>
-                  <div style={{ fontSize: 11, marginTop: 4 }}>&quot;Send Brady a follow-up&quot; · &quot;How many texts today?&quot; · &quot;Draft a promo message&quot;</div>
                 </div>
               )}
               {aiCopilotMessages.map((m, i) => (
@@ -8233,8 +8221,8 @@ button:active { transform: scale(0.98); }`}</style>
               )}
             </div>
 
-            {/* Input */}
-            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 8 }}>
+            {/* Input — Notion style */}
+            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
               <input
                 value={aiCopilotInput}
                 onChange={e => setAiCopilotInput(e.target.value)}
@@ -8456,25 +8444,54 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                     setAiCopilotLoading(false);
                   }
                 }}
-                placeholder="Ask the AI copilot..."
+                placeholder="Do anything with AI..."
                 style={{
-                  flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
-                  fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif",
+                  width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)',
+                  fontSize: 14, outline: 'none', fontFamily: "'Inter', sans-serif",
+                  color: '#1c1c1e', background: 'transparent',
                 }}
               />
-              <button onClick={() => {
-                const input = aiCopilotInput.trim();
-                if (input) {
-                  const e = new KeyboardEvent('keydown', { key: 'Enter' });
-                  (document.activeElement as HTMLElement)?.dispatchEvent(e);
-                }
-              }} style={{
-                width: 32, height: 32, borderRadius: 8, border: 'none',
-                background: '#F59E0B', color: '#fff', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-              </button>
+              {/* Bottom toolbar — Notion style */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <button title="Attach files" style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 16 }}>+</button>
+                  <button title="Settings" onClick={() => {
+                    const permsEl = document.getElementById('craig-perms');
+                    if (permsEl) permsEl.style.display = permsEl.style.display === 'none' ? 'flex' : 'none';
+                  }} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as 'haiku' | 'sonnet' | 'opus')}
+                    style={{
+                      padding: '4px 8px', borderRadius: 6, border: 'none',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                      background: 'transparent', color: '#8e8e93',
+                    }}>
+                    <option value="haiku">Auto</option>
+                    <option value="sonnet">Sonnet</option>
+                    <option value="opus">Opus</option>
+                  </select>
+                  <button style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                  </button>
+                  <button onClick={() => {
+                    if (aiCopilotInput.trim()) {
+                      const el = document.querySelector('[placeholder="Do anything with AI..."]') as HTMLInputElement;
+                      if (el) { el.focus(); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }
+                    }
+                  }} style={{
+                    width: 28, height: 28, borderRadius: 14, border: 'none',
+                    background: aiCopilotInput.trim() ? '#378ADD' : 'rgba(0,0,0,0.06)',
+                    cursor: aiCopilotInput.trim() ? 'pointer' : 'default',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: aiCopilotInput.trim() ? '#fff' : '#c4c4c6', transition: 'all 0.15s',
+                  }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
