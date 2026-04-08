@@ -41,14 +41,43 @@ except:
         while IFS='|' read -r MSG_ID PHONE TEXT; do
             echo "[$(date '+%H:%M:%S')] Sending to ${PHONE}: ${TEXT:0:60}..."
 
-            # Send via AppleScript
-            osascript -e "
-                tell application \"Messages\"
-                    set targetService to 1st account whose service type = iMessage
-                    set targetBuddy to participant \"${PHONE}\" of targetService
-                    send \"${TEXT}\" to targetBuddy
-                end tell
-            " 2>/dev/null
+            # Check if message contains a URL — split into text + link
+            URL_PATTERN='https?://[^ ]*'
+            if echo "$TEXT" | grep -qE "$URL_PATTERN"; then
+                # Extract the URL and the non-URL text
+                URL=$(echo "$TEXT" | grep -oE "$URL_PATTERN" | head -1)
+                TEXT_ONLY=$(echo "$TEXT" | sed "s|$URL||g" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+                # Send text part first (if there is any)
+                if [ -n "$TEXT_ONLY" ]; then
+                    osascript -e "
+                        tell application \"Messages\"
+                            set targetService to 1st account whose service type = iMessage
+                            set targetBuddy to participant \"${PHONE}\" of targetService
+                            send \"${TEXT_ONLY}\" to targetBuddy
+                        end tell
+                    " 2>/dev/null
+                    sleep 1
+                fi
+
+                # Send URL alone (better chance of link preview)
+                osascript -e "
+                    tell application \"Messages\"
+                        set targetService to 1st account whose service type = iMessage
+                        set targetBuddy to participant \"${PHONE}\" of targetService
+                        send \"${URL}\" to targetBuddy
+                    end tell
+                " 2>/dev/null
+            else
+                # No URL — send as single message
+                osascript -e "
+                    tell application \"Messages\"
+                        set targetService to 1st account whose service type = iMessage
+                        set targetBuddy to participant \"${PHONE}\" of targetService
+                        send \"${TEXT}\" to targetBuddy
+                    end tell
+                " 2>/dev/null
+            fi
 
             SEND_STATUS=$?
 
