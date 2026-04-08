@@ -400,6 +400,11 @@ export default function DashboardPage() {
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
   const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>('unread');
   const [activeAccountView, setActiveAccountView] = useState<string>('all');
+  const [showAICopilot, setShowAICopilot] = useState(false);
+  const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
+  const [aiCopilotInput, setAiCopilotInput] = useState('');
+  const [aiCopilotLoading, setAiCopilotLoading] = useState(false);
+  const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -8100,7 +8105,146 @@ button:active { transform: scale(0.98); }`}</style>
       </aside>
 
       {/* ── Main Area ────────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        {/* Pac-Man AI Copilot — always visible */}
+        <div style={{
+          position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', zIndex: 50,
+        }}>
+          <button onClick={() => setShowAICopilot(prev => !prev)} style={{
+            width: 40, height: 40, borderRadius: 20, border: 'none', cursor: 'pointer',
+            background: showAICopilot ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(0,0,0,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: showAICopilot ? '0 4px 16px rgba(245,158,11,0.3)' : '0 1px 4px rgba(0,0,0,0.08)',
+            transition: 'all 0.2s',
+          }} title="AI Copilot">
+            <svg width="22" height="22" viewBox="0 0 24 24" style={{ transform: 'rotate(-30deg)' }}>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill={showAICopilot ? '#fff' : '#F59E0B'} />
+              <path d="M12 2L22 12L12 2z" fill={showAICopilot ? 'linear-gradient(135deg, #F59E0B, #D97706)' : 'rgba(0,0,0,0.06)'} />
+              <circle cx="10" cy="9" r="1.5" fill={showAICopilot ? '#D97706' : '#fff'} />
+            </svg>
+          </button>
+        </div>
+
+        {/* AI Copilot Panel */}
+        {showAICopilot && (
+          <div style={{
+            position: 'absolute', top: 56, left: '50%', transform: 'translateX(-50%)',
+            width: 420, maxHeight: 500, zIndex: 50,
+            background: '#fff', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
+            border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column',
+            overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🟡</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>AI Copilot</div>
+                  <div style={{ fontSize: 10, color: '#8e8e93' }}>Powered by Claude</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => setShowAICopilot(false)} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.04)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', fontSize: 14 }}>✕</button>
+              </div>
+            </div>
+
+            {/* Permissions */}
+            <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[
+                { key: 'sendMessages' as const, label: '📱 Send Texts', color: '#EF4444' },
+                { key: 'editContacts' as const, label: '👤 Edit Contacts', color: '#378ADD' },
+                { key: 'viewConversations' as const, label: '💬 View Convos', color: '#22C55E' },
+              ].map(p => (
+                <button key={p.key} onClick={() => setAiPermissions(prev => ({ ...prev, [p.key]: !prev[p.key] }))}
+                  style={{
+                    padding: '3px 8px', borderRadius: 4, border: 'none', fontSize: 9, fontWeight: 700, cursor: 'pointer',
+                    background: aiPermissions[p.key] ? `${p.color}15` : 'rgba(0,0,0,0.03)',
+                    color: aiPermissions[p.key] ? p.color : '#c4c4c6',
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}>{p.label}</button>
+              ))}
+            </div>
+
+            {/* Messages */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 300, minHeight: 120 }}>
+              {aiCopilotMessages.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 20, color: '#8e8e93' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>🟡</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Ask me anything</div>
+                  <div style={{ fontSize: 11, marginTop: 4 }}>&quot;Send Brady a follow-up&quot; · &quot;How many texts today?&quot; · &quot;Draft a promo message&quot;</div>
+                </div>
+              )}
+              {aiCopilotMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '80%', padding: '8px 12px', borderRadius: 12,
+                    background: m.role === 'user' ? '#378ADD' : 'rgba(0,0,0,0.04)',
+                    color: m.role === 'user' ? '#fff' : '#1c1c1e',
+                    fontSize: 13, lineHeight: 1.5,
+                  }}>{m.text}</div>
+                </div>
+              ))}
+              {aiCopilotLoading && (
+                <div style={{ display: 'flex', gap: 4, padding: '8px 12px' }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: 3, background: '#8e8e93', animation: `pulse 1.2s ease-in-out ${i*0.15}s infinite` }} />)}
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 8 }}>
+              <input
+                value={aiCopilotInput}
+                onChange={e => setAiCopilotInput(e.target.value)}
+                onKeyDown={async e => {
+                  if (e.key === 'Enter' && aiCopilotInput.trim() && !aiCopilotLoading) {
+                    const text = aiCopilotInput.trim();
+                    setAiCopilotInput('');
+                    setAiCopilotMessages(prev => [...prev, { role: 'user', text }]);
+                    setAiCopilotLoading(true);
+                    try {
+                      const res = await fetch('/api/ai/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          messages: [...aiCopilotMessages, { role: 'user', content: text }].map(m => ({
+                            role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
+                          })),
+                          model: 'haiku',
+                          systemPrompt: `You are an AI copilot for the Vernacular dashboard. The user is ${(user?.full_name as string) || 'the admin'}. They manage iMessage conversations through Mac relay stations. Current permissions: ${aiPermissions.sendMessages ? 'CAN send texts' : 'CANNOT send texts'}, ${aiPermissions.editContacts ? 'CAN edit contacts' : 'CANNOT edit contacts'}. Be concise — 2-3 sentences max. If they ask to send a message and you have permission, confirm the action.`,
+                        }),
+                      });
+                      const data = await res.json();
+                      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: data.content || 'Sorry, I couldn\'t process that.' }]);
+                    } catch {
+                      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: 'Something went wrong.' }]);
+                    }
+                    setAiCopilotLoading(false);
+                  }
+                }}
+                placeholder="Ask the AI copilot..."
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                  fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif",
+                }}
+              />
+              <button onClick={() => {
+                const input = aiCopilotInput.trim();
+                if (input) {
+                  const e = new KeyboardEvent('keydown', { key: 'Enter' });
+                  (document.activeElement as HTMLElement)?.dispatchEvent(e);
+                }
+              }} style={{
+                width: 32, height: 32, borderRadius: 8, border: 'none',
+                background: '#F59E0B', color: '#fff', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Top Bar for dashboard view */}
         {activeTab === 'dashboard' && (
           <div style={{
