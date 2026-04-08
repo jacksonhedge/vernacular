@@ -68,6 +68,31 @@ export type CreditAction = BillingAction;
 /**
  * Log a billable action and update the org's running total.
  */
+/**
+ * Check if an org's billing is in good standing.
+ */
+export async function checkBillingStatus(
+  supabase: SupabaseClient,
+  orgId: string,
+): Promise<{ allowed: boolean; reason?: string }> {
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('subscription_status, demo_expires_at')
+    .eq('id', orgId)
+    .single();
+
+  const status = org?.subscription_status || 'active';
+
+  if (status === 'canceled') return { allowed: false, reason: 'subscription_canceled' };
+  if (status === 'demo') {
+    const expires = org?.demo_expires_at ? new Date(org.demo_expires_at) : null;
+    if (expires && expires < new Date()) return { allowed: false, reason: 'demo_expired' };
+  }
+  // past_due gets a 7-day grace period (handled by admin manually)
+
+  return { allowed: true };
+}
+
 export async function deductCredits(
   supabase: SupabaseClient,
   orgId: string,
@@ -75,10 +100,16 @@ export async function deductCredits(
   description?: string,
   contactId?: string,
   messageId?: string,
-): Promise<{ success: boolean; creditsUsed: number; remaining: number; costCents: number }> {
+): Promise<{ success: boolean; creditsUsed: number; remaining: number; costCents: number; blocked?: boolean; reason?: string }> {
   const costCents = ACTION_COSTS_CENTS[action] || 0;
 
   if (costCents === 0) return { success: true, creditsUsed: 0, remaining: -1, costCents: 0 };
+
+  // Check billing status
+  const billing = await checkBillingStatus(supabase, orgId);
+  if (!billing.allowed) {
+    return { success: false, creditsUsed: 0, remaining: 0, costCents: 0, blocked: true, reason: billing.reason };
+  }
 
   // Log the usage with dollar amount
   await supabase.from('credit_usage').insert({
@@ -134,11 +165,16 @@ export async function getCreditSummary(
     .single();
 
   const usageCents = org?.credits_used_this_month || 0;
-  const accountTypes: string[] = org?.account_type || ['general'];
 
-  // Use highest monthly minimum if org has multiple types
-  const monthlyMinimumCents = Math.max(
-    ...accountTypes.map(t => MONTHLY_MINIMUMS_CENTS[t] || 0)
+  // Sum monthly minimums across all active subscriptions (not max)
+  const { data: subs } = await supabase
+    .from('subscriptions')
+    .select('solution_type, quantity, monthly_minimum_cents')
+    .eq('organization_id', orgId)
+    .eq('status', 'active');
+
+  const monthlyMinimumCents = (subs || []).reduce(
+    (sum, s) => sum + (s.monthly_minimum_cents * (s.quantity || 1)), 0
   );
 
   // Overage = usage above monthly minimum (only if there IS a minimum)
