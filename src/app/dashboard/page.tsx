@@ -5258,169 +5258,95 @@ button:active { transform: scale(0.98); }`}</style>
           <div style={sectionStyle}>
             <div style={sectionTitleStyle}>Billing &amp; Plan</div>
 
-            {/* Plan Info */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e' }}>Current Plan</span>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: '#16A34A', background: 'rgba(22,163,74,0.1)',
-                  padding: '3px 10px', borderRadius: 20, letterSpacing: '0.04em', textTransform: 'uppercase' as const,
-                }}>STARTER</span>
-              </div>
-              <button style={{
-                background: 'linear-gradient(135deg, #2563EB, #3B82F6)', color: '#fff', border: 'none',
-                borderRadius: 10, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(37,99,235,0.3)',
-              }}>
-                Add Seats
-              </button>
-            </div>
-            <div style={{ fontSize: 13, color: '#8e8e93', marginBottom: 24 }}>$333/seat/month (minimum 3 seats). Each seat includes a dedicated iMessage line, AI-powered responses, email integration, and 50,000 credits. No phone calls — text and email only.</div>
+            {/* Active Subscriptions */}
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e', marginBottom: 16 }}>Active Subscriptions</div>
 
-            {/* Seats + Lines */}
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Seats (includes dedicated phone line)</span>
-                <span style={{ fontSize: 13, color: '#8e8e93', fontWeight: 600 }}>$333/seat/month (min 3 seats)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#6b7280' }}>{teamMembers.length} seat{teamMembers.length !== 1 ? 's' : ''} &middot; {stations.filter(s => s.phone_number !== 'TBD').length} phone line{stations.filter(s => s.phone_number !== 'TBD').length !== 1 ? 's' : ''}</span>
-                <button style={{
-                  background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 8,
-                  padding: '5px 14px', fontSize: 12, fontWeight: 600, color: '#2563EB', cursor: 'pointer',
-                }}>Add Seat</button>
-              </div>
-              <div style={{ width: '100%', height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)' }}>
-                <div style={{ width: `${Math.min((teamMembers.length / 3) * 100, 100)}%`, height: '100%', borderRadius: 3, background: '#2563EB', transition: 'width 0.3s ease' }} />
-              </div>
+            {/* Solution Plans */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+              {[
+                { type: 'app_testing', icon: '🧪', name: 'App Testing', price: '$1,222/mo per seat', setup: '$1,000 setup' },
+                { type: 'sales_outreach', icon: '📱', name: 'Sales & Outreach', price: '$1,500/mo per seat', setup: '$1,000 setup' },
+                { type: 'vip_manager', icon: '🎰', name: 'VIP Manager', price: '$1,500/mo per line', setup: '$1,000 setup' },
+                { type: 'customer_support', icon: '💬', name: 'Customer Support', price: '$100/mo + $1.25/ticket', setup: '$500 setup' },
+              ].map(plan => {
+                const orgTypes: string[] = (org?.account_type as string[]) || [];
+                const isActive = orgTypes.includes(plan.type);
+                return (
+                  <div key={plan.type} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+                    borderRadius: 10, border: isActive ? '2px solid rgba(34,197,94,0.3)' : '1px solid rgba(0,0,0,0.06)',
+                    background: isActive ? 'rgba(34,197,94,0.03)' : '#fff',
+                  }}>
+                    <span style={{ fontSize: 24 }}>{plan.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>{plan.name}</div>
+                      <div style={{ fontSize: 12, color: '#8e8e93' }}>{plan.price}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {isActive ? (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,0.1)', padding: '2px 8px', borderRadius: 4 }}>ACTIVE</span>
+                      ) : (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#8e8e93', background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: 4 }}>ADD</span>
+                      )}
+                      <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 4 }}>{plan.setup}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Credit Packs */}
+            {/* Usage This Month */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>Credit Packs</span>
-                  <span style={{ fontSize: 12, color: '#8e8e93', marginLeft: 8 }}>Need more credits?</span>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>Usage This Month</div>
+              <div style={{ padding: '14px 16px', borderRadius: 10, background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.04)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 12, color: '#666' }}>
+                  {[
+                    ['New conversation', '$0.99'],
+                    ['Text sent', '$0.03'],
+                    ['Text received', 'Free'],
+                    ['AI draft generated', '$0.10'],
+                    ['AI approved / auto-send', '$0.25'],
+                    ['Ticket resolved', '$1.25'],
+                    ['Contact import', '$0.05'],
+                    ['Widget handoff', '$0.50'],
+                  ].map(([action, cost], i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+                      <span>{action}</span>
+                      <span style={{ fontWeight: 600, color: cost === 'Free' ? '#22C55E' : '#1c1c1e', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>{cost}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 10, paddingTop: 10, fontSize: 11, color: '#8e8e93' }}>
+                  Usage included in monthly minimum. Overage billed above minimum.
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            </div>
+
+            {/* Add-ons */}
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>Integration Add-ons</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {[
-                  { name: '100K Credits', credits: '100,000', price: '$79', perCredit: '$0.00079', icon: '💬', popular: false },
-                  { name: '500K Credits', credits: '500,000', price: '$349', perCredit: '$0.0007', icon: '🚀', popular: true },
-                  { name: '1M Credits', credits: '1,000,000', price: '$599', perCredit: '$0.0006', icon: '⚡', popular: false },
-                ].map((pack, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-                    borderRadius: 10, border: pack.popular ? '1.5px solid rgba(55,138,221,0.3)' : '1px solid rgba(0,0,0,0.06)',
-                    background: pack.popular ? 'rgba(55,138,221,0.03)' : '#fff',
+                  { name: 'Slack', price: '$25/mo', icon: '💬' },
+                  { name: 'Notion', price: '$25/mo', icon: '📝' },
+                  { name: 'Salesforce', price: '$50/mo', icon: '☁️' },
+                  { name: 'Email', price: '$25/mo', icon: '📧' },
+                  { name: 'Discord', price: '$25/mo', icon: '🎮' },
+                  { name: 'Telegram', price: '$25/mo', icon: '✈️' },
+                  { name: 'Webhook', price: '$15/mo', icon: '🔗' },
+                ].map(addon => (
+                  <div key={addon.name} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+                    borderRadius: 8, border: '1px solid rgba(0,0,0,0.06)',
                   }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                      background: pack.popular ? 'linear-gradient(135deg, #378ADD, #2B6CB0)' : 'rgba(0,0,0,0.04)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-                    }}>{pack.icon}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{pack.name}</span>
-                        {pack.popular && <span style={{ fontSize: 9, fontWeight: 700, color: '#378ADD', background: 'rgba(55,138,221,0.1)', padding: '1px 6px', borderRadius: 4 }}>BEST VALUE</span>}
-                      </div>
-                      <div style={{ fontSize: 11, color: '#8e8e93', marginTop: 1 }}>{pack.credits} credits &middot; {pack.perCredit}/credit</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', fontFamily: "'JetBrains Mono', monospace" }}>{pack.price}</span>
-                      <button style={{
-                        padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                        fontSize: 11, fontWeight: 700,
-                        background: 'linear-gradient(135deg, #378ADD, #2B6CB0)',
-                        color: '#fff', fontFamily: "'Inter', sans-serif",
-                      }}>Buy</button>
+                    <span style={{ fontSize: 16 }}>{addon.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{addon.name}</div>
+                      <div style={{ fontSize: 10, color: '#8e8e93' }}>{addon.price}</div>
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Credit Usage Guide */}
-              <div style={{ marginTop: 16, padding: '14px 16px', borderRadius: 10, background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.04)' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#1c1c1e', marginBottom: 8 }}>How Credits Work</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px', fontSize: 11, color: '#666' }}>
-                  {[
-                    ['Send iMessage', '3 credits'],
-                    ['Send email', '3 credits'],
-                    ['Receive message', 'Free'],
-                    ['New contact added', '250 credits'],
-                    ['New contact from widget', '300 credits'],
-                    ['Contact import (each)', '250 credits'],
-                    ['AI draft generated', '15 credits'],
-                    ['AI auto-response', '20 credits'],
-                    ['AI sentiment analysis', '10 credits'],
-                    ['Widget → iMessage', '50 credits'],
-                    ['Contact enrichment', '500 credits'],
-                    ['Bulk blast (per person)', '5 credits'],
-                  ].map(([action, cost], i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                      <span>{action}</span>
-                      <span style={{ fontWeight: 600, color: cost === 'Free' ? '#22C55E' : '#1c1c1e', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{cost}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{
-                marginTop: 12, padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(124,58,237,0.04)', border: '1px solid rgba(124,58,237,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <span style={{ fontSize: 12, color: '#7C3AED', fontWeight: 600 }}>
-                  Monthly base: {teamMembers.length} seat{teamMembers.length !== 1 ? 's' : ''} × $333
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#378ADD', fontFamily: "'JetBrains Mono', monospace" }}>
-                  ${(teamMembers.length * 333).toLocaleString()}/mo
-                </span>
-              </div>
-            </div>
-
-            {/* Plan Comparison Table */}
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', marginBottom: 12 }}>Plan Comparison</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
-                    {['Feature', 'Team (3 seats)', 'Growth (5+)', 'Enterprise (10+)'].map(h => (
-                      <th key={h} style={{
-                        padding: '8px 12px', textAlign: h === 'Feature' ? 'left' : 'center', fontWeight: 600, color: '#1c1c1e', fontSize: 12,
-                        ...(h === 'Team (3 seats)' ? { borderTop: '3px solid #378ADD', background: 'rgba(55,138,221,0.06)' } : {}),
-                      }}>{h}{h === 'Team (3 seats)' && <span style={{ display: 'block', fontSize: 9, color: '#378ADD', fontWeight: 700, letterSpacing: '0.04em' }}>CURRENT</span>}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ['Minimum Seats', '3', '5', '10+'],
-                    ['Dedicated iMessage Line', '1 per seat', '1 per seat', '1 per seat'],
-                    ['Credits/seat/month', '50,000', '75,000', '150,000'],
-                    ['Email Integration', '\u2713', '\u2713', '\u2713'],
-                    ['Phone Calls', '\u2014', '\u2014', '\u2014'],
-                    ['AI Ghost Agents', '4', '4', '4 + Custom'],
-                    ['New Contact (credits)', '250', '250', '250'],
-                    ['AI Draft (credits)', '15', '15', '10'],
-                    ['AI Auto-Response (credits)', '20', '20', '15'],
-                    ['Widget → iMessage (credits)', '50', '50', '30'],
-                    ['Contact Enrichment (credits)', '500', '500', '300'],
-                    ['Campaigns', '\u2014', '\u2713', '\u2713'],
-                    ['Analytics', 'Standard', 'Advanced', 'Custom'],
-                    ['Integrations', 'Notion, Email', 'All', 'All + Custom'],
-                    ['Support', 'Email', 'Priority', 'Dedicated CSM'],
-                    ['Price/seat', '$333/mo', '$299/mo', '$249/mo'],
-                    ['Credit Overage', '$0.001/credit', '$0.0008/credit', '$0.0005/credit'],
-                  ].map((row, i) => (
-                    <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                      <td style={{ padding: '8px 12px', fontWeight: 500, color: '#1c1c1e' }}>{row[0]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#378ADD', fontWeight: 600, background: 'rgba(55,138,221,0.04)' }}>{row[1]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#2563EB', fontWeight: 600 }}>{row[2]}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center', color: '#7C3AED', fontWeight: 600 }}>{row[3]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
 
@@ -7839,15 +7765,15 @@ button:active { transform: scale(0.98); }`}</style>
                 value={activeAccountView}
                 onChange={e => setActiveAccountView(e.target.value)}
                 style={{
-                  marginTop: 2, padding: '1px 2px', borderRadius: 4, border: 'none',
-                  fontSize: 9, fontWeight: 700, cursor: 'pointer', outline: 'none',
-                  fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-                  letterSpacing: '0.04em', width: '100%',
+                  marginTop: 4, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none',
+                  fontFamily: "'Inter', sans-serif",
+                  width: '100%', appearance: 'auto' as never,
                   background: 'rgba(255,255,255,0.08)',
                   color: activeAccountView === 'vip_manager' ? '#A78BFA' :
                     activeAccountView === 'customer_support' ? '#60A5FA' :
                     activeAccountView === 'sales_outreach' ? '#6EE7B7' :
-                    activeAccountView === 'app_testing' ? '#FFC107' : 'rgba(255,255,255,0.6)',
+                    activeAccountView === 'app_testing' ? '#FFC107' : 'rgba(255,255,255,0.7)',
                 }}
               >
                 <option value="all">All Solutions</option>
