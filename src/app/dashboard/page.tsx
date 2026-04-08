@@ -7824,25 +7824,22 @@ button:active { transform: scale(0.98); }`}</style>
                 value={activeAccountView}
                 onChange={e => setActiveAccountView(e.target.value)}
                 style={{
-                  marginTop: 3, padding: '1px 4px', borderRadius: 4, border: 'none',
+                  marginTop: 2, padding: '1px 2px', borderRadius: 4, border: 'none',
                   fontSize: 9, fontWeight: 700, cursor: 'pointer', outline: 'none',
                   fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  background: activeAccountView === 'vip_manager' ? 'rgba(167,139,250,0.2)' :
-                    activeAccountView === 'customer_support' ? 'rgba(96,165,250,0.2)' :
-                    activeAccountView === 'sales_outreach' ? 'rgba(110,231,183,0.2)' :
-                    activeAccountView === 'app_testing' ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.1)',
+                  letterSpacing: '0.04em', width: '100%',
+                  background: 'rgba(255,255,255,0.08)',
                   color: activeAccountView === 'vip_manager' ? '#A78BFA' :
                     activeAccountView === 'customer_support' ? '#60A5FA' :
                     activeAccountView === 'sales_outreach' ? '#6EE7B7' :
-                    activeAccountView === 'app_testing' ? '#FFC107' : '#8e8e93',
+                    activeAccountView === 'app_testing' ? '#FFC107' : 'rgba(255,255,255,0.6)',
                 }}
               >
                 <option value="all">All Solutions</option>
                 <option value="vip_manager">🎰 VIP Manager</option>
                 <option value="customer_support">💬 Support</option>
-                <option value="sales_outreach">📱 Sales / Outreach</option>
-                <option value="app_testing">🧪 App Testing</option>
+                <option value="sales_outreach">📱 Sales</option>
+                <option value="app_testing">🧪 Testing</option>
               </select>
             </div>
           )}
