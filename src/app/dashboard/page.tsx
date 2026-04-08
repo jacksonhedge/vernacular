@@ -7601,6 +7601,34 @@ button:active { transform: scale(0.98); }`}</style>
                     </div>
                   </div>
 
+                  {/* Example Conversation */}
+                  <div style={{ padding: '16px', borderRadius: 10, background: 'rgba(34,197,94,0.03)', border: '1px solid rgba(34,197,94,0.1)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#22C55E', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      💬 Example Conversation
+                      <span style={{ fontSize: 10, fontWeight: 500, color: '#8e8e93' }}>(teach the AI by example)</span>
+                    </div>
+                    <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 10px' }}>Select a real conversation to use as a template. The AI will study the flow and replicate the approach.</p>
+
+                    <select id="init-example-conv" style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                      fontSize: 13, outline: 'none', background: '#fff', cursor: 'pointer', marginBottom: 10,
+                    }}>
+                      <option value="">Select a conversation...</option>
+                      {allConversations.filter(c => c.messages.length >= 3).map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.contact?.name || c.contact?.phone || 'Unknown'} — {c.messages.length} msgs — &quot;{c.messages[c.messages.length - 1]?.text?.substring(0, 40) || ''}...&quot;
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Preview of selected conversation */}
+                    <div id="init-conv-preview" style={{ maxHeight: 200, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ fontSize: 11, color: '#c4c4c6', textAlign: 'center', padding: 12 }}>
+                        Select a conversation above to preview
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                     <button onClick={async () => {
                       const name = (document.getElementById('init-name') as HTMLInputElement)?.value;
@@ -7611,13 +7639,25 @@ button:active { transform: scale(0.98); }`}</style>
                       const appName = (document.getElementById('init-app-name') as HTMLInputElement)?.value;
                       const link = (document.getElementById('init-link') as HTMLInputElement)?.value;
                       const states = (document.getElementById('init-states') as HTMLInputElement)?.value;
+                      const exampleConvId = (document.getElementById('init-example-conv') as HTMLSelectElement)?.value;
                       if (!name) { window.alert('Name is required'); return; }
+
+                      // Build example conversation transcript
+                      let exampleTranscript = '';
+                      if (exampleConvId) {
+                        const conv = allConversations.find(c => c.id === exampleConvId);
+                        if (conv) {
+                          exampleTranscript = `\n\nExample Conversation (${conv.contact?.name || conv.contact?.phone}):\n` +
+                            conv.messages.map(m => `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`).join('\n');
+                        }
+                      }
+
                       const orgId = getOrgId();
                       if (orgId) {
                         await supabase.from('org_knowledge').insert({
                           organization_id: orgId,
                           title: name,
-                          content: `Type: ${type}\nDescription: ${desc}\nInstructions: ${instructions}\nGoal: ${goal}${appName ? `\nApp: ${appName}` : ''}${link ? `\nLink: ${link}` : ''}${states ? `\nStates: ${states}` : ''}`,
+                          content: `Type: ${type}\nDescription: ${desc}\nInstructions: ${instructions}\nGoal: ${goal}${appName ? `\nApp: ${appName}` : ''}${link ? `\nLink: ${link}` : ''}${states ? `\nStates: ${states}` : ''}${exampleTranscript}`,
                           category: 'initiative',
                         });
                       }
