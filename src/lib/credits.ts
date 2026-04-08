@@ -5,7 +5,7 @@
  * - VIP Manager:     $1,500/mo minimum per line, overage billed per action
  * - Sales/Outreach:  $1,500/mo minimum per seat, overage billed per action
  * - App Testing:     $1,222/mo minimum per seat, overage billed per action
- * - Customer Support: $500 setup fee, then $1.25 per resolved ticket (no monthly minimum)
+ * - Customer Support: $1,000 setup fee (+$1,000 AI), then $1.25 per resolved ticket (no monthly minimum)
  *
  * Usage costs (included in monthly minimum, overage charged above):
  * - New conversation opened:        $0.99

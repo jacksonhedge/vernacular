@@ -7511,8 +7511,8 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
           </div>
 
-          {/* Initiative Cards Grid — dynamic from DB + defaults */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {/* Initiative Cards Grid — hidden when detail is open */}
+          {!selectedInitiative && <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {(() => {
               const typeIcons: Record<string, string> = { support: '💬', outreach: '📱', testing: '🧪', vip: '🎰', custom: '⚡' };
               const typeColors: Record<string, string> = { support: '#60A5FA', outreach: '#6EE7B7', testing: '#FFC107', vip: '#A78BFA', custom: '#F59E0B' };
@@ -7579,7 +7579,7 @@ button:active { transform: scale(0.98); }`}</style>
                 </div>
               </div>
             ))}
-          </div>
+          </div>}
 
           {/* Selected Initiative Detail */}
           {/* Create New Initiative */}
@@ -7747,12 +7747,16 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
           )}
 
-          {selectedInitiative && selectedInitiative !== 'new' && (
-            <div style={{ marginTop: 20 }}>
+          {selectedInitiative && selectedInitiative !== 'new' && !(() => { /* hide grid when detail open */ return false; })() && (
+            <div>
               <button onClick={() => setSelectedInitiative(null)} style={{
-                background: 'none', border: 'none', cursor: 'pointer', fontSize: 13,
-                color: '#378ADD', fontWeight: 600, marginBottom: 16, padding: 0,
-              }}>← Back to Initiatives</button>
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: 14,
+                color: '#378ADD', fontWeight: 600, marginBottom: 20, padding: 0,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back to Initiatives
+              </button>
 
               {/* Initiative Items — individual memories, instructions, examples */}
               {(() => {
