@@ -7852,7 +7852,7 @@ button:active { transform: scale(0.98); }`}</style>
               >
                 <option value="all">All Solutions</option>
                 <option value="vip_manager">🎰 VIP — $1,500/line</option>
-                <option value="customer_support">💬 Support — $0.99/ticket</option>
+                <option value="customer_support">💬 Support — $100/mo + $1.25/ticket</option>
                 <option value="sales_outreach">📱 Sales — $1,500/seat</option>
                 <option value="app_testing">🧪 Testing — $1,222/seat</option>
               </select>
