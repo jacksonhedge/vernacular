@@ -8295,6 +8295,15 @@ button:active { transform: scale(0.98); }`}</style>
           </button>
         </div>
 
+        {/* Backdrop overlay when AI panel is open */}
+        {showAICopilot && (
+          <div onClick={() => setShowAICopilot(false)} style={{
+            position: 'absolute', inset: 0, zIndex: 45,
+            background: 'rgba(0,0,0,0.05)',
+            transition: 'opacity 0.2s',
+          }} />
+        )}
+
         {/* Vernacular AI Panel — Notion-style */}
         {showAICopilot && (
           <div style={{
