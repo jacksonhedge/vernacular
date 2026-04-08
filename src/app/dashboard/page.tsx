@@ -8625,7 +8625,9 @@ ACTIONS YOU CAN TAKE:
 
 6. CREATE INITIATIVE: Include [INITIATIVE:name|type|description|instructions|goal|app|link|states] to create a new initiative. Types: support, outreach, testing, vip, custom. Example: [INITIATIVE:DraftKings NJ Testing|testing|Recruit testers for DraftKings sportsbook in New Jersey|Screen for 21+ age, NJ residents only. Explain $50 compensation per completed test.|Get contact to complete test deposit|DraftKings|https://draftkings.com/signup|NJ]
 
-7. IMPROVE INITIATIVE: Include [IMPROVE_INITIATIVE:title|improvement] to update an existing initiative's instructions or tone based on conversation learnings. Example: [IMPROVE_INITIATIVE:DraftKings NJ Testing|Add: Always ask if they have a friend who wants to test too — referral bonus of $25] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
+7. IMPROVE INITIATIVE: Include [IMPROVE_INITIATIVE:title|improvement] to update an existing initiative's instructions or tone based on conversation learnings. Example: [IMPROVE_INITIATIVE:DraftKings NJ Testing|Add: Always ask if they have a friend who wants to test too — referral bonus of $25]
+
+8. SUB-INITIATIVE: Include [SUB_INITIATIVE:parent_title|name|type|description|instructions] to create a sub-initiative under a parent. Example: [SUB_INITIATIVE:DraftKings NJ Testing|DraftKings Referral Program|outreach|Get existing testers to refer friends|Offer $25 referral bonus per friend who completes a test] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
@@ -8827,6 +8829,28 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                               }).eq('id', existing[0].id);
                               setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${title.trim()}" improved! Added: "${improvement.trim().substring(0, 60)}..."` }]);
                             }
+                          }
+                        }
+                      }
+
+                      // Check for SUB_INITIATIVE commands
+                      if (reply.includes('[SUB_INITIATIVE:')) {
+                        const match = reply.match(/\[SUB_INITIATIVE:([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/);
+                        if (match) {
+                          const orgId = getOrgId();
+                          if (orgId) {
+                            const [, parentTitle, name, type, desc, instructions] = match;
+                            const { data: parent } = await supabase.from('org_knowledge')
+                              .select('id').eq('organization_id', orgId).eq('category', 'initiative')
+                              .ilike('title', `%${parentTitle.trim()}%`).limit(1);
+                            await supabase.from('org_knowledge').insert({
+                              organization_id: orgId,
+                              title: name.trim(),
+                              content: `Type: ${type.trim()}\nDescription: ${desc.trim()}\nInstructions: ${instructions.trim()}\nParent: ${parentTitle.trim()}`,
+                              category: 'initiative',
+                              parent_id: parent?.[0]?.id || null,
+                            });
+                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Sub-initiative "${name.trim()}" created under "${parentTitle.trim()}"!` }]);
                           }
                         }
                       }
