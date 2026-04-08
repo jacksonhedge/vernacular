@@ -15,40 +15,48 @@ export async function GET() {
           justifyContent: 'center',
           background: 'linear-gradient(135deg, #0d1f3c 0%, #1a3a5c 40%, #2e6494 70%, #5a9fd4 100%)',
           fontFamily: 'system-ui, -apple-system, sans-serif',
-          padding: '40px 60px',
+          padding: '30px 40px',
         }}
       >
-        {/* iMessage conversation — BIG */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '900px', marginBottom: '32px' }}>
-          {/* Incoming */}
-          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+        {/* iMessage conversation — BIG, tight spacing */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', width: '100%', maxWidth: '1000px', marginBottom: '24px' }}>
+          {/* Incoming — with iMessage tail on left */}
+          <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-end', gap: '0' }}>
+            <div style={{
+              width: '20px', height: '20px', background: 'rgba(255,255,255,0.95)',
+              borderRadius: '0 0 0 20px', marginRight: '-10px', marginBottom: '2px',
+            }} />
             <div style={{
               background: 'rgba(255,255,255,0.95)',
               color: '#1a3a5c',
-              padding: '28px 40px',
-              borderRadius: '32px 32px 32px 8px',
-              fontSize: '48px',
+              padding: '30px 44px',
+              borderRadius: '36px 36px 36px 4px',
+              fontSize: '52px',
               fontWeight: 600,
-              lineHeight: 1.3,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              lineHeight: 1.25,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
             }}>
               Agents talking via iMessage?
             </div>
           </div>
-          {/* Outgoing */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Outgoing — with iMessage tail on right */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: '0' }}>
             <div style={{
               background: '#378ADD',
               color: '#ffffff',
-              padding: '28px 40px',
-              borderRadius: '32px 32px 8px 32px',
-              fontSize: '48px',
+              padding: '30px 44px',
+              borderRadius: '36px 36px 4px 36px',
+              fontSize: '52px',
               fontWeight: 700,
-              lineHeight: 1.3,
-              boxShadow: '0 4px 20px rgba(55,138,221,0.4)',
+              lineHeight: 1.25,
+              boxShadow: '0 4px 24px rgba(55,138,221,0.4)',
             }}>
               You got it. 💬
             </div>
+            <div style={{
+              width: '20px', height: '20px', background: '#378ADD',
+              borderRadius: '0 0 20px 0', marginLeft: '-10px', marginBottom: '2px',
+            }} />
           </div>
         </div>
 
