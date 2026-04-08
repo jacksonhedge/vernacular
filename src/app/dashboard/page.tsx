@@ -7569,6 +7569,38 @@ button:active { transform: scale(0.98); }`}</style>
                     }} />
                   </div>
 
+                  {/* Shared Link Section */}
+                  <div style={{ padding: '16px', borderRadius: 10, background: 'rgba(55,138,221,0.03)', border: '1px solid rgba(55,138,221,0.1)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#378ADD', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🔗 Shared Link
+                      <span style={{ fontSize: 10, fontWeight: 500, color: '#8e8e93' }}>(for geo-fenced apps)</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>App Name</label>
+                        <input id="init-app-name" placeholder="e.g., DraftKings, FanDuel, BetRivers" style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                          fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif",
+                        }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Link / URL</label>
+                        <input id="init-link" placeholder="https://app.dscout.com/panels-ui/s/..." style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                          fontSize: 13, outline: 'none', fontFamily: "'JetBrains Mono', monospace",
+                        }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>State(s) Available</label>
+                        <input id="init-states" placeholder="e.g., NJ, PA, MI, OH (comma separated)" style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                          fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif",
+                        }} />
+                        <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 4 }}>Leave blank if available nationwide</div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                     <button onClick={async () => {
                       const name = (document.getElementById('init-name') as HTMLInputElement)?.value;
@@ -7576,13 +7608,16 @@ button:active { transform: scale(0.98); }`}</style>
                       const desc = (document.getElementById('init-desc') as HTMLTextAreaElement)?.value;
                       const instructions = (document.getElementById('init-instructions') as HTMLTextAreaElement)?.value;
                       const goal = (document.getElementById('init-goal') as HTMLInputElement)?.value;
+                      const appName = (document.getElementById('init-app-name') as HTMLInputElement)?.value;
+                      const link = (document.getElementById('init-link') as HTMLInputElement)?.value;
+                      const states = (document.getElementById('init-states') as HTMLInputElement)?.value;
                       if (!name) { window.alert('Name is required'); return; }
                       const orgId = getOrgId();
                       if (orgId) {
                         await supabase.from('org_knowledge').insert({
                           organization_id: orgId,
                           title: name,
-                          content: `Type: ${type}\nDescription: ${desc}\nInstructions: ${instructions}\nGoal: ${goal}`,
+                          content: `Type: ${type}\nDescription: ${desc}\nInstructions: ${instructions}\nGoal: ${goal}${appName ? `\nApp: ${appName}` : ''}${link ? `\nLink: ${link}` : ''}${states ? `\nStates: ${states}` : ''}`,
                           category: 'initiative',
                         });
                       }
