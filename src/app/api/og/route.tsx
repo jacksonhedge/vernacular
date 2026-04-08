@@ -18,19 +18,19 @@ export async function GET() {
           padding: '40px 60px',
         }}
       >
-        {/* iMessage conversation */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '700px', marginBottom: '40px' }}>
+        {/* iMessage conversation — BIG */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%', maxWidth: '900px', marginBottom: '32px' }}>
           {/* Incoming */}
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <div style={{
               background: 'rgba(255,255,255,0.95)',
               color: '#1a3a5c',
-              padding: '18px 28px',
-              borderRadius: '24px 24px 24px 6px',
-              fontSize: '32px',
+              padding: '28px 40px',
+              borderRadius: '32px 32px 32px 8px',
+              fontSize: '48px',
               fontWeight: 600,
-              maxWidth: '80%',
-              lineHeight: 1.4,
+              lineHeight: 1.3,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             }}>
               Agents talking via iMessage?
             </div>
@@ -40,12 +40,12 @@ export async function GET() {
             <div style={{
               background: '#378ADD',
               color: '#ffffff',
-              padding: '18px 28px',
-              borderRadius: '24px 24px 6px 24px',
-              fontSize: '32px',
+              padding: '28px 40px',
+              borderRadius: '32px 32px 8px 32px',
+              fontSize: '48px',
               fontWeight: 700,
-              maxWidth: '80%',
-              lineHeight: 1.4,
+              lineHeight: 1.3,
+              boxShadow: '0 4px 20px rgba(55,138,221,0.4)',
             }}>
               You got it. 💬
             </div>
@@ -53,17 +53,17 @@ export async function GET() {
         </div>
 
         {/* Branding */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: '#fff' }} />
-            <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.6)' }} />
-            <div style={{ width: '12px', height: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.3)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ width: '14px', height: '14px', borderRadius: '7px', background: '#fff' }} />
+            <div style={{ width: '14px', height: '14px', borderRadius: '7px', background: 'rgba(255,255,255,0.6)' }} />
+            <div style={{ width: '14px', height: '14px', borderRadius: '7px', background: 'rgba(255,255,255,0.3)' }} />
           </div>
-          <span style={{ color: '#fff', fontSize: '28px', fontWeight: 800, letterSpacing: '-0.02em' }}>
+          <span style={{ color: '#fff', fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em' }}>
             Vernacular
           </span>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '22px', fontWeight: 500 }}>
-            — The iMessage Internet Protocol
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '24px', fontWeight: 500 }}>
+            The iMessage Internet Protocol
           </span>
         </div>
       </div>
