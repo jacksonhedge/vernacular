@@ -384,6 +384,7 @@ export default function DashboardPage() {
   });
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
   const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>('unread');
+  const [activeAccountView, setActiveAccountView] = useState<string>('all');
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -7819,14 +7820,30 @@ button:active { transform: scale(0.98); }`}</style>
               }}>
                 {(org?.name as string) || 'Vernacular'}
               </div>
-              <div style={{
-                fontSize: 10, fontWeight: 700,
-                color: plan === 'enterprise' ? '#A78BFA' : plan === 'pro' ? '#60A5FA' : '#6EE7B7',
-                fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
-                letterSpacing: '0.06em', marginTop: 2,
-              }}>
-                {plan}
-              </div>
+              <select
+                value={activeAccountView}
+                onChange={e => setActiveAccountView(e.target.value)}
+                style={{
+                  marginTop: 3, padding: '1px 4px', borderRadius: 4, border: 'none',
+                  fontSize: 9, fontWeight: 700, cursor: 'pointer', outline: 'none',
+                  fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  background: activeAccountView === 'vip_manager' ? 'rgba(167,139,250,0.2)' :
+                    activeAccountView === 'customer_support' ? 'rgba(96,165,250,0.2)' :
+                    activeAccountView === 'sales_outreach' ? 'rgba(110,231,183,0.2)' :
+                    activeAccountView === 'app_testing' ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.1)',
+                  color: activeAccountView === 'vip_manager' ? '#A78BFA' :
+                    activeAccountView === 'customer_support' ? '#60A5FA' :
+                    activeAccountView === 'sales_outreach' ? '#6EE7B7' :
+                    activeAccountView === 'app_testing' ? '#FFC107' : '#8e8e93',
+                }}
+              >
+                <option value="all">All Solutions</option>
+                <option value="vip_manager">🎰 VIP Manager</option>
+                <option value="customer_support">💬 Support</option>
+                <option value="sales_outreach">📱 Sales / Outreach</option>
+                <option value="app_testing">🧪 App Testing</option>
+              </select>
             </div>
           )}
           {/* Sound Toggle */}
