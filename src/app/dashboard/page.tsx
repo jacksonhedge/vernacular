@@ -8060,21 +8060,27 @@ button:active { transform: scale(0.98); }`}</style>
             position: 'relative', overflow: 'visible',
           }} title="Craig — AI Copilot">
             <svg width="28" height="28" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
-              <style>{`
-                @keyframes craigChomp { 0%,100% { d: path("M95 50 A45 45 0 1 1 50 5 L50 50 Z"); } 50% { d: path("M95 48 A45 45 0 1 1 95 52 L50 50 Z"); } }
-                @keyframes craigDot { 0% { transform: translateX(0); opacity:1; } 100% { transform: translateX(-40px); opacity:0; } }
-              `}</style>
               {aiCopilotLoading ? (
                 <>
-                  <path d="M95 50 A45 45 0 1 1 50 5 L50 50 Z" fill="#fff" style={{ animation: 'craigChomp 0.35s ease-in-out infinite' }} />
-                  <circle cx="110" cy="50" r="4" fill="#EF4444" style={{ animation: 'craigDot 0.5s linear infinite' }} />
-                  <circle cx="122" cy="50" r="4" fill="#EC4899" style={{ animation: 'craigDot 0.5s linear 0.17s infinite' }} />
-                  <circle cx="134" cy="50" r="4" fill="#3B82F6" style={{ animation: 'craigDot 0.5s linear 0.34s infinite' }} />
+                  {/* Chomping Pac-Man */}
+                  <circle cx="50" cy="50" r="45" fill="#fff" />
+                  <path d="M50 50 L95 30 L95 70 Z" fill="#F59E0B">
+                    <animate attributeName="d" values="M50 50 L95 20 L95 80 Z;M50 50 L95 45 L95 55 Z;M50 50 L95 20 L95 80 Z" dur="0.4s" repeatCount="indefinite" />
+                  </path>
+                  <circle cx="58" cy="25" r="5" fill="#EA8C00" />
+                  {/* Dots being eaten */}
+                  <circle r="4" fill="#EF4444"><animate attributeName="cx" values="120;60" dur="0.5s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" repeatCount="indefinite" /></circle>
+                  <circle r="4" fill="#EC4899"><animate attributeName="cx" values="140;80" dur="0.5s" begin="0.17s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" begin="0.17s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" begin="0.17s" repeatCount="indefinite" /></circle>
+                  <circle r="4" fill="#3B82F6"><animate attributeName="cx" values="160;100" dur="0.5s" begin="0.34s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" begin="0.34s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" begin="0.34s" repeatCount="indefinite" /></circle>
                 </>
               ) : (
-                <path d="M95 50 A45 45 0 1 1 50 5 L50 50 Z" fill="#fff" />
+                <>
+                  {/* Static Pac-Man — circle with wedge mouth */}
+                  <circle cx="50" cy="50" r="45" fill="#fff" />
+                  <path d="M50 50 L95 25 L95 75 Z" fill="#F59E0B" />
+                  <circle cx="58" cy="25" r="5" fill="#EA8C00" />
+                </>
               )}
-              <circle cx="55" cy="28" r="5" fill="#EA8C00" />
             </svg>
             {/* Green status dot */}
             <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, background: '#22C55E', border: '2px solid #fff' }} />
