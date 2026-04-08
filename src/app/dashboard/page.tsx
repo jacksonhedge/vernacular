@@ -320,6 +320,7 @@ export default function DashboardPage() {
   const [newConvName, setNewConvName] = useState('');
   const [hoveredColClose, setHoveredColClose] = useState<string | null>(null);
   const messageEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const streamsScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Notion data
   const [notionContacts, setNotionContacts] = useState<Array<{
@@ -3390,14 +3391,14 @@ button:active { transform: scale(0.98); }`}</style>
             return (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 8px', width: 120, minWidth: 120, maxWidth: 120 }}>
                 <button onClick={() => {
-                  const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                  const el = streamsScrollRef.current;
                   if (el) el.scrollBy({ left: -350, behavior: 'smooth' });
                 }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                 </button>
                 <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
                   onClick={e => {
-                    const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                    const el = streamsScrollRef.current;
                     if (!el) return;
                     const rect = e.currentTarget.getBoundingClientRect();
                     const pct = (e.clientX - rect.left) / rect.width;
@@ -3412,7 +3413,7 @@ button:active { transform: scale(0.98); }`}</style>
                   }} />
                 </div>
                 <button onClick={() => {
-                  const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                  const el = streamsScrollRef.current;
                   if (el) el.scrollBy({ left: 350, behavior: 'smooth' });
                 }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
@@ -3424,7 +3425,7 @@ button:active { transform: scale(0.98); }`}</style>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
         </div>
-        <div data-streams-scroll onWheel={e => { if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) { e.currentTarget.scrollLeft += e.deltaY; } }} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
+        <div ref={streamsScrollRef} onWheel={e => { if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) { e.currentTarget.scrollLeft += e.deltaY; } }} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
         {(() => {
           // Sort: pinned first, then unread, then the rest
           const sorted = [...columns].sort((a, b) => {
