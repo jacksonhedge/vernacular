@@ -8471,11 +8471,12 @@ button:active { transform: scale(0.98); }`}</style>
 
             {/* Input — Notion style */}
             <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)', background: 'rgba(0,0,0,0.02)' }}>
-              <input
+              <textarea
                 value={aiCopilotInput}
                 onChange={e => setAiCopilotInput(e.target.value)}
                 onKeyDown={async e => {
-                  if (e.key === 'Enter' && aiCopilotInput.trim() && !aiCopilotLoading) {
+                  if (e.key === 'Enter' && !e.shiftKey && aiCopilotInput.trim() && !aiCopilotLoading) {
+                    e.preventDefault();
                     const text = aiCopilotInput.trim();
                     setAiCopilotInput('');
                     setAiCopilotMessages(prev => [...prev, { role: 'user', text }]);
@@ -8695,11 +8696,15 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                     setAiCopilotLoading(false);
                   }
                 }}
+                onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 140) + 'px'; }}
                 placeholder="Do anything with AI..."
+                rows={1}
                 style={{
-                  width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.04)',
+                  width: '100%', padding: '10px 12px', border: 'none', borderRadius: 10,
                   fontSize: 14, outline: 'none', fontFamily: "'Inter', sans-serif",
-                  color: '#1c1c1e', background: 'transparent',
+                  color: '#1c1c1e', background: 'rgba(0,0,0,0.04)',
+                  resize: 'none', overflow: 'hidden', lineHeight: 1.5,
+                  minHeight: 38, maxHeight: 140, whiteSpace: 'pre-wrap',
                 }}
               />
               {/* Bottom toolbar — Notion style */}
