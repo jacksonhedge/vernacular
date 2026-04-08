@@ -8691,7 +8691,9 @@ ACTIONS YOU CAN TAKE:
 
 7. IMPROVE INITIATIVE: Include [IMPROVE_INITIATIVE:title|improvement] to update an existing initiative's instructions or tone based on conversation learnings. Example: [IMPROVE_INITIATIVE:DraftKings NJ Testing|Add: Always ask if they have a friend who wants to test too — referral bonus of $25]
 
-8. SUB-INITIATIVE: Include [SUB_INITIATIVE:parent_title|name|type|description|instructions] to create a sub-initiative under a parent. Example: [SUB_INITIATIVE:DraftKings NJ Testing|DraftKings Referral Program|outreach|Get existing testers to refer friends|Offer $25 referral bonus per friend who completes a test] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
+8. SCHEDULE: Include [SCHEDULE:contact_name|title|datetime|status] to add to the Schedule tab. Status: tentative or confirmed. Example: [SCHEDULE:Sean|(Maybe) FanDuel test|tonight at 8pm|tentative] or [SCHEDULE:Brady Walsh|Follow-up call|tomorrow 2pm|confirmed]. Detect scheduling mentions in conversations — if someone says "let's do it at 3" or "I can tonight", create a schedule entry.
+
+9. SUB-INITIATIVE: Include [SUB_INITIATIVE:parent_title|name|type|description|instructions] to create a sub-initiative under a parent. Example: [SUB_INITIATIVE:DraftKings NJ Testing|DraftKings Referral Program|outreach|Get existing testers to refer friends|Offer $25 referral bonus per friend who completes a test] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
@@ -8894,6 +8896,32 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                               setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${title.trim()}" improved! Added: "${improvement.trim().substring(0, 60)}..."` }]);
                             }
                           }
+                        }
+                      }
+
+                      // Check for SCHEDULE commands
+                      if (reply.includes('[SCHEDULE:')) {
+                        const match = reply.match(/\[SCHEDULE:([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]/);
+                        if (match) {
+                          const orgId = getOrgId();
+                          const [, contactName, title, datetime, status] = match;
+                          // Find contact
+                          const contact = contacts.find(c => (c.full_name || '').toLowerCase().includes(contactName.trim().toLowerCase()));
+                          await supabase.from('scheduled_events').insert({
+                            organization_id: orgId,
+                            contact_name: contactName.trim(),
+                            contact_phone: contact?.phone || '',
+                            contact_id: contact?.id || null,
+                            title: title.trim(),
+                            description: `Detected from conversation. Time: ${datetime.trim()}`,
+                            status: status.trim() === 'confirmed' ? 'confirmed' : 'tentative',
+                            source: 'ai_detected',
+                            detected_from_message: text,
+                          });
+                          setAiCopilotMessages(prev => [...prev, {
+                            role: 'assistant',
+                            text: `📅 ${status.trim() === 'confirmed' ? '✅ Confirmed' : '⏳ Tentative'}: "${title.trim()}" with ${contactName.trim()} — ${datetime.trim()}`,
+                          }]);
                         }
                       }
 
