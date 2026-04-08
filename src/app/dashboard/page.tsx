@@ -8520,7 +8520,7 @@ ACTIONS YOU CAN TAKE:
 
 3. DRAFT MESSAGE: Include [DRAFT:contact_name:draft text] to pre-fill a message in their conversation input without sending. Good for when the user wants to review first.
 
-4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Available fields: name, firstName, lastName, email, company, jobTitle, city, state, school, greekOrg, venmo, instagram, twitter, linkedin, notes. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
+4. UPDATE CONTACT: Include [UPDATE:phone_number:field:value] to update a contact. Available fields: name, firstName, lastName, email, company, jobTitle, city, state, school, greekOrg, venmo, instagram, twitter, linkedin, notes, relationship. Relationship values: prospect, tester, client, partner, referral, vendor, friend, vip, lead. Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
@@ -8608,7 +8608,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                           const fieldMap: Record<string, string> = {
                             name: 'fullName', fullName: 'fullName', full_name: 'fullName',
                             email: 'email', company: 'company', city: 'city', state: 'state',
-                            school: 'school', notes: 'notes',
+                            school: 'school', notes: 'notes', relationship: 'relationship',
                           };
                           const apiField = fieldMap[field] || field;
                           try {

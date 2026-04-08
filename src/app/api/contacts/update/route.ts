@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     if (school) updateData.school = school;
     if (greekOrg) updateData.greek_org = greekOrg;
     if (venmo) updateData.venmo_handle = venmo;
+    if (body.relationship) updateData.relationship = body.relationship;
     if (notes) updateData.notes = notes;
 
     const { error } = await supabase
