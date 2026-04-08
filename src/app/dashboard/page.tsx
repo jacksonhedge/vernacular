@@ -383,6 +383,7 @@ export default function DashboardPage() {
     return new Set();
   });
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
+  const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>('unread');
 
   // Sound effects using Web Audio API
   const playSound = (type: 'send' | 'receive' | 'click') => {
@@ -3396,17 +3397,46 @@ button:active { transform: scale(0.98); }`}</style>
           <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
+          <select
+            value={streamSortMode}
+            onChange={e => setStreamSortMode(e.target.value as typeof streamSortMode)}
+            style={{
+              padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+              fontSize: 10, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+              fontFamily: "'JetBrains Mono', monospace", background: 'rgba(55,138,221,0.06)',
+              outline: 'none', flexShrink: 0,
+            }}
+          >
+            <option value="unread">Unread Left</option>
+            <option value="recent">Most Recent</option>
+            <option value="name">A → Z</option>
+            <option value="most-messages">Most Messages</option>
+          </select>
         </div>
         <div ref={streamsScrollRef} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'scroll', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32, WebkitOverflowScrolling: 'touch' }}>
         {(() => {
-          // Sort: pinned first, then unread, then the rest
+          // Sort: pinned always first, then by selected mode
           const sorted = [...columns].sort((a, b) => {
             const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
             if (aPinned !== bPinned) return bPinned - aPinned;
-            const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
-            const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
-            return bUnread - aUnread;
+            if (streamSortMode === 'unread') {
+              const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
+              const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
+              return bUnread - aUnread;
+            }
+            if (streamSortMode === 'recent') {
+              const aTime = a.messages.length > 0 ? new Date(a.messages[a.messages.length - 1].timestamp || 0).getTime() : 0;
+              const bTime = b.messages.length > 0 ? new Date(b.messages[b.messages.length - 1].timestamp || 0).getTime() : 0;
+              return bTime - aTime;
+            }
+            if (streamSortMode === 'name') {
+              return (a.contact?.name || '').localeCompare(b.contact?.name || '');
+            }
+            if (streamSortMode === 'most-messages') {
+              return b.messages.length - a.messages.length;
+            }
+            return 0;
           });
           // Filter: if showReadStreams is off, only show pinned + unread
           const visible = showReadStreams ? sorted : sorted.filter(c =>
