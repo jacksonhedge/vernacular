@@ -8070,13 +8070,19 @@ button:active { transform: scale(0.98); }`}</style>
             transition: 'all 0.2s',
             position: 'relative',
           }} title="Vernacular AI">
+            <style>{`
+              @keyframes glimmer {
+                0% { background-position: -200% center; }
+                100% { background-position: 200% center; }
+              }
+            `}</style>
             {/* Three dots logo */}
             <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               {aiCopilotLoading ? (
                 <>
-                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out infinite' }} />
-                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out 0.15s infinite' }} />
-                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out 0.3s infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: '#fff', animation: 'pulse 1s ease-in-out infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: '#fff', animation: 'pulse 1s ease-in-out 0.15s infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: '#fff', animation: 'pulse 1s ease-in-out 0.3s infinite' }} />
                 </>
               ) : (
                 <>
@@ -8089,6 +8095,11 @@ button:active { transform: scale(0.98); }`}</style>
             <span style={{
               fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
               color: showAICopilot ? '#fff' : '#1c1c1e',
+              backgroundImage: showAICopilot ? 'none' : 'linear-gradient(90deg, #1c1c1e 0%, #1c1c1e 40%, #378ADD 50%, #1c1c1e 60%, #1c1c1e 100%)',
+              backgroundSize: '200% 100%',
+              WebkitBackgroundClip: showAICopilot ? undefined : 'text',
+              WebkitTextFillColor: showAICopilot ? '#fff' : 'transparent',
+              animation: showAICopilot ? 'none' : 'glimmer 3s ease-in-out infinite',
             }}>Vernacular AI</span>
             {/* Green status dot */}
             <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: 5, background: '#22C55E', border: '2px solid #fff' }} />
@@ -8205,13 +8216,37 @@ button:active { transform: scale(0.98); }`}</style>
                 </div>
               )}
               {aiCopilotMessages.map((m, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
-                    maxWidth: '80%', padding: '8px 12px', borderRadius: 12,
+                    maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
                     background: m.role === 'user' ? '#378ADD' : 'rgba(0,0,0,0.04)',
                     color: m.role === 'user' ? '#fff' : '#1c1c1e',
                     fontSize: 13, lineHeight: 1.5,
                   }}>{m.text}</div>
+                  {/* Like/Dislike on AI responses */}
+                  {m.role === 'assistant' && (
+                    <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+                      <button onClick={() => {
+                        fetch('/api/ai/draft-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ aiDraft: m.text, action: 'approved', wasGood: true, tags: ['liked'] })
+                        });
+                        setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text + ' 👍' } : msg));
+                      }} title="Good response" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#c4c4c6', padding: '2px 4px', borderRadius: 4 }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#22C55E')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#c4c4c6')}>👍</button>
+                      <button onClick={() => {
+                        const reason = window.prompt('What was wrong with this response?');
+                        if (reason !== null) {
+                          fetch('/api/ai/draft-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ aiDraft: m.text, action: 'rejected', wasGood: false, rejectionReason: reason, tags: ['disliked'] })
+                          });
+                          setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text + ' 👎' } : msg));
+                        }
+                      }} title="Bad response — provide feedback" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#c4c4c6', padding: '2px 4px', borderRadius: 4 }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#EF4444')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#c4c4c6')}>👎</button>
+                    </div>
+                  )}
                 </div>
               ))}
               {aiCopilotLoading && (
