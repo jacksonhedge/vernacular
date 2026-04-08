@@ -3918,16 +3918,48 @@ button:active { transform: scale(0.98); }`}</style>
                           setColumns(prev => prev.map(c => c.id === col.id ? {
                             ...c, messages: c.messages.filter(m => m.id !== msg.id),
                           } : c));
+                          // Auto-expand textarea to show full text
+                          setTimeout(() => {
+                            const ta = document.querySelector(`[id="stream-col-${col.id}"] textarea`) as HTMLTextAreaElement;
+                            if (ta) { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 200) + 'px'; ta.focus(); }
+                          }, 50);
+                          // Auto-expand the textarea to fit the pasted text
+                          setTimeout(() => {
+                            const textarea = document.querySelector(`#stream-col-${col.id} textarea`) as HTMLTextAreaElement;
+                            if (textarea) { textarea.style.height = 'auto'; textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'; textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }
+                          }, 50);
                         }} style={{
                           padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(245,158,11,0.3)', cursor: 'pointer',
                           background: 'rgba(245,158,11,0.08)', color: '#D97706', fontSize: 11, fontWeight: 700,
                           fontFamily: "'Inter', sans-serif",
                         }}>Edit</button>
-                        <button onClick={() => {
-                          // Type my own — dismiss the draft
+                        <button onClick={async () => {
+                          // Dismiss = negative feedback + permanently remove
                           setColumns(prev => prev.map(c => c.id === col.id ? {
                             ...c, messages: c.messages.filter(m => m.id !== msg.id),
                           } : c));
+                          // Add to hidden messages so it never comes back
+                          setHiddenMessages(prev => {
+                            const next = new Set(prev).add(msg.id);
+                            localStorage.setItem('vernacular-hidden-msgs', JSON.stringify([...next]));
+                            return next;
+                          });
+                          // Log as rejected/bad — same as 👎
+                          const orgId = getOrgId();
+                          await fetch('/api/ai/draft-log', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              aiDraft: msg.text,
+                              action: 'rejected',
+                              wasGood: false,
+                              rejectionReason: 'Dismissed by user',
+                              tags: ['dismissed', 'copilot'],
+                              organizationId: orgId,
+                              personaName: 'AI Draft',
+                              inboundMessage: col.messages.filter(m => m.direction === 'incoming').slice(-1)[0]?.text || '',
+                            }),
+                          }).catch(() => {});
                         }} style={{
                           padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', cursor: 'pointer',
                           background: 'rgba(0,0,0,0.03)', color: '#8e8e93', fontSize: 11, fontWeight: 600,
