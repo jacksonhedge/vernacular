@@ -7443,7 +7443,29 @@ button:active { transform: scale(0.98); }`}</style>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Initiatives</h2>
               <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Each initiative is an AI-powered project with its own memory, tone, and knowledge.</p>
             </div>
-            <button onClick={() => setSelectedInitiative('new')} style={{ ...primaryBtnStyle, fontSize: 13 }}>+ Create Initiative</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={async () => {
+                const orgId = getOrgId();
+                if (!orgId) return;
+                const btn = document.getElementById('analyze-tone-btn');
+                if (btn) btn.textContent = 'Analyzing...';
+                try {
+                  const res = await fetch('/api/ai/analyze-tone', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ organizationId: orgId, limit: 50 }),
+                  });
+                  const data = await res.json();
+                  if (data.analysis?.summary) {
+                    window.alert(`Tone Profile (${data.messagesAnalyzed} messages analyzed):\n\n${data.analysis.summary}\n\nFormality: ${data.analysis.formality}/5\nWarmth: ${data.analysis.warmth}/5\nVerbosity: ${data.analysis.verbosity}/5\n\nGreeting: "${data.analysis.greeting_style}"\nVocabulary: ${(data.analysis.vocabulary || []).slice(0, 5).join(', ')}\n\n${data.saved ? '✅ Saved to org knowledge' : ''}`);
+                  }
+                } catch { window.alert('Analysis failed'); }
+                if (btn) btn.textContent = '🎨 Analyze My Tone';
+              }} id="analyze-tone-btn" style={{
+                ...primaryBtnStyle, fontSize: 13,
+                background: 'rgba(124,58,237,0.1)', color: '#7C3AED', boxShadow: 'none',
+              }}>🎨 Analyze My Tone</button>
+              <button onClick={() => setSelectedInitiative('new')} style={{ ...primaryBtnStyle, fontSize: 13 }}>+ Create Initiative</button>
+            </div>
           </div>
 
           {/* Initiative Cards Grid */}
