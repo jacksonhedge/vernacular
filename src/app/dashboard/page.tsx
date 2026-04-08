@@ -413,6 +413,8 @@ export default function DashboardPage() {
   const [showTokenUsage, setShowTokenUsage] = useState(false);
   const [tokenStats, setTokenStats] = useState<{ total: number; cost: string; count: number }>({ total: 0, cost: '$0.00', count: 0 });
   const [craigKnowledge, setCraigKnowledge] = useState('');
+  const [showCraigHistory, setShowCraigHistory] = useState(false);
+  const [craigChatHistory, setCraigChatHistory] = useState<Array<{ id: string; preview: string; date: string; msgs: number }>>([]);
 
   const [orgKnowledge, setOrgKnowledge] = useState('');
 
@@ -8317,6 +8319,18 @@ button:active { transform: scale(0.98); }`}</style>
                 {(org?.name as string) || 'Vernacular'}
               </div>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <button onClick={() => {
+                  setShowCraigHistory(prev => !prev);
+                  if (!showCraigHistory) {
+                    // Load chat history from localStorage
+                    try {
+                      const saved = JSON.parse(localStorage.getItem('vernacular-craig-history') || '[]');
+                      setCraigChatHistory(saved);
+                    } catch { /* silent */ }
+                  }
+                }} title="Previous chats" style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: showCraigHistory ? 'rgba(55,138,221,0.1)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showCraigHistory ? '#378ADD' : '#8e8e93', fontSize: 12 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                </button>
                 <button onClick={async () => {
                   setShowTokenUsage(prev => !prev);
                   if (!showTokenUsage) {
@@ -8355,6 +8369,46 @@ button:active { transform: scale(0.98); }`}</style>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Previous Chats */}
+            {showCraigHistory && (
+              <div style={{ padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)', maxHeight: 180, overflow: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Previous Chats</span>
+                  <button onClick={() => {
+                    // Save current chat to history before starting new
+                    if (aiCopilotMessages.length > 0) {
+                      const entry = {
+                        id: `chat-${Date.now()}`,
+                        preview: aiCopilotMessages[0]?.text?.substring(0, 50) || 'Chat',
+                        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        msgs: aiCopilotMessages.length,
+                      };
+                      const history = [...craigChatHistory, entry].slice(-20);
+                      setCraigChatHistory(history);
+                      localStorage.setItem('vernacular-craig-history', JSON.stringify(history));
+                    }
+                    setAiCopilotMessages([]);
+                  }} style={{ fontSize: 10, fontWeight: 600, color: '#378ADD', background: 'none', border: 'none', cursor: 'pointer' }}>+ New Chat</button>
+                </div>
+                {craigChatHistory.length === 0 ? (
+                  <div style={{ fontSize: 11, color: '#c4c4c6', textAlign: 'center', padding: 12 }}>No previous chats</div>
+                ) : (
+                  craigChatHistory.slice().reverse().map(chat => (
+                    <div key={chat.id} style={{
+                      padding: '6px 8px', borderRadius: 6, cursor: 'pointer', marginBottom: 4,
+                      background: 'rgba(0,0,0,0.02)', fontSize: 12,
+                    }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(55,138,221,0.06)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.02)')}
+                    >
+                      <div style={{ fontWeight: 500, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.preview}</div>
+                      <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 2 }}>{chat.date} · {chat.msgs} messages</div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
