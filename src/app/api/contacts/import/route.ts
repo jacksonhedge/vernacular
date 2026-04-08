@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
           // Check for duplicate by phone
           if (contact.phone) {
             contact.phone = formatPhone(contact.phone);
+            // Look up by phone (ignore org_id — contacts may have null org from sync)
             const { data: existing } = await supabase
               .from('contacts')
-              .select('id')
-              .eq('organization_id', organizationId)
+              .select('id, organization_id')
               .or(phoneOrFilter(contact.phone))
               .limit(1);
 
@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
                 if (contact.company) updateData.company = contact.company;
                 if (contact.jobTitle || contact.job_title) updateData.job_title = contact.jobTitle || contact.job_title;
                 if (contact.linkedinUrl || contact.linkedin_url) updateData.linkedin_url = contact.linkedinUrl || contact.linkedin_url;
+                // Also set org_id if missing
+                if (!existing[0].organization_id && organizationId) {
+                  updateData.organization_id = organizationId;
+                }
                 if (Object.keys(updateData).length > 0) {
                   await supabase.from('contacts').update(updateData).eq('id', existing[0].id);
                   results.imported++;
