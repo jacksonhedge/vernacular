@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/supabase';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODELS: Record<string, string> = {
@@ -49,11 +50,26 @@ export async function POST(request: Request) {
     const data = await claudeRes.json();
     const content = data.content?.[0]?.text || '';
     const usage = data.usage || {};
+    const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0);
+    const modelKey = model || 'sonnet';
+    const tokenCosts: Record<string, number> = { haiku: 0.001, sonnet: 0.006, opus: 0.030 };
+
+    // Track usage
+    const supabase = createServiceClient();
+    await supabase.from('ai_usage').insert({
+      model: modelKey,
+      tokens_input: usage.input_tokens || 0,
+      tokens_output: usage.output_tokens || 0,
+      tokens_total: totalTokens,
+      cost_estimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
+      action: 'ai_chat',
+    });
 
     return NextResponse.json({
       content,
       model: selectedModel,
-      tokensUsed: (usage.input_tokens || 0) + (usage.output_tokens || 0),
+      tokensUsed: totalTokens,
+      costEstimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
     });
   } catch (err) {
     return NextResponse.json({
