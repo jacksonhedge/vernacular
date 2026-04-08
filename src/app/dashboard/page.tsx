@@ -8052,38 +8052,35 @@ button:active { transform: scale(0.98); }`}</style>
           }}
         >
           <button onClick={() => { if (!craigDragging) setShowAICopilot(prev => !prev); }} style={{
-            width: 44, height: 44, borderRadius: 22, border: 'none', cursor: craigDragging ? 'grabbing' : 'pointer',
-            background: 'linear-gradient(135deg, #F59E0B, #EA8C00)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: showAICopilot ? '0 4px 20px rgba(245,158,11,0.5)' : '0 2px 8px rgba(245,158,11,0.3)',
-            transition: 'box-shadow 0.2s, transform 0.15s',
-            position: 'relative', overflow: 'visible',
-          }} title="Craig — AI Copilot">
-            <svg width="28" height="28" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+            height: 36, borderRadius: 18, border: 'none', cursor: craigDragging ? 'grabbing' : 'pointer',
+            background: showAICopilot ? '#378ADD' : 'rgba(255,255,255,0.95)',
+            display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px 0 10px',
+            boxShadow: showAICopilot ? '0 4px 20px rgba(55,138,221,0.4)' : '0 2px 12px rgba(0,0,0,0.12)',
+            transition: 'all 0.2s',
+            position: 'relative',
+          }} title="Vernacular AI">
+            {/* Three dots logo */}
+            <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               {aiCopilotLoading ? (
                 <>
-                  {/* Chomping Pac-Man */}
-                  <circle cx="50" cy="50" r="45" fill="#fff" />
-                  <path d="M50 50 L95 30 L95 70 Z" fill="#F59E0B">
-                    <animate attributeName="d" values="M50 50 L95 20 L95 80 Z;M50 50 L95 45 L95 55 Z;M50 50 L95 20 L95 80 Z" dur="0.4s" repeatCount="indefinite" />
-                  </path>
-                  <circle cx="58" cy="25" r="5" fill="#EA8C00" />
-                  {/* Dots being eaten */}
-                  <circle r="4" fill="#EF4444"><animate attributeName="cx" values="120;60" dur="0.5s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" repeatCount="indefinite" /></circle>
-                  <circle r="4" fill="#EC4899"><animate attributeName="cx" values="140;80" dur="0.5s" begin="0.17s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" begin="0.17s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" begin="0.17s" repeatCount="indefinite" /></circle>
-                  <circle r="4" fill="#3B82F6"><animate attributeName="cx" values="160;100" dur="0.5s" begin="0.34s" repeatCount="indefinite" /><animate attributeName="cy" values="50;50" dur="0.5s" begin="0.34s" repeatCount="indefinite" /><animate attributeName="opacity" values="1;0" dur="0.5s" begin="0.34s" repeatCount="indefinite" /></circle>
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out 0.15s infinite' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD', animation: 'pulse 1s ease-in-out 0.3s infinite' }} />
                 </>
               ) : (
                 <>
-                  {/* Static Pac-Man — circle with wedge mouth */}
-                  <circle cx="50" cy="50" r="45" fill="#fff" />
-                  <path d="M50 50 L95 25 L95 75 Z" fill="#F59E0B" />
-                  <circle cx="58" cy="25" r="5" fill="#EA8C00" />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? '#fff' : '#378ADD' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? 'rgba(255,255,255,0.6)' : 'rgba(55,138,221,0.6)' }} />
+                  <div style={{ width: 7, height: 7, borderRadius: 4, background: showAICopilot ? 'rgba(255,255,255,0.3)' : 'rgba(55,138,221,0.3)' }} />
                 </>
               )}
-            </svg>
+            </div>
+            <span style={{
+              fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
+              color: showAICopilot ? '#fff' : '#1c1c1e',
+            }}>Vernacular AI</span>
             {/* Green status dot */}
-            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, background: '#22C55E', border: '2px solid #fff' }} />
+            <div style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: 5, background: '#22C55E', border: '2px solid #fff' }} />
           </button>
         </div>
 
@@ -8099,12 +8096,13 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Header */}
             <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ fontSize: 18 }}>🟡</span>
-                  <div style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: 4, background: '#22C55E', border: '2px solid #fff' }} />
+                <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  <div style={{ width: 6, height: 6, borderRadius: 3, background: '#378ADD' }} />
+                  <div style={{ width: 6, height: 6, borderRadius: 3, background: 'rgba(55,138,221,0.6)' }} />
+                  <div style={{ width: 6, height: 6, borderRadius: 3, background: 'rgba(55,138,221,0.3)' }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Craig</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e' }}>Vernacular AI</div>
                   <div style={{ fontSize: 10, color: '#22C55E', fontWeight: 600 }}>● Online</div>
                 </div>
               </div>
@@ -8198,8 +8196,12 @@ button:active { transform: scale(0.98); }`}</style>
             <div style={{ flex: 1, overflow: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 300, minHeight: 120 }}>
               {aiCopilotMessages.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 20, color: '#8e8e93' }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>🟡</div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>Hey, I&apos;m Craig</div>
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 8 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 5, background: '#378ADD' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: 5, background: 'rgba(55,138,221,0.6)' }} />
+                    <div style={{ width: 10, height: 10, borderRadius: 5, background: 'rgba(55,138,221,0.3)' }} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>Vernacular AI</div>
                   <div style={{ fontSize: 11, marginTop: 4 }}>&quot;Send Brady a follow-up&quot; · &quot;How many texts today?&quot; · &quot;Draft a promo message&quot;</div>
                 </div>
               )}
