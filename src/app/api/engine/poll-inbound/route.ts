@@ -34,12 +34,21 @@ export async function GET() {
       const areaCode = phoneDigits.length === 11 ? phoneDigits.slice(1, 4) : phoneDigits.slice(0, 3);
       if (areaCode === '555') continue;
 
-      // Find or create contact
+      // Find station first (need org_id for contact)
+      const { data: station } = await supabase
+        .from('stations').select('id, organization_id')
+        .eq('name', msg.station || 'Wade')
+        .limit(1);
+
+      const stationOrgId = station?.[0]?.organization_id || null;
+
+      // Find or create contact (with org_id from station)
       const contactId = await findOrCreateContact(supabase, {
         phone: msg.contact_phone,
         source: 'inbound',
         import_source: 'imessage',
         source_system: 'wade-station',
+        organization_id: stationOrgId || undefined,
       });
 
       if (!contactId) { errors++; errorDetails.push(`${msg.contact_phone}: no contactId`); continue; }
@@ -50,12 +59,6 @@ export async function GET() {
         await logContactActivity(supabase, contactId, 'replied', `Inbound: "${msg.message.substring(0, 50)}"`);
         await updateEngagement(supabase, contactId, 'received_reply');
       }
-
-      // Find station
-      const { data: station } = await supabase
-        .from('stations').select('id')
-        .eq('name', msg.station || 'Wade')
-        .limit(1);
 
       const stationId = station?.[0]?.id;
       if (!stationId) { errors++; errorDetails.push(`${msg.contact_phone}: no station "${msg.station}"`); continue; }
