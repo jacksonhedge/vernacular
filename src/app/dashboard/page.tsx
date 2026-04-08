@@ -3384,44 +3384,15 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             Mark All Read
           </button>
-          {/* Scroll indicator — drag or click to scroll streams */}
-          {(() => {
-            const totalCols = columns.filter(c => c.contact).length;
-            if (totalCols <= 1) return null;
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 8px', width: 120, minWidth: 120, maxWidth: 120 }}>
-                <button onClick={() => {
-                  const el = streamsScrollRef.current;
-                  if (el) el.scrollBy({ left: -350, behavior: 'smooth' });
-                }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
-                </button>
-                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
-                  onClick={e => {
-                    const el = streamsScrollRef.current;
-                    if (!el) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const pct = (e.clientX - rect.left) / rect.width;
-                    el.scrollTo({ left: pct * (el.scrollWidth - el.clientWidth), behavior: 'smooth' });
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: 0, left: 0, height: '100%',
-                    width: `${Math.max(20, 100 / totalCols)}%`,
-                    borderRadius: 3, background: 'linear-gradient(90deg, #378ADD, #5B9FE8)',
-                    transition: 'left 0.15s ease',
-                    pointerEvents: 'none',
-                  }} />
-                </div>
-                <button onClick={() => {
-                  const el = streamsScrollRef.current;
-                  if (el) el.scrollBy({ left: 350, behavior: 'smooth' });
-                }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
-                </button>
-              </div>
-            );
-          })()}
+          {/* Scroll left/right buttons */}
+          <button onClick={() => { if (streamsScrollRef.current) streamsScrollRef.current.scrollBy({ left: -350, behavior: 'smooth' }); }}
+            style={{ padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 700, background: 'rgba(0,0,0,0.06)', color: '#1c1c1e', cursor: 'pointer' }}>
+            ← Prev
+          </button>
+          <button onClick={() => { if (streamsScrollRef.current) streamsScrollRef.current.scrollBy({ left: 350, behavior: 'smooth' }); }}
+            style={{ padding: '4px 8px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 700, background: 'rgba(0,0,0,0.06)', color: '#1c1c1e', cursor: 'pointer' }}>
+            Next →
+          </button>
           <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
