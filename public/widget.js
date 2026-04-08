@@ -1,501 +1,272 @@
 /**
- * Vernacular Chat Widget
- * Embeddable customer support chat that bridges web visitors to iMessage.
+ * Vernacular Chat Widget v2
+ * AI-powered support chat with iMessage handoff.
  *
  * Usage:
  *   <script src="https://vernacular.chat/widget.js"
- *           data-station="Wade"
- *           data-color="#378ADD"
- *           data-org="org_123"
- *           data-greeting="Hi! How can we help you today?"
- *           data-position="right"
- *           data-name="Vernacular">
+ *           data-token="EMBED_TOKEN_HERE"
+ *           data-position="right">
  *   </script>
  */
 (function () {
   'use strict';
 
-  // ── Configuration ──────────────────────────────────────────────────
   var script = document.currentScript || (function () {
     var scripts = document.getElementsByTagName('script');
     return scripts[scripts.length - 1];
   })();
 
   var CONFIG = {
-    color: script.getAttribute('data-color') || '#378ADD',
-    station: script.getAttribute('data-station') || 'Wade',
-    org: script.getAttribute('data-org') || '',
-    greeting: script.getAttribute('data-greeting') || 'Hi! How can we help you today?',
+    token: script.getAttribute('data-token') || '',
     position: script.getAttribute('data-position') || 'right',
-    name: script.getAttribute('data-name') || 'Vernacular',
-    apiBase: 'https://vernacular.chat',
+    apiBase: script.getAttribute('data-api') || 'https://vernacular.chat',
+    // These get filled from /api/widget/config
+    color: '#378ADD',
+    name: 'Support',
+    greeting: 'Hi! How can I help you today?',
+    stationPhone: '',
   };
 
-  // ── State ──────────────────────────────────────────────────────────
   var state = {
     open: false,
-    messages: [],          // { text, from: 'user'|'bot', time }
-    phase: 'welcome',      // welcome | prompt | phone | chat | sent
+    messages: [],
+    conversationId: '',
+    sessionId: '',
     unread: false,
-    phone: '',
-    firstUserMessage: '',
-    waitingForResponse: false,
+    typing: false,
+    handoffOffered: false,
+    resolved: false,
+    hasAIReply: false,
   };
 
-  // ── Shadow DOM host ────────────────────────────────────────────────
+  // Generate session ID
+  state.sessionId = sessionStorage.getItem('vnc-session') || ('vnc-' + Math.random().toString(36).slice(2));
+  sessionStorage.setItem('vnc-session', state.sessionId);
+
   var host = document.createElement('div');
   host.id = 'vnc-widget-host';
   document.body.appendChild(host);
   var shadow = host.attachShadow({ mode: 'open' });
 
-  // ── Styles ─────────────────────────────────────────────────────────
-  var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-  function hexToRgb(hex) {
-    var r = parseInt(hex.slice(1, 3), 16);
-    var g = parseInt(hex.slice(3, 5), 16);
-    var b = parseInt(hex.slice(5, 7), 16);
-    return r + ',' + g + ',' + b;
+  // ── Fetch config ────────────────────────────────────────────────────
+  if (CONFIG.token) {
+    fetch(CONFIG.apiBase + '/api/widget/config/' + CONFIG.token)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.client_name) CONFIG.name = data.client_name;
+        if (data.brand_color) CONFIG.color = data.brand_color;
+        if (data.greeting) CONFIG.greeting = data.greeting;
+        if (data.station_phone) CONFIG.stationPhone = data.station_phone;
+        state.messages = [{ text: CONFIG.greeting, from: 'bot', time: Date.now() }];
+        render();
+      })
+      .catch(function () {
+        state.messages = [{ text: CONFIG.greeting, from: 'bot', time: Date.now() }];
+        render();
+      });
   }
 
-  var colorRgb = hexToRgb(CONFIG.color);
-  var posLeft = CONFIG.position === 'left';
+  // ── Create session ──────────────────────────────────────────────────
+  function ensureSession(cb) {
+    if (state.conversationId) return cb();
+    fetch(CONFIG.apiBase + '/api/widget/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embed_token: CONFIG.token, session_id: state.sessionId }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        state.conversationId = data.conversation_id || '';
+        cb();
+      })
+      .catch(function () { cb(); });
+  }
 
-  var css = `
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  // ── Send message to AI ──────────────────────────────────────────────
+  function sendToAI(text) {
+    if (!state.conversationId) return;
+    state.typing = true;
+    render();
 
-    :host{
-      all:initial;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-      font-size:14px;
-      color:${isDark ? '#e4e4e7' : '#18181b'};
-      line-height:1.5;
-    }
+    fetch(CONFIG.apiBase + '/api/widget/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: state.conversationId,
+        embed_token: CONFIG.token,
+        message: text,
+      }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        state.typing = false;
+        if (data.reply) {
+          state.messages.push({ text: data.reply, from: 'bot', time: Date.now() });
+          state.hasAIReply = true;
+        }
+        if (data.offer_handoff && !state.handoffOffered) {
+          state.handoffOffered = true;
+          state.messages.push({
+            text: '__HANDOFF__',
+            from: 'system',
+            time: Date.now(),
+          });
+        }
+        render();
+        scrollToBottom();
+      })
+      .catch(function () {
+        state.typing = false;
+        state.messages.push({ text: 'Sorry, something went wrong. Please try again.', from: 'bot', time: Date.now() });
+        render();
+      });
+  }
 
-    /* ── Fab ──────────────────────────────────────────────────────── */
-    .vnc-fab{
-      position:fixed;
-      bottom:24px;
-      ${posLeft ? 'left' : 'right'}:24px;
-      width:56px;height:56px;
-      border-radius:50%;
-      background:${CONFIG.color};
-      border:none;cursor:pointer;
-      z-index:999999;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 4px 14px rgba(${colorRgb},0.45);
-      transition:transform .2s ease,box-shadow .2s ease;
-      animation:vnc-bounce .6s ease;
-    }
-    .vnc-fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(${colorRgb},0.55);}
-    .vnc-fab svg{width:26px;height:26px;fill:#fff;}
-    .vnc-fab.open svg.chat-icon{display:none;}
-    .vnc-fab.open svg.close-icon{display:block;}
-    .vnc-fab:not(.open) svg.close-icon{display:none;}
+  // ── Handoff to iMessage ─────────────────────────────────────────────
+  function doHandoff() {
+    fetch(CONFIG.apiBase + '/api/widget/handoff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: state.conversationId,
+        embed_token: CONFIG.token,
+      }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.sms_link) {
+          window.open(data.sms_link, '_self');
+        }
+        resolveConversation('imessage_handoff');
+      })
+      .catch(function () {});
+  }
 
-    .vnc-badge{
-      position:absolute;top:2px;right:2px;
-      width:12px;height:12px;border-radius:50%;
-      background:#ef4444;border:2px solid #fff;
-      display:none;
-    }
-    .vnc-badge.show{display:block;}
+  // ── Resolve (bill) ──────────────────────────────────────────────────
+  function resolveConversation(method) {
+    if (state.resolved || !state.conversationId || !state.hasAIReply) return;
+    state.resolved = true;
+    fetch(CONFIG.apiBase + '/api/widget/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        conversation_id: state.conversationId,
+        embed_token: CONFIG.token,
+        resolution_method: method || 'ai',
+        source: 'widget',
+      }),
+    }).catch(function () {});
+  }
 
-    @keyframes vnc-bounce{
-      0%{transform:scale(0);}
-      50%{transform:scale(1.15);}
-      100%{transform:scale(1);}
-    }
-
-    /* ── Panel ────────────────────────────────────────────────────── */
-    .vnc-panel{
-      position:fixed;
-      bottom:92px;
-      ${posLeft ? 'left' : 'right'}:24px;
-      width:360px;height:500px;
-      border-radius:16px;
-      background:${isDark ? '#1c1c1e' : '#ffffff'};
-      box-shadow:0 12px 40px rgba(0,0,0,${isDark ? '0.5' : '0.18'});
-      display:flex;flex-direction:column;
-      overflow:hidden;
-      z-index:999999;
-      transform:translateY(20px);opacity:0;pointer-events:none;
-      transition:transform .25s ease,opacity .25s ease;
-    }
-    .vnc-panel.open{transform:translateY(0);opacity:1;pointer-events:auto;}
-
-    /* ── Header ───────────────────────────────────────────────────── */
-    .vnc-header{
-      display:flex;align-items:center;gap:10px;
-      padding:14px 16px;
-      background:${CONFIG.color};
-      color:#fff;
-    }
-    .vnc-header-logo{
-      width:28px;height:28px;border-radius:8px;
-      background:rgba(255,255,255,0.2);
-      display:flex;align-items:center;justify-content:center;
-    }
-    .vnc-header-logo svg{width:18px;height:18px;fill:#fff;}
-    .vnc-header-title{flex:1;font-weight:600;font-size:15px;}
-    .vnc-header-close{
-      background:none;border:none;cursor:pointer;
-      width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-      border-radius:6px;
-    }
-    .vnc-header-close:hover{background:rgba(255,255,255,0.15);}
-    .vnc-header-close svg{width:16px;height:16px;fill:#fff;}
-
-    /* ── Body ─────────────────────────────────────────────────────── */
-    .vnc-body{
-      flex:1;overflow-y:auto;padding:16px;
-      display:flex;flex-direction:column;gap:8px;
-      background:${isDark ? '#111113' : '#f4f4f5'};
-    }
-
-    .vnc-msg{
-      max-width:80%;padding:10px 14px;border-radius:18px;
-      font-size:14px;line-height:1.45;word-break:break-word;
-      animation:vnc-msg-in .2s ease;
-    }
-    @keyframes vnc-msg-in{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-
-    .vnc-msg.user{
-      align-self:flex-end;
-      background:${CONFIG.color};color:#fff;
-      border-bottom-right-radius:4px;
-    }
-    .vnc-msg.bot{
-      align-self:flex-start;
-      background:${isDark ? '#2c2c2e' : '#ffffff'};
-      color:${isDark ? '#e4e4e7' : '#18181b'};
-      border-bottom-left-radius:4px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.06);
-    }
-
-    /* ── Typing / Pac-Man ─────────────────────────────────────────── */
-    .vnc-typing{
-      align-self:flex-start;
-      padding:10px 18px;border-radius:18px;
-      background:${isDark ? '#2c2c2e' : '#ffffff'};
-      border-bottom-left-radius:4px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.06);
-      display:none;
-    }
-    .vnc-typing.show{display:flex;align-items:center;gap:2px;}
-
-    /* pac-man */
-    .pacman{
-      width:18px;height:18px;position:relative;
-    }
-    .pacman-body{
-      width:18px;height:18px;border-radius:50%;
-      background:${CONFIG.color};
-      position:relative;
-      animation:pac-chomp .35s ease infinite alternate;
-    }
-    .pacman-body::before,.pacman-body::after{
-      content:'';position:absolute;
-      right:0;width:50%;height:50%;
-      background:${isDark ? '#2c2c2e' : '#ffffff'};
-      transform-origin:bottom right;
-    }
-    .pacman-body::before{top:0;transform-origin:bottom right;}
-    .pacman-body::after{bottom:0;transform-origin:top right;}
-    @keyframes pac-chomp{
-      0%{clip-path:polygon(100% 0,100% 100%,50% 50%,100% 0);}
-      100%{clip-path:polygon(100% 35%,100% 65%,50% 50%,100% 35%);}
-    }
-    .pacman-body{
-      clip-path:none;
-      animation:none;
-    }
-    /* simpler approach: wedge cutout */
-    .pac{
-      width:18px;height:18px;
-      border-radius:50%;
-      background:${CONFIG.color};
-      position:relative;
-      animation:pac-eat .4s ease infinite;
-    }
-    @keyframes pac-eat{
-      0%,100%{clip-path:polygon(50% 50%,100% 10%,100% 0,0 0,0 100%,100% 100%,100% 90%);}
-      50%{clip-path:polygon(50% 50%,100% 50%,100% 0,0 0,0 100%,100% 100%,100% 50%);}
-    }
-    .pac-dots{
-      display:flex;align-items:center;gap:4px;margin-left:4px;
-    }
-    .pac-dot{
-      width:4px;height:4px;border-radius:50%;
-      background:${isDark ? '#52525b' : '#a1a1aa'};
-      animation:pac-dot-fade .8s ease infinite;
-    }
-    .pac-dot:nth-child(2){animation-delay:.15s;}
-    .pac-dot:nth-child(3){animation-delay:.3s;}
-    @keyframes pac-dot-fade{
-      0%,100%{opacity:1;}50%{opacity:.3;}
-    }
-
-    /* ── Prompt card ──────────────────────────────────────────────── */
-    .vnc-card{
-      align-self:flex-start;
-      background:${isDark ? '#2c2c2e' : '#ffffff'};
-      border-radius:14px;padding:14px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.06);
-      display:flex;flex-direction:column;gap:10px;
-      max-width:88%;
-      animation:vnc-msg-in .2s ease;
-    }
-    .vnc-card p{font-size:13px;color:${isDark ? '#a1a1aa' : '#52525b'};}
-    .vnc-card-btns{display:flex;gap:8px;}
-    .vnc-card-btn{
-      flex:1;padding:8px 12px;border-radius:10px;
-      font-size:13px;font-weight:600;cursor:pointer;
-      border:none;transition:opacity .15s;
-    }
-    .vnc-card-btn:hover{opacity:.85;}
-    .vnc-card-btn.primary{background:${CONFIG.color};color:#fff;}
-    .vnc-card-btn.secondary{
-      background:${isDark ? '#3a3a3c' : '#f4f4f5'};
-      color:${isDark ? '#e4e4e7' : '#18181b'};
-    }
-
-    /* ── Phone input ──────────────────────────────────────────────── */
-    .vnc-phone-card{
-      align-self:flex-start;
-      background:${isDark ? '#2c2c2e' : '#ffffff'};
-      border-radius:14px;padding:16px;
-      box-shadow:0 1px 3px rgba(0,0,0,0.06);
-      max-width:88%;
-      animation:vnc-msg-in .2s ease;
-    }
-    .vnc-phone-row{
-      display:flex;gap:0;margin-top:10px;
-      border:1.5px solid ${isDark ? '#3a3a3c' : '#e4e4e7'};
-      border-radius:10px;overflow:hidden;
-    }
-    .vnc-phone-prefix{
-      padding:10px 10px;
-      background:${isDark ? '#3a3a3c' : '#f4f4f5'};
-      font-size:14px;font-weight:600;
-      color:${isDark ? '#a1a1aa' : '#71717a'};
-      display:flex;align-items:center;
-    }
-    .vnc-phone-input{
-      flex:1;border:none;outline:none;
-      padding:10px 10px;font-size:14px;
-      background:transparent;
-      color:${isDark ? '#e4e4e7' : '#18181b'};
-      font-family:inherit;
-    }
-    .vnc-phone-input::placeholder{color:${isDark ? '#52525b' : '#a1a1aa'};}
-    .vnc-phone-submit{
-      margin-top:10px;width:100%;
-      padding:10px;border:none;border-radius:10px;
-      background:${CONFIG.color};color:#fff;
-      font-size:14px;font-weight:600;cursor:pointer;
-      transition:opacity .15s;
-    }
-    .vnc-phone-submit:hover{opacity:.85;}
-    .vnc-phone-submit:disabled{opacity:.5;cursor:not-allowed;}
-
-    /* ── Success ──────────────────────────────────────────────────── */
-    .vnc-success{
-      align-self:center;text-align:center;
-      padding:24px 16px;
-      animation:vnc-msg-in .3s ease;
-    }
-    .vnc-success-icon{font-size:36px;margin-bottom:8px;}
-    .vnc-success-title{font-size:16px;font-weight:700;margin-bottom:4px;}
-    .vnc-success-sub{font-size:13px;color:${isDark ? '#a1a1aa' : '#71717a'};}
-
-    /* ── Input bar ────────────────────────────────────────────────── */
-    .vnc-input-bar{
-      display:flex;align-items:center;gap:8px;
-      padding:10px 12px;
-      border-top:1px solid ${isDark ? '#2c2c2e' : '#e4e4e7'};
-      background:${isDark ? '#1c1c1e' : '#ffffff'};
-    }
-    .vnc-input{
-      flex:1;border:none;outline:none;
-      padding:10px 14px;border-radius:20px;
-      font-size:14px;
-      background:${isDark ? '#2c2c2e' : '#f4f4f5'};
-      color:${isDark ? '#e4e4e7' : '#18181b'};
-      font-family:inherit;
-    }
-    .vnc-input::placeholder{color:${isDark ? '#52525b' : '#a1a1aa'};}
-    .vnc-send{
-      width:36px;height:36px;border-radius:50%;
-      background:${CONFIG.color};
-      border:none;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      transition:opacity .15s,transform .15s;
-      flex-shrink:0;
-    }
-    .vnc-send:hover{opacity:.85;transform:scale(1.05);}
-    .vnc-send:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-    .vnc-send svg{width:16px;height:16px;fill:#fff;transform:rotate(-45deg);}
-
-    /* ── Powered by ───────────────────────────────────────────────── */
-    .vnc-powered{
-      text-align:center;padding:6px;
-      font-size:10px;
-      color:${isDark ? '#52525b' : '#a1a1aa'};
-      background:${isDark ? '#1c1c1e' : '#ffffff'};
-    }
-    .vnc-powered a{color:${CONFIG.color};text-decoration:none;font-weight:600;}
-
-    /* ── Mobile ───────────────────────────────────────────────────── */
-    @media(max-width:480px){
-      .vnc-panel{
-        width:100%;height:100%;
-        bottom:0;${posLeft ? 'left' : 'right'}:0;
-        border-radius:0;
-      }
-      .vnc-fab{bottom:16px;${posLeft ? 'left' : 'right'}:16px;}
-    }
-  `;
-
-  // ── Icons ──────────────────────────────────────────────────────────
-  var ICON_CHAT = '<svg class="chat-icon" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M7 9h10v2H7zm0-3h10v2H7z"/></svg>';
-  var ICON_CLOSE = '<svg class="close-icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
-  var ICON_SEND = '<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
-  var ICON_MINIMIZE = '<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>';
-  var ICON_LOGO = '<svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>';
-
-  // ── Build DOM ──────────────────────────────────────────────────────
-  var styleEl = document.createElement('style');
-  styleEl.textContent = css;
-  shadow.appendChild(styleEl);
-
-  var root = document.createElement('div');
-  shadow.appendChild(root);
-
+  // ── Render ──────────────────────────────────────────────────────────
   function render() {
-    root.innerHTML = `
-      <button class="vnc-fab ${state.open ? 'open' : ''}" aria-label="Toggle chat">
-        ${ICON_CHAT}${ICON_CLOSE}
-        <span class="vnc-badge ${state.unread && !state.open ? 'show' : ''}"></span>
-      </button>
-      <div class="vnc-panel ${state.open ? 'open' : ''}">
-        <div class="vnc-header">
-          <div class="vnc-header-logo">${ICON_LOGO}</div>
-          <span class="vnc-header-title">Chat with ${escHtml(CONFIG.name)}</span>
-          <button class="vnc-header-close" aria-label="Minimize">${ICON_MINIMIZE}</button>
-        </div>
-        <div class="vnc-body">
-          ${renderMessages()}
-          <div class="vnc-typing ${state.waitingForResponse ? 'show' : ''}">
-            <div class="pac"></div>
-            <div class="pac-dots">
-              <span class="pac-dot"></span>
-              <span class="pac-dot"></span>
-              <span class="pac-dot"></span>
-            </div>
-          </div>
-        </div>
-        ${renderFooter()}
-        <div class="vnc-powered">Powered by <a href="https://vernacular.chat" target="_blank" rel="noopener">Vernacular</a></div>
-      </div>
-    `;
-    bindEvents();
-    scrollToBottom();
-  }
+    var c = CONFIG.color;
+    var pos = CONFIG.position === 'left' ? 'left: 20px;' : 'right: 20px;';
 
-  function renderMessages() {
-    var html = '';
-    state.messages.forEach(function (m) {
-      html += '<div class="vnc-msg ' + m.from + '">' + escHtml(m.text) + '</div>';
+    var messagesHtml = state.messages.map(function (m) {
+      if (m.from === 'system' && m.text === '__HANDOFF__') {
+        return '<div class="vnc-handoff-card">' +
+          '<div class="vnc-handoff-icon">💬</div>' +
+          '<div class="vnc-handoff-title">Continue in iMessage?</div>' +
+          '<div class="vnc-handoff-desc">Get a direct text from our team — faster, personal, blue bubbles.</div>' +
+          '<button class="vnc-handoff-btn" data-action="handoff">Text Us →</button>' +
+          '</div>';
+      }
+      var cls = m.from === 'user' ? 'vnc-msg-user' : 'vnc-msg-bot';
+      return '<div class="' + cls + '"><div class="vnc-bubble">' + escHtml(m.text) + '</div></div>';
+    }).join('');
+
+    if (state.typing) {
+      messagesHtml += '<div class="vnc-msg-bot"><div class="vnc-bubble vnc-typing"><span></span><span></span><span></span></div></div>';
+    }
+
+    shadow.innerHTML = '<style>' +
+      '.vnc-launcher{position:fixed;bottom:20px;' + pos + 'width:56px;height:56px;border-radius:28px;background:' + c + ';cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:99999;border:none;transition:transform .15s}' +
+      '.vnc-launcher:hover{transform:scale(1.08)}' +
+      '.vnc-launcher svg{fill:#fff;width:24px;height:24px}' +
+      '.vnc-badge{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:7px;background:#EF4444;border:2px solid #fff}' +
+      '.vnc-panel{position:fixed;bottom:88px;' + pos + 'width:368px;height:520px;border-radius:16px;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:99999;display:flex;flex-direction:column;overflow:hidden;font-family:Inter,-apple-system,sans-serif}' +
+      '.vnc-header{padding:16px 18px;background:' + c + ';color:#fff;display:flex;align-items:center;justify-content:space-between}' +
+      '.vnc-header-name{font-size:16px;font-weight:700}' +
+      '.vnc-header-sub{font-size:11px;opacity:.7;margin-top:2px}' +
+      '.vnc-close{background:none;border:none;color:#fff;cursor:pointer;font-size:18px;opacity:.7;padding:4px}' +
+      '.vnc-close:hover{opacity:1}' +
+      '.vnc-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}' +
+      '.vnc-msg-user{display:flex;justify-content:flex-end}' +
+      '.vnc-msg-bot{display:flex;justify-content:flex-start}' +
+      '.vnc-msg-user .vnc-bubble{background:' + c + ';color:#fff;border-radius:18px 18px 4px 18px;padding:10px 14px;max-width:80%;font-size:14px;line-height:1.5}' +
+      '.vnc-msg-bot .vnc-bubble{background:#f0f0f5;color:#1c1c1e;border-radius:18px 18px 18px 4px;padding:10px 14px;max-width:80%;font-size:14px;line-height:1.5}' +
+      '.vnc-typing span{display:inline-block;width:6px;height:6px;border-radius:3px;background:#8e8e93;margin:0 2px;animation:vncDot 1.2s ease-in-out infinite}' +
+      '.vnc-typing span:nth-child(2){animation-delay:.15s}' +
+      '.vnc-typing span:nth-child(3){animation-delay:.3s}' +
+      '@keyframes vncDot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}' +
+      '.vnc-handoff-card{background:linear-gradient(135deg,rgba(55,138,221,.08),rgba(55,138,221,.03));border:1px solid rgba(55,138,221,.2);border-radius:14px;padding:18px;text-align:center;margin:6px 0}' +
+      '.vnc-handoff-icon{font-size:28px;margin-bottom:8px}' +
+      '.vnc-handoff-title{font-size:15px;font-weight:700;color:#1c1c1e;margin-bottom:4px}' +
+      '.vnc-handoff-desc{font-size:12px;color:#8e8e93;margin-bottom:12px;line-height:1.4}' +
+      '.vnc-handoff-btn{background:' + c + ';color:#fff;border:none;border-radius:20px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer}' +
+      '.vnc-handoff-btn:hover{opacity:.9}' +
+      '.vnc-input-bar{padding:12px;border-top:1px solid rgba(0,0,0,.06);display:flex;gap:8px;align-items:center}' +
+      '.vnc-input{flex:1;padding:10px 14px;border-radius:20px;border:1px solid rgba(0,0,0,.1);font-size:14px;outline:none;font-family:inherit}' +
+      '.vnc-input:focus{border-color:' + c + '}' +
+      '.vnc-send{width:36px;height:36px;border-radius:18px;background:' + c + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:center}' +
+      '.vnc-send svg{fill:#fff;width:16px;height:16px}' +
+      '.vnc-powered{text-align:center;padding:6px;font-size:10px;color:#c4c4c6;border-top:1px solid rgba(0,0,0,.03)}' +
+      '</style>' +
+
+      // Launcher button
+      '<button class="vnc-launcher" aria-label="Open chat">' +
+      (state.unread ? '<div class="vnc-badge"></div>' : '') +
+      '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      '</button>' +
+
+      // Panel
+      (state.open ? (
+        '<div class="vnc-panel">' +
+        '<div class="vnc-header">' +
+        '<div><div class="vnc-header-name">' + escHtml(CONFIG.name) + '</div><div class="vnc-header-sub">Powered by Vernacular</div></div>' +
+        '<button class="vnc-close" data-action="close">✕</button>' +
+        '</div>' +
+        '<div class="vnc-body">' + messagesHtml + '</div>' +
+        '<div class="vnc-input-bar">' +
+        '<input class="vnc-input" placeholder="Type a message..." />' +
+        '<button class="vnc-send"><svg viewBox="0 0 24 24"><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>' +
+        '</div>' +
+        '<div class="vnc-powered">vernacular.chat</div>' +
+        '</div>'
+      ) : '');
+
+    // Events
+    var launcher = shadow.querySelector('.vnc-launcher');
+    if (launcher) launcher.addEventListener('click', togglePanel);
+
+    var closeBtn = shadow.querySelector('[data-action="close"]');
+    if (closeBtn) closeBtn.addEventListener('click', function () {
+      state.open = false;
+      if (state.hasAIReply) resolveConversation('ai');
+      render();
     });
 
-    if (state.phase === 'prompt') {
-      html += `
-        <div class="vnc-card">
-          <p>Want to continue this conversation in iMessage? You'll get responses as blue bubbles on your phone.</p>
-          <div class="vnc-card-btns">
-            <button class="vnc-card-btn primary" data-action="yes-text">Yes, text me</button>
-            <button class="vnc-card-btn secondary" data-action="continue-here">Continue here</button>
-          </div>
-        </div>`;
-    }
-
-    if (state.phase === 'phone') {
-      html += `
-        <div class="vnc-phone-card">
-          <p style="font-size:13px;color:${isDark ? '#a1a1aa' : '#52525b'};margin-bottom:4px;">Enter your phone number and we'll text you via iMessage:</p>
-          <div class="vnc-phone-row">
-            <span class="vnc-phone-prefix">+1</span>
-            <input class="vnc-phone-input" type="tel" placeholder="(555) 123-4567" maxlength="14" value="${escHtml(state.phone)}" />
-          </div>
-          <button class="vnc-phone-submit" ${state.phone.replace(/\D/g, '').length < 10 ? 'disabled' : ''}>Send me a text</button>
-        </div>`;
-    }
-
-    if (state.phase === 'sent') {
-      html += `
-        <div class="vnc-success">
-          <div class="vnc-success-icon">\u2705</div>
-          <div class="vnc-success-title">Check your phone!</div>
-          <div class="vnc-success-sub">We sent you a blue iMessage. You can close this tab \u2014 the conversation continues on your phone.</div>
-        </div>`;
-    }
-
-    return html;
-  }
-
-  function renderFooter() {
-    if (state.phase === 'sent' || state.phase === 'prompt' || state.phase === 'phone') return '';
-    return `
-      <div class="vnc-input-bar">
-        <input class="vnc-input" type="text" placeholder="Type a message\u2026" />
-        <button class="vnc-send" aria-label="Send">${ICON_SEND}</button>
-      </div>`;
-  }
-
-  // ── Event binding ──────────────────────────────────────────────────
-  function bindEvents() {
-    var fab = shadow.querySelector('.vnc-fab');
-    var close = shadow.querySelector('.vnc-header-close');
     var input = shadow.querySelector('.vnc-input');
     var sendBtn = shadow.querySelector('.vnc-send');
-    var phoneInput = shadow.querySelector('.vnc-phone-input');
-    var phoneSubmit = shadow.querySelector('.vnc-phone-submit');
-
-    if (fab) fab.addEventListener('click', togglePanel);
-    if (close) close.addEventListener('click', togglePanel);
-
     if (input) {
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
       });
-      // auto-focus when panel is open
       if (state.open) setTimeout(function () { input.focus(); }, 50);
     }
     if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
-    // prompt buttons
-    var yesBtn = shadow.querySelector('[data-action="yes-text"]');
-    var contBtn = shadow.querySelector('[data-action="continue-here"]');
-    if (yesBtn) yesBtn.addEventListener('click', function () { state.phase = 'phone'; render(); });
-    if (contBtn) contBtn.addEventListener('click', function () { state.phase = 'chat'; render(); });
-
-    // phone input
-    if (phoneInput) {
-      phoneInput.addEventListener('input', function (e) {
-        state.phone = formatPhone(e.target.value);
-        e.target.value = state.phone;
-        var submit = shadow.querySelector('.vnc-phone-submit');
-        if (submit) submit.disabled = state.phone.replace(/\D/g, '').length < 10;
-      });
-    }
-    if (phoneSubmit) phoneSubmit.addEventListener('click', submitPhone);
+    var handoffBtn = shadow.querySelector('[data-action="handoff"]');
+    if (handoffBtn) handoffBtn.addEventListener('click', doHandoff);
   }
 
-  // ── Actions ────────────────────────────────────────────────────────
   function togglePanel() {
     state.open = !state.open;
-    if (state.open) state.unread = false;
+    if (state.open) {
+      state.unread = false;
+      ensureSession(function () {});
+    }
     render();
   }
 
@@ -506,87 +277,27 @@
     if (!text) return;
 
     state.messages.push({ text: text, from: 'user', time: Date.now() });
-
-    if (state.phase === 'welcome') {
-      state.firstUserMessage = text;
-      state.phase = 'prompt';
-      // add a small delay for the prompt card
-      state.messages.push({ text: 'Thanks for reaching out!', from: 'bot', time: Date.now() });
-    } else if (state.phase === 'chat') {
-      // send to API
-      postMessage(text);
-    }
-
+    input.value = '';
     render();
+    scrollToBottom();
+
+    ensureSession(function () {
+      sendToAI(text);
+    });
   }
 
-  function postMessage(text, phoneNumber) {
-    var phone = phoneNumber || '';
-    var payload = {
-      phoneNumber: phone,
-      message: text,
-      contactName: '',
-      sourceSystem: 'widget',
-      organizationId: CONFIG.org,
-    };
-    fetch(CONFIG.apiBase + '/api/messages/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).catch(function () { /* silent fail for widget */ });
-  }
-
-  function submitPhone() {
-    var digits = state.phone.replace(/\D/g, '');
-    if (digits.length < 10) return;
-
-    var fullPhone = '+1' + digits;
-    state.phase = 'sent';
-    state.waitingForResponse = true;
-    render();
-
-    // Send the welcome iMessage
-    postMessage(
-      'Hey! Thanks for reaching out. A member of our team will follow up with you shortly via iMessage. \uD83D\uDCAC',
-      fullPhone
-    );
-
-    // Send the user's original message as context
-    if (state.firstUserMessage) {
-      setTimeout(function () {
-        postMessage(state.firstUserMessage, fullPhone);
-      }, 500);
-    }
-
-    // stop the pac-man after a bit
-    setTimeout(function () {
-      state.waitingForResponse = false;
-      state.unread = true;
-      render();
-    }, 2500);
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────
   function escHtml(s) {
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
   }
 
-  function formatPhone(val) {
-    var digits = val.replace(/\D/g, '').slice(0, 10);
-    if (digits.length === 0) return '';
-    if (digits.length <= 3) return '(' + digits;
-    if (digits.length <= 6) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
-    return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
-  }
-
   function scrollToBottom() {
     var body = shadow.querySelector('.vnc-body');
-    if (body) setTimeout(function () { body.scrollTop = body.scrollHeight; }, 30);
+    if (body) setTimeout(function () { body.scrollTop = body.scrollHeight; }, 50);
   }
 
-  // ── Init ───────────────────────────────────────────────────────────
+  // Init
   state.messages.push({ text: CONFIG.greeting, from: 'bot', time: Date.now() });
   render();
 })();
