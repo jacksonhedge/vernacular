@@ -3383,11 +3383,48 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             Mark All Read
           </button>
-          <span style={{ fontSize: 10, color: '#8e8e93', marginLeft: 'auto', fontFamily: "'JetBrains Mono', monospace" }}>
+          {/* Scroll indicator — drag or click to scroll streams */}
+          {(() => {
+            const totalCols = columns.filter(c => c.contact).length;
+            if (totalCols <= 2) return null;
+            return (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, margin: '0 12px' }}>
+                <button onClick={() => {
+                  const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                  if (el) el.scrollBy({ left: -350, behavior: 'smooth' });
+                }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+                <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.06)', position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
+                  onClick={e => {
+                    const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                    if (!el) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const pct = (e.clientX - rect.left) / rect.width;
+                    el.scrollTo({ left: pct * (el.scrollWidth - el.clientWidth), behavior: 'smooth' });
+                  }}
+                >
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, height: '100%',
+                    width: `${Math.max(20, 100 / totalCols)}%`,
+                    borderRadius: 3, background: 'linear-gradient(90deg, #378ADD, #5B9FE8)',
+                    transition: 'left 0.15s ease',
+                  }} />
+                </div>
+                <button onClick={() => {
+                  const el = document.querySelector('[data-streams-scroll]') as HTMLElement;
+                  if (el) el.scrollBy({ left: 350, behavior: 'smooth' });
+                }} style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'rgba(0,0,0,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8e8e93', flexShrink: 0 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+                </button>
+              </div>
+            );
+          })()}
+          <span style={{ fontSize: 10, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
             {columns.filter(c => c.contact && pinnedConversations.has(c.id)).length} pinned
           </span>
         </div>
-        <div onWheel={e => { if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) { e.currentTarget.scrollLeft += e.deltaY; } }} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
+        <div data-streams-scroll onWheel={e => { if (Math.abs(e.deltaX) < Math.abs(e.deltaY)) { e.currentTarget.scrollLeft += e.deltaY; } }} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'auto', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32 }}>
         {(() => {
           // Sort: pinned first, then unread, then the rest
           const sorted = [...columns].sort((a, b) => {
