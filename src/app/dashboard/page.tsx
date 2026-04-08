@@ -8141,34 +8141,32 @@ button:active { transform: scale(0.98); }`}</style>
           }}
         >
           <button onClick={() => { if (!craigDragging) setShowAICopilot(prev => !prev); }} style={{
-            width: 42, height: 42, borderRadius: 21, border: 'none', cursor: craigDragging ? 'grabbing' : 'pointer',
-            background: showAICopilot ? '#F59E0B' : 'rgba(0,0,0,0.06)',
+            width: 44, height: 44, borderRadius: 22, border: 'none', cursor: craigDragging ? 'grabbing' : 'pointer',
+            background: 'linear-gradient(135deg, #F59E0B, #EA8C00)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: showAICopilot ? '0 4px 16px rgba(245,158,11,0.4)' : '0 1px 4px rgba(0,0,0,0.08)',
-            transition: 'box-shadow 0.2s',
+            boxShadow: showAICopilot ? '0 4px 20px rgba(245,158,11,0.5)' : '0 2px 8px rgba(245,158,11,0.3)',
+            transition: 'box-shadow 0.2s, transform 0.15s',
             position: 'relative', overflow: 'visible',
           }} title="Craig — AI Copilot">
-            {/* Pac-Man with chomping animation when AI is working */}
             <svg width="28" height="28" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
               <style>{`
-                @keyframes chomp { 0%,100% { d: path("M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 L50 50 L90 20 Z"); } 50% { d: path("M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 L50 50 L95 45 Z"); } }
-                @keyframes dotMove { 0% { cx: 110; } 100% { cx: 60; opacity: 0; } }
+                @keyframes craigChomp { 0%,100% { d: path("M95 50 A45 45 0 1 1 50 5 L50 50 Z"); } 50% { d: path("M95 48 A45 45 0 1 1 95 52 L50 50 Z"); } }
+                @keyframes craigDot { 0% { transform: translateX(0); opacity:1; } 100% { transform: translateX(-40px); opacity:0; } }
               `}</style>
               {aiCopilotLoading ? (
                 <>
-                  <path d="M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 L50 50 L90 20 Z" fill={showAICopilot ? '#fff' : '#F59E0B'} style={{ animation: 'chomp 0.4s ease-in-out infinite' }} />
-                  <circle cx="110" cy="50" r="5" fill="#EF4444" style={{ animation: 'dotMove 0.6s linear infinite' }} />
-                  <circle cx="130" cy="50" r="5" fill="#EC4899" style={{ animation: 'dotMove 0.6s linear 0.2s infinite' }} />
-                  <circle cx="150" cy="50" r="5" fill="#3B82F6" style={{ animation: 'dotMove 0.6s linear 0.4s infinite' }} />
+                  <path d="M95 50 A45 45 0 1 1 50 5 L50 50 Z" fill="#fff" style={{ animation: 'craigChomp 0.35s ease-in-out infinite' }} />
+                  <circle cx="110" cy="50" r="4" fill="#EF4444" style={{ animation: 'craigDot 0.5s linear infinite' }} />
+                  <circle cx="122" cy="50" r="4" fill="#EC4899" style={{ animation: 'craigDot 0.5s linear 0.17s infinite' }} />
+                  <circle cx="134" cy="50" r="4" fill="#3B82F6" style={{ animation: 'craigDot 0.5s linear 0.34s infinite' }} />
                 </>
               ) : (
-                <path d={showAICopilot
-                  ? "M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 Z"
-                  : "M50 5 A45 45 0 1 1 50 95 A45 45 0 1 1 50 5 L50 50 L90 20 Z"
-                } fill={showAICopilot ? '#fff' : '#F59E0B'} />
+                <path d="M95 50 A45 45 0 1 1 50 5 L50 50 Z" fill="#fff" />
               )}
-              <circle cx="40" cy="30" r="5" fill={showAICopilot ? '#F59E0B' : '#1a1a2e'} />
+              <circle cx="55" cy="28" r="5" fill="#EA8C00" />
             </svg>
+            {/* Green status dot */}
+            <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: 5, background: '#22C55E', border: '2px solid #fff' }} />
           </button>
         </div>
 
