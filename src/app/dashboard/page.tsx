@@ -3440,7 +3440,7 @@ button:active { transform: scale(0.98); }`}</style>
                     </div>
                   </div>
                   {/* Row 2: Channel + AI + Times */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3, background: col.channel === 'discord' ? 'rgba(88,101,242,0.1)' : col.channel === 'telegram' ? 'rgba(0,136,204,0.1)' : col.channel === 'email' ? 'rgba(217,119,6,0.1)' : 'rgba(34,197,94,0.1)', color: col.channel === 'discord' ? '#5865F2' : col.channel === 'telegram' ? '#0088cc' : col.channel === 'email' ? '#D97706' : '#22C55E', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase' }}>
                       {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMsg'}
                     </span>
