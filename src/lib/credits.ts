@@ -28,6 +28,7 @@ export const ACTION_COSTS_CENTS = {
   send_email: 0.1,             // $0.001
   receive_message: 0,          // free
   ai_draft: 0.31,              // $0.0031
+  ai_response_sent: 1,         // $0.01 — AI wrote AND it was sent
   ai_auto_response: 25,        // $0.25
   ai_draft_approved: 25,       // $0.25
   support_ticket_resolved: 125, // $1.25
