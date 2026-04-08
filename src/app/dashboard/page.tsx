@@ -5259,10 +5259,10 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Solution Plans */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
               {[
-                { type: 'app_testing', icon: '🧪', name: 'App Testing', price: '$1,222/mo per seat', setup: '$1,000 setup' },
-                { type: 'sales_outreach', icon: '📱', name: 'Sales & Outreach', price: '$1,500/mo per seat', setup: '$1,000 setup' },
-                { type: 'vip_manager', icon: '🎰', name: 'VIP Manager', price: '$1,500/mo per line', setup: '$1,000 setup' },
-                { type: 'customer_support', icon: '💬', name: 'Customer Support', price: '$100/mo + $1.25/ticket', setup: '$500 setup' },
+                { type: 'app_testing', icon: '🧪', name: 'App Testing', price: '$1,222/mo per seat', setup: '$1,000 setup · +$1,000 AI' },
+                { type: 'sales_outreach', icon: '📱', name: 'Sales & Outreach', price: '$1,500/mo per seat', setup: '$1,000 setup · +$1,000 AI' },
+                { type: 'vip_manager', icon: '🎰', name: 'VIP Manager', price: '$1,500/mo per line', setup: '$1,000 setup · +$1,000 AI' },
+                { type: 'customer_support', icon: '💬', name: 'Customer Support', price: '$100/mo + $1.25/ticket', setup: '$1,000 setup · +$1,000 AI' },
               ].map(plan => {
                 const orgTypes: string[] = (org?.account_type as string[]) || [];
                 const isActive = orgTypes.includes(plan.type);
