@@ -14,13 +14,27 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient(); // Service role — bypasses RLS
 
-    // Find contact by last 7 digits
-    const digits = phone.replace(/\D/g, '').slice(-7);
-    const { data: contacts } = await supabase
+    // Find contact — try exact match first, then last 4 digits
+    const digits = phone.replace(/\D/g, '');
+    const d10 = digits.length === 11 && digits[0] === '1' ? digits.slice(1) : digits;
+    const formatted = d10.length === 10 ? `(${d10.slice(0,3)}) ${d10.slice(3,6)}-${d10.slice(6)}` : phone;
+    const last4 = d10.slice(-4);
+
+    let { data: contacts } = await supabase
       .from('contacts')
       .select('id')
-      .ilike('phone', `%${digits}%`)
+      .eq('phone', formatted)
       .limit(1);
+
+    // Fallback: ilike on last 4 digits
+    if (!contacts || contacts.length === 0) {
+      const { data: fallback } = await supabase
+        .from('contacts')
+        .select('id')
+        .ilike('phone', `%${last4}%`)
+        .limit(1);
+      contacts = fallback;
+    }
 
     if (!contacts || contacts.length === 0) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
