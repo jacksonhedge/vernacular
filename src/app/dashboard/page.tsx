@@ -8228,8 +8228,54 @@ button:active { transform: scale(0.98); }`}</style>
                   flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
                   background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
                 }}>Cancel</button>
-                <button onClick={() => {
-                  // TODO: save to Supabase
+                <button onClick={async () => {
+                  if (!editingContact) return;
+                  const fullName = editingContact.name || `${editingContact.firstName} ${editingContact.lastName}`.trim();
+                  const phone = editingContact.phone;
+                  const orgId = getOrgId();
+
+                  // Save to Supabase contacts
+                  if (orgId && phone) {
+                    await fetch('/api/contacts/import', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        organizationId: orgId,
+                        contacts: [{
+                          phone,
+                          fullName: fullName || undefined,
+                          firstName: editingContact.firstName || undefined,
+                          lastName: editingContact.lastName || undefined,
+                          email: editingContact.email || undefined,
+                          company: editingContact.company || undefined,
+                          jobTitle: editingContact.jobTitle || undefined,
+                          linkedinUrl: editingContact.linkedin || undefined,
+                          instagram: editingContact.instagram || undefined,
+                          twitter: editingContact.twitter || undefined,
+                          school: editingContact.school || undefined,
+                          greekOrg: editingContact.greekOrg || undefined,
+                          venmo: editingContact.venmo || undefined,
+                          notes: editingContact.notes || undefined,
+                        }],
+                        source: 'edit',
+                      }),
+                    });
+                  }
+
+                  // Update column header with new name
+                  const newName = fullName || phone;
+                  const newInitials = fullName ? fullName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) : '##';
+                  setColumns(prev => prev.map(c => c.id === editingContact.colId && c.contact ? {
+                    ...c, contact: { ...c.contact, name: newName, initials: newInitials },
+                  } : c));
+                  setAllConversations(prev => prev.map(c => c.id === editingContact.colId && c.contact ? {
+                    ...c, contact: { ...c.contact, name: newName, initials: newInitials },
+                  } : c));
+
+                  // Refresh contacts list
+                  const { data: refreshed } = await supabase.from('contacts').select('*').order('full_name').limit(200);
+                  if (refreshed) setContacts(refreshed as unknown as ContactRecord[]);
+
                   setEditingContact(null);
                 }} style={{
                   flex: 1, padding: '10px 0', borderRadius: 8, border: 'none',
