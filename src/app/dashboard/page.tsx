@@ -3938,12 +3938,19 @@ button:active { transform: scale(0.98); }`}</style>
                           setColumns(prev => prev.map(c => c.id === col.id ? {
                             ...c, messages: c.messages.filter(m => m.id !== msg.id),
                           } : c));
+                          setAllConversations(prev => prev.map(c => c.id === col.id ? {
+                            ...c, messages: c.messages.filter(m => m.id !== msg.id),
+                          } : c));
                           // Add to hidden messages so it never comes back
                           setHiddenMessages(prev => {
                             const next = new Set(prev).add(msg.id);
                             localStorage.setItem('vernacular-hidden-msgs', JSON.stringify([...next]));
                             return next;
                           });
+                          // Delete from database so refresh doesn't re-add it
+                          if (msg.id && !msg.id.startsWith('ai-draft-') && !msg.id.startsWith('m-')) {
+                            await supabase.from('messages').delete().eq('id', msg.id);
+                          }
                           // Log as rejected/bad — same as 👎
                           const orgId = getOrgId();
                           await fetch('/api/ai/draft-log', {
