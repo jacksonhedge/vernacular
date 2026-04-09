@@ -205,8 +205,12 @@ def sync_inbound(db: sqlite3.Connection):
             write_state(INBOUND_STATE, rowid)
             continue
 
-        # Check for attachment if no text
+        # Detect file transfer GUID artifacts
         att_type, att_name = None, None
+        if text and "kIMFileTransferGUID" in text:
+            text = None  # Force attachment lookup
+
+        # Check for attachment if no text
         if not text or len(text.strip()) < 1:
             att_type, att_name = get_attachment_info(db, rowid)
             if att_type:
@@ -249,7 +253,11 @@ def sync_outbound(db: sqlite3.Connection):
         if not msg_text or len(msg_text.strip()) < 1:
             msg_text = extract_text_from_blob(attr_blob) if attr_blob else None
 
+        # Detect file transfer GUID artifacts from BLOB extraction
         att_type, att_name = None, None
+        if msg_text and "kIMFileTransferGUID" in msg_text:
+            msg_text = None  # Force attachment lookup
+
         if not msg_text or len(msg_text.strip()) < 1:
             # No text and no BLOB — check for attachment
             att_type, att_name = get_attachment_info(db, rowid)
