@@ -12,10 +12,10 @@
  * - Text sent (human):              $0.03
  * - Text received:                  $0.00 (free)
  * - AI draft generated:             $0.10
- * - AI draft approved & sent:       $0.25
+ * - AI draft approved & sent:       $0.17
  * - AI auto-send:                   $0.25
  * - Support ticket resolved:        $1.25
- * - Contact import:                 $0.05
+ * - Contact import:                 $0.07
  * - Widget handoff to iMessage:     $0.50
  */
 
@@ -30,11 +30,11 @@ export const ACTION_COSTS_CENTS = {
   ai_draft: 0.31,              // $0.0031
   ai_response_sent: 1,         // $0.01 — AI wrote AND it was sent
   ai_auto_response: 25,        // $0.25
-  ai_draft_approved: 25,       // $0.25
+  ai_draft_approved: 17,       // $0.17
   support_ticket_resolved: 125, // $1.25
-  contact_import: 5,           // $0.05
-  new_contact: 5,              // $0.05
-  new_contact_widget: 5,       // $0.05
+  contact_import: 7,           // $0.07
+  new_contact: 7,              // $0.07
+  new_contact_widget: 7,       // $0.07
   widget_handoff: 50,          // $0.50
   ai_sentiment: 5,             // $0.05
   contact_enrichment: 25,      // $0.25
