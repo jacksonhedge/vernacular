@@ -4456,7 +4456,7 @@ button:active { transform: scale(0.98); }`}</style>
         <>
           <div onClick={() => setMsgContextMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
           <div style={{
-            position: 'fixed', left: msgContextMenu.x, bottom: typeof window !== 'undefined' ? window.innerHeight - msgContextMenu.y : 0, zIndex: 300,
+            position: 'fixed', left: msgContextMenu.x - 80, bottom: typeof window !== 'undefined' ? window.innerHeight - msgContextMenu.y + 8 : 0, zIndex: 300,
             background: '#fff', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 180,
           }}>
