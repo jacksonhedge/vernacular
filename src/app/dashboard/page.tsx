@@ -9986,7 +9986,7 @@ IMPORTANT RULES:
 - You have REAL access to the contact and conversation data above. USE IT.
 - ABSOLUTELY NEVER say "I don't have access" or "I can't see that" — you CAN. The data is listed above.
 - ABSOLUTELY NEVER say "As an AI assistant I don't have visibility into..." — YOU DO. Read the data above.
-- If asked about a contact, search the CONTACTS list above.
+- If asked about a contact, search the CONTACTS list above. If you can't find them there, USE [LOOKUP:search:name] to search the full database. NEVER say "I don't see them" without searching first.
 - If asked about a conversation's settings, read the OPEN CONVERSATIONS list — it shows AI mode, goal, channel, timestamps.
 - If asked to update a contact, use [UPDATE:phone:field:value].
 - NEVER fabricate data. Only reference what's listed above.
