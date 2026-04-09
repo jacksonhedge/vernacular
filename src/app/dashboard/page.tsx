@@ -9610,10 +9610,13 @@ ${contacts.length > 30 ? `... and ${contacts.length - 30} more` : ''}
 
 OPEN CONVERSATIONS (real data — you CAN see all of this):
 ${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => {
-  const lastMsg = c.messages[c.messages.length - 1];
-  const ts = lastMsg?.timestamp ? parseTimestamp(lastMsg.timestamp) : null;
-  const timeStr = ts && !isNaN(ts.getTime()) ? ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'recently';
-  return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Last: "${lastMsg?.text || ''}" (${lastMsg?.direction || '?'}, ${timeStr} ET)`;
+  const recentMsgs = c.messages.slice(-3);
+  const msgLines = recentMsgs.map(m => {
+    const ts = m.timestamp ? parseTimestamp(m.timestamp) : null;
+    const t = ts && !isNaN(ts.getTime()) ? ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+    return `  ${m.direction === 'outgoing' ? '→' : '←'} "${m.text}" (${t})`;
+  }).join('\n');
+  return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'}\n${msgLines}`;
 }).join('\n')}
 
 IMPORTANT RULES:
