@@ -915,16 +915,14 @@ export default function DashboardPage() {
                   const fresh = freshMap.get(existing.id);
                   if (fresh) {
                     freshMap.delete(existing.id);
-                    // Append only truly new messages (by id), and replace optimistic m- messages with real ones
-                    const existingIds = new Set(existing.messages.map(m => m.id));
-                    const newMsgs = fresh.messages.filter(m => !existingIds.has(m.id));
-                    // Remove optimistic messages that now have a real DB version (same text+direction)
-                    const realTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
-                    const deduped = existing.messages.filter(m => !m.id.startsWith('m-') || !realTexts.has(`${m.direction}::${m.text}`));
+                    // Replace existing messages with fresh from API (source of truth)
+                    // Keep only optimistic m- messages that don't have a DB match yet
+                    const freshTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
+                    const optimisticOnly = existing.messages.filter(m => m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`));
                     return {
                       ...existing,
-                      contact: fresh.contact, // update tag/unread status
-                      messages: [...deduped, ...newMsgs],
+                      contact: fresh.contact,
+                      messages: [...fresh.messages, ...optimisticOnly],
                     };
                   }
                   return existing;
