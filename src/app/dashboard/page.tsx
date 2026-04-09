@@ -2718,7 +2718,7 @@ button:active { transform: scale(0.98); }`}</style>
                     { label: 'Needs Reply', color: '#22C55E' },
                     { label: 'AI Draft', color: '#F59E0B' },
                     { label: 'Active', color: '#7C3AED' },
-                    { label: 'Staged', color: '#EF4444' },
+                    { label: 'Staged', color: '#3B82F6' },
                   ].map(l => (
                     <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}60` }} />
@@ -2835,21 +2835,26 @@ button:active { transform: scale(0.98); }`}</style>
                   // Staged contact — red pulsing tile
                   return (
                     <div key={`staged-${stagedIdx}`} className="disco-tile" style={{
-                      aspectRatio: '1', borderRadius: 6, background: '#EF4444',
+                      aspectRatio: '1', borderRadius: 6,
+                      background: 'linear-gradient(135deg, #60A5FA, #3B82F6)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      animation: 'nasaPulse 1.5s ease-in-out infinite',
+                      animation: 'tileGlow 3s ease-in-out infinite',
                       cursor: 'pointer', position: 'relative', padding: 2, overflow: 'hidden',
-                      boxShadow: '0 0 12px rgba(239,68,68,0.5)',
+                      boxShadow: '0 0 10px rgba(59,130,246,0.3)',
+                      border: '1px solid rgba(255,255,255,0.15)',
                     }} title={`STAGED: ${staged.name} (${staged.phone})`}
                       onClick={() => {
                         const remove = window.confirm(`Remove ${staged.name} from staging?`);
                         if (remove) setStagedContacts(prev => prev.filter((_, i) => i !== stagedIdx));
                       }}>
-                      {staged.state && <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 9, fontWeight: 800, opacity: 0.8 }}>{staged.state.length > 3 ? staged.state.slice(0, 2).toUpperCase() : staged.state}</span>}
-                      <span style={{ fontSize: staged.firstName.length > 6 ? 18 : 24, fontWeight: 900, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.4)', textAlign: 'center', lineHeight: 1 }}>
+                      {/* Top-right: state — big and bright */}
+                      {staged.state && <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 12, fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.4)', letterSpacing: '0.03em' }}>{staged.state.length > 3 ? staged.state.slice(0, 2).toUpperCase() : staged.state.toUpperCase()}</span>}
+                      {/* Top-left: direction arrow placeholder */}
+                      <span style={{ position: 'absolute', top: 4, left: 5, fontSize: 11, opacity: 0.6 }}>⏳</span>
+                      <span style={{ fontSize: staged.firstName.length > 6 ? 18 : 24, fontWeight: 900, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)', textAlign: 'center', lineHeight: 1 }}>
                         {staged.firstName.length > 8 ? staged.initials : staged.firstName}
                       </span>
-                      <span style={{ fontSize: 7, opacity: 0.7, marginTop: 2 }}>STAGED</span>
+                      <span style={{ fontSize: 7, opacity: 0.6, marginTop: 2, fontWeight: 600, letterSpacing: '0.05em' }}>STAGED</span>
                     </div>
                   );
                 }
