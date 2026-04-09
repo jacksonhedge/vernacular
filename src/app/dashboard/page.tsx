@@ -411,6 +411,7 @@ export default function DashboardPage() {
   const [calendarView, setCalendarView] = useState<'list' | 'week'>('list');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
+  const [sendContextMenu, setSendContextMenu] = useState<{ x: number; y: number; colId: string } | null>(null);
   const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
       try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-msgs') || '[]')); } catch { return new Set(); }
@@ -1317,6 +1318,25 @@ button:active { transform: scale(0.98); }`}</style>
         console.log(`[Vernacular]   → Contact ID: ${data.contactId || 'N/A'}`);
         // Update column with real conversation ID and message ID
         const realId = data.conversationId ? `real-${data.conversationId}` : colId;
+        // Migrate pinned/dismissed references if ID changed
+        if (realId !== colId) {
+          setPinnedConversations(prev => {
+            if (!prev.has(colId)) return prev;
+            const next = new Set(prev);
+            next.delete(colId);
+            next.add(realId);
+            localStorage.setItem('vernacular-pinned', JSON.stringify([...next]));
+            return next;
+          });
+          setDismissedColumns(prev => {
+            if (!prev.has(colId)) return prev;
+            const next = new Set(prev);
+            next.delete(colId);
+            next.add(realId);
+            localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+            return next;
+          });
+        }
         setColumns(prev => prev.map(c => c.id === colId ? {
           ...c,
           id: realId,
@@ -1344,6 +1364,49 @@ button:active { transform: scale(0.98); }`}</style>
         messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}` } : m),
       } : c));
     }
+  };
+
+  const sendWithDelay = (colId: string, delaySec: number) => {
+    const text = inputValues[colId]?.trim();
+    if (!text) return;
+    const col = columns.find(c => c.id === colId);
+    const contactName = col?.contact?.name || 'Contact';
+
+    // Show the message immediately as "typing" indicator
+    const typingMsg: Message = {
+      id: `typing-${Date.now()}`,
+      text: `⏳ Typing in ${delaySec}s... "${text.substring(0, 40)}${text.length > 40 ? '...' : ''}"`,
+      direction: 'outgoing',
+      timestamp: new Date().toISOString(),
+      isAIDraft: true, // renders as draft/pending style
+    };
+    setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, typingMsg] } : c));
+
+    // Countdown timer
+    let remaining = delaySec;
+    const interval = setInterval(() => {
+      remaining--;
+      if (remaining > 0) {
+        setColumns(prev => prev.map(c => c.id === colId ? {
+          ...c,
+          messages: c.messages.map(m => m.id === typingMsg.id ? { ...m, text: `⏳ Sending in ${remaining}s... "${text.substring(0, 40)}${text.length > 40 ? '...' : ''}"` } : m),
+        } : c));
+      }
+    }, 1000);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      // Remove typing indicator
+      setColumns(prev => prev.map(c => c.id === colId ? {
+        ...c,
+        messages: c.messages.filter(m => m.id !== typingMsg.id),
+      } : c));
+      // Actually send
+      sendMessage(colId);
+    }, delaySec * 1000);
+
+    // Don't clear input yet — sendMessage will clear it
+    // But we need to keep the text in inputValues for sendMessage to read
   };
 
   const usedContactIds = columns.filter(c => c.contact).map(c => c.contact!.id);
@@ -4186,9 +4249,10 @@ button:active { transform: scale(0.98); }`}</style>
                       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
                   </button>
-                  {/* Send button */}
+                  {/* Send button — right-click for delayed send */}
                   <button
                     onClick={() => sendMessage(col.id)}
+                    onContextMenu={e => { e.preventDefault(); setSendContextMenu({ x: e.clientX, y: e.clientY, colId: col.id }); }}
                     style={{
                       width: 36, height: 36, borderRadius: 8, border: 'none',
                       background: '#378ADD', color: '#fff', cursor: 'pointer',
@@ -4271,6 +4335,56 @@ button:active { transform: scale(0.98); }`}</style>
       )}
 
       {/* Invite Member Modal — rendered globally at bottom of component */}
+
+      {/* Send Context Menu — right-click on send button */}
+      {sendContextMenu && (
+        <>
+          <div onClick={() => setSendContextMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
+          <div style={{
+            position: 'fixed', left: sendContextMenu.x - 160, top: sendContextMenu.y - 10, zIndex: 300,
+            background: '#fff', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+            border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 180,
+          }}>
+            <div style={{ padding: '10px 14px 6px', fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Type, don&apos;t send
+            </div>
+            {[
+              { label: 'Send in 10 seconds', delay: 10, icon: '⏱' },
+              { label: 'Send in 30 seconds', delay: 30, icon: '⏳' },
+              { label: 'Send in 60 seconds', delay: 60, icon: '🕐' },
+            ].map(opt => (
+              <button key={opt.delay} onClick={() => { sendWithDelay(sendContextMenu.colId, opt.delay); setSendContextMenu(null); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#1c1c1e',
+                  textAlign: 'left', fontFamily: "'Inter', sans-serif",
+                }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+              >
+                <span style={{ fontSize: 14 }}>{opt.icon}</span>
+                {opt.label}
+              </button>
+            ))}
+            <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: '4px 0' }}>
+              <button onClick={() => { sendMessage(sendContextMenu.colId); setSendContextMenu(null); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  padding: '10px 14px', border: 'none', background: 'transparent',
+                  cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#378ADD',
+                  textAlign: 'left', fontFamily: "'Inter', sans-serif",
+                }}
+                onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(55,138,221,0.06)'; }}
+                onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
+              >
+                <span style={{ fontSize: 14 }}>📤</span>
+                Send now
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Calendar Event Popup */}
       {calendarPopup && (() => {
