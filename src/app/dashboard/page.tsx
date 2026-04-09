@@ -9480,7 +9480,45 @@ button:active { transform: scale(0.98); }`}</style>
                     fontSize: 14, lineHeight: 1.5, fontFamily: "'Inter', -apple-system, sans-serif",
                     border: m.text.includes('[APPROVE_SEND:') ? '1px solid rgba(55,138,221,0.2)' : 'none',
                   }}>
-                    {m.text.includes('[APPROVE_SEND:') ? (() => {
+                    {m.text.includes('[APPROVE_BULK:') ? (() => {
+                      const match = m.text.match(/\[APPROVE_BULK:(.*)\]/);
+                      if (!match) return m.text;
+                      try {
+                        const { contacts: bulkContacts, messages: msgTemplates } = JSON.parse(match[1]);
+                        const displayText = m.text.replace(/\[APPROVE_BULK:.*\]/, '').trim();
+                        return (
+                          <div>
+                            <div style={{ whiteSpace: 'pre-wrap', marginBottom: 8 }}>{displayText}</div>
+                            {!m.text.includes('✅ Sent') && !m.text.includes('❌ Cancelled') && (
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={async () => {
+                                  const orgId = getOrgId();
+                                  let sent = 0;
+                                  for (const c of bulkContacts) {
+                                    for (const tmpl of msgTemplates) {
+                                      const msg = tmpl.replace(/\{name\}/g, c.firstName);
+                                      await fetch('/api/messages/send', {
+                                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ phoneNumber: c.phone, message: msg, contactName: c.name, organizationId: orgId }),
+                                      });
+                                      sent++;
+                                    }
+                                  }
+                                  setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_BULK:.*\]/, `✅ Sent ${sent} messages to ${bulkContacts.length} contacts!`) } : msg));
+                                }} style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                                  ✓ Send All ({bulkContacts.length} contacts × {msgTemplates.length} msgs)
+                                </button>
+                                <button onClick={() => {
+                                  setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_BULK:.*\]/, '❌ Cancelled') } : msg));
+                                }} style={{ padding: '6px 16px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#8e8e93', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                                  ✕ Cancel
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      } catch { return m.text; }
+                    })() : m.text.includes('[APPROVE_SEND:') ? (() => {
                       const match = m.text.match(/\[APPROVE_SEND:([^:]+):([^:]+):([^\]]+)\]/);
                       if (!match) return m.text;
                       const phone = match[1], name = match[2], msgText = match[3];
@@ -9657,7 +9695,9 @@ ACTIONS YOU CAN TAKE:
 
 8. SCHEDULE: Include [SCHEDULE:contact_name|title|datetime|status] to add to the Schedule tab. Status: tentative or confirmed. Example: [SCHEDULE:Sean|(Maybe) FanDuel test|tonight at 8pm|tentative] or [SCHEDULE:Brady Walsh|Follow-up call|tomorrow 2pm|confirmed]. Detect scheduling mentions in conversations — if someone says "let's do it at 3" or "I can tonight", create a schedule entry.
 
-9. SUB-INITIATIVE: Include [SUB_INITIATIVE:parent_title|name|type|description|instructions] to create a sub-initiative under a parent. Example: [SUB_INITIATIVE:DraftKings NJ Testing|DraftKings Referral Program|outreach|Get existing testers to refer friends|Offer $25 referral bonus per friend who completes a test] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
+9. BULK SEND: Include [BULK_SEND:initiative_name:message1|||message2] to send texts to ALL contacts in an initiative. Use ||| to separate multiple messages. Each contact gets the messages with their first name swapped in. Example: [BULK_SEND:Testers in NJ:Hey {name} whats up man, this is Jackson with that online casino testing group|||We are kicking that off again, wanted to see if you were still interested] — {name} gets replaced with each contact's first name. This creates approval cards for you to review before any messages send.
+
+10. SUB-INITIATIVE: Include [SUB_INITIATIVE:parent_title|name|type|description|instructions] to create a sub-initiative under a parent. Example: [SUB_INITIATIVE:DraftKings NJ Testing|DraftKings Referral Program|outreach|Get existing testers to refer friends|Offer $25 referral bonus per friend who completes a test] Example: [UPDATE:(669) 215-9518:name:Kyle Ashe] — you can chain multiple: [UPDATE:(669) 215-9518:name:Kyle Ashe] [UPDATE:(669) 215-9518:state:New Jersey] [UPDATE:(669) 215-9518:school:Rutgers]
 
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
@@ -9778,6 +9818,47 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         }
                         // Strip [SEND:] tags from the displayed reply
                         reply = reply.replace(/\[SEND:[^\]]+\]/g, '').trim();
+                      }
+
+                      // Check for bulk send commands [BULK_SEND:initiative:msg1|||msg2]
+                      if (reply.includes('[BULK_SEND:')) {
+                        const bulkMatch = reply.match(/\[BULK_SEND:([^:]+):([^\]]+)\]/);
+                        if (bulkMatch) {
+                          const initName = bulkMatch[1].trim();
+                          const msgTemplates = bulkMatch[2].split('|||').map((s: string) => s.trim());
+
+                          setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `🔍 loading contacts from "${initName}"...` }]);
+
+                          try {
+                            const lookupRes = await fetch('/api/ai/search-history', {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ action: 'initiative_details', query: initName, orgId: getOrgId() }),
+                            });
+                            const lookupData = await lookupRes.json();
+                            // Parse contact lines
+                            const contactLines = (lookupData.result || '').split('\n').filter((l: string) => l.startsWith('- '));
+                            const bulkContacts = contactLines.map((l: string) => {
+                              const match = l.match(/- (.+?) \| \((\d{3})\) (\d{3})-(\d{4})/);
+                              if (!match) return null;
+                              return { name: match[1], phone: `(${match[2]}) ${match[3]}-${match[4]}`, firstName: match[1].split(' ')[0] };
+                            }).filter(Boolean) as Array<{ name: string; phone: string; firstName: string }>;
+
+                            // Remove "loading" message
+                            setAiCopilotMessages(prev => prev.filter(m => !m.text.includes('loading contacts')));
+
+                            // Create bulk approval card
+                            const preview = bulkContacts.slice(0, 5).map(c => c.name).join(', ') + (bulkContacts.length > 5 ? ` + ${bulkContacts.length - 5} more` : '');
+                            const msgPreview = msgTemplates.map((t: string) => `"${t.replace('{name}', '[Name]').substring(0, 60)}"`).join(' → ');
+
+                            setAiCopilotMessages(prev => [...prev, {
+                              role: 'assistant',
+                              text: `📨 **Bulk send to ${bulkContacts.length} contacts** from "${initName}":\n${msgPreview}\n\nRecipients: ${preview}\n\n[APPROVE_BULK:${JSON.stringify({ contacts: bulkContacts, messages: msgTemplates })}]`,
+                            }]);
+                          } catch {
+                            setAiCopilotMessages(prev => prev.filter(m => !m.text.includes('loading contacts')));
+                          }
+                        }
+                        reply = reply.replace(/\[BULK_SEND:[^\]]+\]/g, '').trim();
                       }
 
                       // Check for contact update commands [UPDATE:phone:field:value]
