@@ -9613,7 +9613,7 @@ ${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => {
   const lastMsg = c.messages[c.messages.length - 1];
   const ts = lastMsg?.timestamp ? parseTimestamp(lastMsg.timestamp) : null;
   const timeStr = ts && !isNaN(ts.getTime()) ? ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'recently';
-  return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Last: "${lastMsg?.text?.substring(0, 40) || ''}" (${lastMsg?.direction || '?'}, ${timeStr} ET)`;
+  return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Last: "${lastMsg?.text?.substring(0, 150) || ''}" (${lastMsg?.direction || '?'}, ${timeStr} ET)`;
 }).join('\n')}
 
 IMPORTANT RULES:
