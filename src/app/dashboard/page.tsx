@@ -4184,6 +4184,34 @@ button:active { transform: scale(0.98); }`}</style>
                 if (msg) navigator.clipboard.writeText(msg.text);
                 setMsgContextMenu(null);
               }},
+              { label: 'Create Calendar Event', icon: '📅', action: async () => {
+                const col = columns.find(c => c.id === msgContextMenu.colId);
+                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+                const contactName = col?.contact?.name || '';
+                const contactPhone = col?.contact?.phone || '';
+                const title = prompt('Event title:', `${contactName || 'Contact'} — follow up`);
+                if (!title) { setMsgContextMenu(null); return; }
+                const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                await supabase.from('scheduled_events').insert({
+                  organization_id: orgId,
+                  contact_id: col?.contact ? (contacts.find(c => c.phone === contactPhone) as unknown as Record<string, unknown>)?.id || null : null,
+                  contact_name: contactName,
+                  contact_phone: contactPhone,
+                  title,
+                  description: msg?.text ? `From message: "${msg.text.substring(0, 200)}"` : '',
+                  status: 'tentative',
+                  source: 'manual',
+                  detected_from_message: msg?.text || null,
+                });
+                // Refresh calendar events
+                const { data } = await supabase.from('scheduled_events')
+                  .select('id, title, contact_name, contact_phone, scheduled_at, status, source, description, detected_from_message, created_at')
+                  .eq('organization_id', orgId)
+                  .order('created_at', { ascending: false })
+                  .limit(100);
+                if (data) setCalendarEvents(data as typeof calendarEvents);
+                setMsgContextMenu(null);
+              }},
             ].map(item => (
               <button key={item.label} onClick={item.action} style={{
                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
