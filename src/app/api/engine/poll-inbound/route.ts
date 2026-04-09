@@ -136,7 +136,7 @@ export async function GET() {
             status: 'active',
             last_message_at: msg.created_at,
             last_message_preview: msg.message.substring(0, 100),
-            unread_count: 1,
+            unread_count: (msg.direction || '').toLowerCase() === 'inbound' ? 1 : 0,
             flagged: false,
           })
           .select('id').single();
@@ -149,11 +149,12 @@ export async function GET() {
       // Link message to conversation
       await supabase.from('messages').update({ conversation_id: convId }).eq('id', msg.id);
 
-      // Update conversation
+      // Update conversation — only set unread on actual inbound messages
+      const isInbound = (msg.direction || '').toLowerCase() === 'inbound';
       await supabase.from('conversations').update({
         last_message_at: msg.created_at,
         last_message_preview: msg.message.substring(0, 100),
-        unread_count: 1,
+        ...(isInbound ? { unread_count: 1 } : {}),
       }).eq('id', convId);
 
       synced++;

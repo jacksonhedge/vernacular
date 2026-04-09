@@ -9131,12 +9131,12 @@ button:active { transform: scale(0.98); }`}</style>
                   {!sidebarCollapsed && item.label}
                   {item.label === 'Conversations' && unreadCount > 0 && (
                     <span style={{
-                      position: 'absolute', top: 6, right: 10,
-                      width: 20, height: 20, borderRadius: 10,
+                      position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)',
+                      minWidth: 20, height: 20, borderRadius: 10, padding: '0 5px',
                       background: '#EF4444', color: '#fff',
                       fontSize: 10, fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{unreadCount}</span>
+                    }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
                   )}
                 </button>
                 {item.tab === 'conversations' && activeTab === 'conversations' && !sidebarCollapsed && (
