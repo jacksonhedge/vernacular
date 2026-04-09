@@ -3584,8 +3584,9 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             {/* Column Header */}
             <div style={{
-              padding: '12px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)',
-              display: 'flex', alignItems: 'center', gap: 10, background: '#fafbfc', minHeight: 52,
+              padding: '12px 14px', borderBottom: '2px solid rgba(0,0,0,0.1)',
+              display: 'flex', alignItems: 'center', gap: 10, background: '#f4f5f7', minHeight: 52,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
             }}>
               {col.contact ? (
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -3712,7 +3713,7 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Conversation Goal */}
             {col.contact && (
               <div style={{
-                padding: '6px 14px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                padding: '6px 14px', borderBottom: '1px solid rgba(0,0,0,0.08)',
                 display: 'flex', alignItems: 'center', gap: 6, background: '#f8f9fa',
               }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2" strokeLinecap="round">
