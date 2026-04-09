@@ -550,6 +550,10 @@ export default function DashboardPage() {
     { name: 'Pinky', color: '#FFB8FF', role: 'Tone Specialist', purpose: 'Matches your brand voice perfectly across all messages' },
     { name: 'Inky', color: '#00FFFF', role: 'Follow-Up Engine', purpose: 'Never lets a conversation go cold — auto-follows up' },
     { name: 'Clyde', color: '#FFB852', role: 'Support Agent', purpose: 'Handles FAQs, troubleshooting, and common questions' },
+    { name: 'Sue', color: '#A78BFA', role: 'Scheduler', purpose: 'Detects time references and manages calendar events' },
+    { name: 'Funky', color: '#34D399', role: 'Enrichment', purpose: 'Auto-detects names, Venmo, emails from messages' },
+    { name: 'Spooky', color: '#F472B6', role: 'Analyst', purpose: 'Tracks response rates and conversation patterns' },
+    { name: 'Shadow', color: '#6B7280', role: 'Sentinel', purpose: 'Monitors for stale conversations and alerts' },
   ]);
   const [stationOverride, setStationOverride] = useState<'auto' | 'dnd' | 'offline'>('auto');
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
@@ -2662,7 +2666,7 @@ button:active { transform: scale(0.98); }`}</style>
           return {
             id: col.id, text: lastMsg?.text || '', name: fullName, initials,
             phone: col.contact!.phone || '', direction: lastMsg?.direction || 'outgoing',
-            status: tileStatus, colId: col.id,
+            status: tileStatus, colId: col.id, aiMode: col.aiMode || 'off',
             timestamp: lastMsg?.timestamp || '', state, greekOrg, msgCount: col.messages.length,
           };
         });
@@ -2699,6 +2703,7 @@ button:active { transform: scale(0.98); }`}</style>
               @keyframes nasaPulse { 0%,100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.02); box-shadow: 0 0 12px currentColor; } }
               @keyframes nasaUrgent { 0%,100% { opacity: 0.75; } 50% { opacity: 1; box-shadow: 0 0 14px rgba(245,158,11,0.4); } }
               .disco-tile:hover { transform: scale(1.2) !important; z-index: 10 !important; box-shadow: 0 0 24px currentColor !important; }
+              @keyframes ghostFloat { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-3px); } }
             `}</style>
 
             {/* Header */}
@@ -2925,6 +2930,25 @@ button:active { transform: scale(0.98); }`}</style>
                     }}>
                       {tile.name.split(' ')[0].length > 6 ? tile.initials : tile.name.split(' ')[0]}
                     </span>
+                    {/* Ghost — appears when AI is active on this tile */}
+                    {(tile.aiMode === 'draft' || tile.aiMode === 'auto' || tile.status === 'draft') && (() => {
+                      const ghostIdx = idx % ghostConfig.length;
+                      const ghost = ghostConfig[ghostIdx];
+                      return (
+                        <div style={{
+                          position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
+                          animation: 'ghostFloat 2s ease-in-out infinite',
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 14 16">
+                            <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z" fill={ghost.color} opacity="0.9" />
+                            <circle cx="5" cy="7" r="1.2" fill="#fff" />
+                            <circle cx="9" cy="7" r="1.2" fill="#fff" />
+                            <circle cx="5.5" cy="7" r="0.6" fill="#111" />
+                            <circle cx="9.5" cy="7" r="0.6" fill="#111" />
+                          </svg>
+                        </div>
+                      );
+                    })()}
                   </button>
                 );
               })}
