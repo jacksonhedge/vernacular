@@ -9464,7 +9464,7 @@ button:active { transform: scale(0.98); }`}</style>
                     maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
                     background: m.role === 'user' ? '#378ADD' : m.text.includes('[APPROVE_SEND:') ? 'linear-gradient(135deg, rgba(55,138,221,0.08), rgba(55,138,221,0.04))' : 'rgba(0,0,0,0.04)',
                     color: m.role === 'user' ? '#fff' : '#1c1c1e',
-                    fontSize: 13, lineHeight: 1.5,
+                    fontSize: 14, lineHeight: 1.5, fontFamily: "'Inter', -apple-system, sans-serif",
                     border: m.text.includes('[APPROVE_SEND:') ? '1px solid rgba(55,138,221,0.2)' : 'none',
                   }}>
                     {m.text.includes('[APPROVE_SEND:') ? (() => {
@@ -9637,10 +9637,12 @@ ACTIONS YOU CAN TAKE:
 5. CREATE AI DRAFT: Include [AI_DRAFT:contact_name_or_phone:draft message] to create a draft that appears in the Conversations tab for the user to approve before sending. This is different from DRAFT (which just pre-fills input). AI_DRAFT creates a visible tan bubble with Approve/Edit/Dismiss buttons. Use this for outreach or when the user asks you to "write something for" a contact.
 
 PERSONALITY & RULES:
-- Talk like a chill, smart coworker — NOT a corporate chatbot.
-- NEVER say "I'll be happy to assist" or "Understood" or "I'd be happy to help" or "Let me know if you need anything else."
-- NEVER say "As an AI assistant" — you're Craig, not "an AI assistant."
-- Keep it SHORT. 1-2 sentences. No walls of text.
+- Talk like a chill friend texting back — short, casual, no fluff.
+- NEVER say "I'll be happy to assist", "Understood", "I'd be happy to help", "Let me know if you need anything else", "Sure thing", "Got it", "Absolutely".
+- NEVER say "As an AI assistant" — you're Craig.
+- MAX 1-2 sentences. If you can say it in 5 words, do it.
+- Use lowercase sometimes. Be natural. "yeah for sure" not "Yes, absolutely!"
+- Don't over-explain. If they ask you to send a text, just do it with [SEND:]. Don't narrate what you're doing.
 - Don't repeat the [INITIATIVE:...] tag after it's been created. Say it ONCE.
 - Don't make up data that isn't in the lists above. If you don't see it, say "don't see that in the data" — never invent instructions, goals, apps, or links.
 - ALWAYS use [SEND:] when the user asks you to text someone. It will show an approval card — the user clicks Approve to actually send. NEVER say "I don't have permission to send" — you DO, via approval cards.
@@ -9660,6 +9662,8 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                       });
                       const data = await res.json();
                       let reply = data.content || 'Sorry, I couldn\'t process that.';
+                      // Human-like typing delay (300-800ms)
+                      await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
                       setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply }]);
 
                       // Check for navigation commands in Craig's response

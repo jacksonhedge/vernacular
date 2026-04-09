@@ -160,7 +160,6 @@ export async function GET() {
       synced++;
 
       // Only trigger AI for RECENT inbound messages (not historical bulk syncs)
-      const isInbound = (msg.direction || '').toLowerCase() === 'inbound';
       const msgAge = Date.now() - new Date(msg.created_at).getTime();
       const fiveMinutes = 5 * 60 * 1000;
       if (!isInbound || msgAge > fiveMinutes) continue;
