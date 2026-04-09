@@ -960,11 +960,15 @@ export default function DashboardPage() {
                     // Replace existing messages with fresh from API (source of truth)
                     // Keep only optimistic m- messages that don't have a DB match yet
                     const freshTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
-                    const optimisticOnly = existing.messages.filter(m => m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`));
+                    // Keep optimistic messages AND AI drafts that aren't in the DB yet
+                    const localOnly = existing.messages.filter(m =>
+                      (m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`)) ||
+                      (m.isAIDraft && m.id.startsWith('ai-draft-'))
+                    );
                     return {
                       ...existing,
                       contact: fresh.contact,
-                      messages: [...fresh.messages, ...optimisticOnly],
+                      messages: [...fresh.messages, ...localOnly],
                     };
                   }
                   return existing;
