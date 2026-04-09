@@ -12,6 +12,8 @@
 STATION_NAME="${STATION_NAME:?ERROR: STATION_NAME is required}"
 VERNACULAR_URL="${VERNACULAR_URL:-https://vernacular.chat}"
 POLL_INTERVAL="${POLL_INTERVAL:-5}"
+MSG_DIR="/tmp/vernacular_outbound_msgs"
+mkdir -p "$MSG_DIR"
 
 echo "[$(date '+%H:%M:%S')] Starting outbound sender for ${STATION_NAME} (every ${POLL_INTERVAL}s)"
 
@@ -19,30 +21,56 @@ while true; do
     # Poll for queued messages
     RESPONSE=$(curl -s "${VERNACULAR_URL}/api/engine/poll-outbound?station=${STATION_NAME}")
 
-    # Parse messages from response (now includes attachment_url)
-    MESSAGES=$(echo "$RESPONSE" | python3 -c "
-import sys, json
+    # Parse messages into individual JSON files (avoids IFS/pipe parsing bugs)
+    MSG_COUNT=$(echo "$RESPONSE" | python3 -c "
+import sys, json, os
 try:
     data = json.load(sys.stdin)
     msgs = data.get('messages', [])
-    for m in msgs:
+    # Clean old message files
+    msg_dir = '$MSG_DIR'
+    for f in os.listdir(msg_dir):
+        if f.startswith('msg_'):
+            os.remove(os.path.join(msg_dir, f))
+    count = 0
+    for i, m in enumerate(msgs):
         phone = m.get('phone', '') or m.get('contact_phone', '')
         text = m.get('message', '')
         msg_id = m.get('id', '')
-        att_url = m.get('attachment_url', '')
+        att_url = m.get('attachment_url', '') or ''
         if phone and (text or att_url):
-            text_escaped = (text or '').replace(\"'\", \"'\\\\''\")
-            print(f'{msg_id}|{phone}|{text_escaped}|{att_url}')
+            with open(os.path.join(msg_dir, f'msg_{i}.json'), 'w') as f:
+                json.dump({'id': msg_id, 'phone': phone, 'text': text, 'att_url': att_url}, f)
+            count += 1
+    print(count)
 except:
-    pass
+    print(0)
 " 2>/dev/null)
 
-    if [ -n "$MESSAGES" ]; then
-        while IFS='|' read -r MSG_ID PHONE TEXT ATT_URL; do
+    if [ "$MSG_COUNT" -gt 0 ] 2>/dev/null; then
+        for MSG_FILE in "$MSG_DIR"/msg_*.json; do
+            [ -f "$MSG_FILE" ] || continue
+
+            # Read fields from JSON using Python (safe, no IFS issues)
+            eval $(python3 -c "
+import json
+with open('$MSG_FILE') as f:
+    m = json.load(f)
+# Shell-safe escaping
+def esc(s):
+    return s.replace(\"'\", \"'\\\\''\" )
+print(f\"MSG_ID='{esc(m['id'])}'\")
+print(f\"PHONE='{esc(m['phone'])}'\")
+print(f\"TEXT='{esc(m['text'])}'\")
+print(f\"ATT_URL='{esc(m['att_url'])}'\")
+" 2>/dev/null)
+
             echo "[$(date '+%H:%M:%S')] Sending to ${PHONE}: ${TEXT:0:60}..."
 
+            SEND_STATUS=0
+
             # If there's an attachment URL, download and send as file
-            if [ -n "$ATT_URL" ] && [ "$ATT_URL" != "" ]; then
+            if [ -n "$ATT_URL" ]; then
                 echo "[$(date '+%H:%M:%S')] Downloading attachment: ${ATT_URL:0:80}..."
                 ATT_FILENAME=$(basename "$ATT_URL" | sed 's/?.*//')
                 ATT_PATH="/tmp/vernacular_att_${ATT_FILENAME}"
@@ -69,6 +97,7 @@ except:
                             send POSIX file \"${ATT_PATH}\" to targetBuddy
                         end tell
                     " 2>/dev/null
+                    SEND_STATUS=$?
                     rm -f "$ATT_PATH"
                 else
                     echo "[$(date '+%H:%M:%S')] Download failed, sending text only"
@@ -79,11 +108,11 @@ except:
                             send \"${TEXT}\" to targetBuddy
                         end tell
                     " 2>/dev/null
+                    SEND_STATUS=$?
                 fi
             # Check if message contains a URL — split into text + link
             elif echo "$TEXT" | grep -qE 'https?://[^ ]*'; then
-                URL_PATTERN='https?://[^ ]*'
-                URL=$(echo "$TEXT" | grep -oE "$URL_PATTERN" | head -1)
+                URL=$(echo "$TEXT" | grep -oE 'https?://[^ ]*' | head -1)
                 TEXT_ONLY=$(echo "$TEXT" | sed "s|$URL||g" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
                 if [ -n "$TEXT_ONLY" ]; then
@@ -104,6 +133,7 @@ except:
                         send \"${URL}\" to targetBuddy
                     end tell
                 " 2>/dev/null
+                SEND_STATUS=$?
             else
                 # No URL, no attachment — send as single message
                 osascript -e "
@@ -113,13 +143,11 @@ except:
                         send \"${TEXT}\" to targetBuddy
                     end tell
                 " 2>/dev/null
+                SEND_STATUS=$?
             fi
-
-            SEND_STATUS=$?
 
             if [ $SEND_STATUS -eq 0 ]; then
                 echo "[$(date '+%H:%M:%S')] Sent successfully"
-                # Confirm sent
                 curl -s -X POST "${VERNACULAR_URL}/api/engine/confirm-sent" \
                     -H "Content-Type: application/json" \
                     -d "{\"messageId\": \"${MSG_ID}\", \"status\": \"sent\", \"station\": \"${STATION_NAME}\"}" \
@@ -131,7 +159,9 @@ except:
                     -d "{\"messageId\": \"${MSG_ID}\", \"status\": \"failed\", \"station\": \"${STATION_NAME}\", \"error\": \"AppleScript failed\"}" \
                     > /dev/null
             fi
-        done <<< "$MESSAGES"
+
+            rm -f "$MSG_FILE"
+        done
     fi
 
     sleep "$POLL_INTERVAL"
