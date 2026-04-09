@@ -2966,7 +2966,11 @@ button:active { transform: scale(0.98); }`}</style>
                       if (last?.isAIDraft) return 1;
                       return 2;
                     };
-                    return getPriority(a) - getPriority(b);
+                    const pDiff = getPriority(a) - getPriority(b);
+                    if (pDiff !== 0) return pDiff;
+                    const aTime = a.messages.length > 0 ? new Date(a.messages[a.messages.length - 1].timestamp || 0).getTime() : 0;
+                    const bTime = b.messages.length > 0 ? new Date(b.messages[b.messages.length - 1].timestamp || 0).getTime() : 0;
+                    return bTime - aTime;
                   });
                 const MAX_SLOTS = 12;
                 const totalContacts = sortedCols.length;
@@ -3396,6 +3400,8 @@ button:active { transform: scale(0.98); }`}</style>
         <div ref={streamsScrollRef} style={{ flex: 1, display: 'flex', gap: 0, overflowX: 'scroll', overflowY: 'hidden', padding: '8px 16px 16px 16px', minHeight: 0, paddingRight: 32, WebkitOverflowScrolling: 'touch' }}>
         {(() => {
           // Sort: pinned always first, then by selected mode
+          const getLastMsgTime = (col: ConversationColumn) =>
+            col.messages.length > 0 ? new Date(col.messages[col.messages.length - 1].timestamp || 0).getTime() : 0;
           const sorted = [...columns].sort((a, b) => {
             const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
@@ -3403,12 +3409,11 @@ button:active { transform: scale(0.98); }`}</style>
             if (streamSortMode === 'unread') {
               const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
               const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
-              return bUnread - aUnread;
+              if (aUnread !== bUnread) return bUnread - aUnread;
+              return getLastMsgTime(b) - getLastMsgTime(a);
             }
             if (streamSortMode === 'recent') {
-              const aTime = a.messages.length > 0 ? new Date(a.messages[a.messages.length - 1].timestamp || 0).getTime() : 0;
-              const bTime = b.messages.length > 0 ? new Date(b.messages[b.messages.length - 1].timestamp || 0).getTime() : 0;
-              return bTime - aTime;
+              return getLastMsgTime(b) - getLastMsgTime(a);
             }
             if (streamSortMode === 'name') {
               return (a.contact?.name || '').localeCompare(b.contact?.name || '');
@@ -3416,7 +3421,7 @@ button:active { transform: scale(0.98); }`}</style>
             if (streamSortMode === 'most-messages') {
               return b.messages.length - a.messages.length;
             }
-            return 0;
+            return getLastMsgTime(b) - getLastMsgTime(a);
           });
           // Filter: if showReadStreams is off, only show pinned + unread
           const visible = showReadStreams ? sorted : sorted.filter(c =>
@@ -8641,7 +8646,12 @@ ${contacts.slice(0, 30).map(c => `- ${c.full_name || 'Unknown'} | ${c.phone || '
 ${contacts.length > 30 ? `... and ${contacts.length - 30} more` : ''}
 
 OPEN CONVERSATIONS (real data — you CAN see all of this):
-${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Channel: ${c.channel || 'iMessage'} | Last msg: "${c.messages[c.messages.length - 1]?.text?.substring(0, 40) || ''}" (${c.messages[c.messages.length - 1]?.direction || '?'}, ${c.messages[c.messages.length - 1]?.timestamp || '?'})`).join('\n')}
+${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => {
+  const lastMsg = c.messages[c.messages.length - 1];
+  const ts = lastMsg?.timestamp ? new Date(lastMsg.timestamp) : null;
+  const timeStr = ts && !isNaN(ts.getTime()) ? ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'recently';
+  return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Last: "${lastMsg?.text?.substring(0, 40) || ''}" (${lastMsg?.direction || '?'}, ${timeStr} ET)`;
+}).join('\n')}
 
 IMPORTANT RULES:
 - You have REAL access to the contact and conversation data above. USE IT.

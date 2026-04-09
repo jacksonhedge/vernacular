@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         id: m.id,
         text: m.message || '',
         direction: dir === 'outbound' ? 'outgoing' : 'incoming',
-        timestamp: time ? new Date(time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+        timestamp: time || '',
         status: m.status,
         isAIDraft: m.source_system === 'vernacular-ai' && (m.status === 'Draft' || m.status === 'draft'),
       });
