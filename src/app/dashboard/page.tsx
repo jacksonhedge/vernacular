@@ -2683,7 +2683,8 @@ button:active { transform: scale(0.98); }`}</style>
           return { bg: '#7C3AED', glow: '0 0 8px rgba(124,58,237,0.4)', text: '#fff' }; // active/sent
         };
 
-        const COLS = Math.min(8, Math.max(4, Math.ceil(Math.sqrt(allTiles.length))));
+        const COLS = 10; // Fixed 10-column grid for 100-tile layout
+        const TOTAL_TILES = 100;
 
         return (
           <div style={{
@@ -2741,7 +2742,18 @@ button:active { transform: scale(0.98); }`}</style>
                 <img src="/logo.png" alt="" style={{ width: 120, height: 120, borderRadius: 24 }} />
               </div>
 
-              {allTiles.slice(0, 144).map((tile, idx) => {
+              {Array.from({ length: TOTAL_TILES }).map((_, idx) => {
+                const tile = allTiles[idx];
+                if (!tile) {
+                  // Vacant silver tile
+                  return (
+                    <div key={`vacant-${idx}`} style={{
+                      aspectRatio: '1', borderRadius: 6, background: '#C8CDD3',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: 0.5,
+                    }} />
+                  );
+                }
                 const colors = tileColor(tile.status);
                 return (
                   <button
