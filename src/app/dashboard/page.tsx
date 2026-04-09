@@ -9853,7 +9853,11 @@ button:active { transform: scale(0.98); }`}</style>
                           <div style={{ whiteSpace: 'pre-wrap' }}>{displayText}</div>
                           {!m.text.includes('✅ Sent') && !m.text.includes('❌ Cancelled') && (
                             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                              <button onClick={async () => {
+                              <button onClick={async (e) => {
+                                const btn = e.currentTarget;
+                                btn.textContent = '⏳ Sending...';
+                                btn.style.background = '#D97706';
+                                btn.style.pointerEvents = 'none';
                                 const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
                                 try {
                                   await fetch('/api/messages/send', {
@@ -9866,14 +9870,19 @@ button:active { transform: scale(0.98); }`}</style>
                                   setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '❌ Failed to send') } : msg));
                                 }
                               }} style={{
-                                padding: '6px 16px', borderRadius: 8, border: 'none',
-                                background: '#22C55E', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                              }}>✓ Approve & Send</button>
+                                padding: '8px 24px', borderRadius: 10, border: 'none',
+                                background: '#22C55E', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
+                                transition: 'all 0.1s',
+                              }}
+                              onMouseDown={e => { (e.currentTarget).style.transform = 'scale(0.95)'; }}
+                              onMouseUp={e => { (e.currentTarget).style.transform = 'scale(1)'; }}
+                              >✓ Approve & Send</button>
                               <button onClick={() => {
                                 setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '❌ Cancelled') } : msg));
                               }} style={{
-                                padding: '6px 16px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
-                                background: '#fff', color: '#8e8e93', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                padding: '8px 20px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)',
+                                background: '#fff', color: '#8e8e93', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                               }}>✕ Reject</button>
                             </div>
                           )}
