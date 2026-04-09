@@ -8799,16 +8799,16 @@ button:active { transform: scale(0.98); }`}</style>
       <aside style={{
         width: sidebarCollapsed ? 64 : 260,
         minWidth: sidebarCollapsed ? 64 : 260,
-        background: '#1a1a2e',
+        background: 'linear-gradient(180deg, #D4E9F7, #C2DEF0, #B8D8EC)',
         display: 'flex',
         flexDirection: 'column',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        borderRight: '1px solid rgba(0,0,0,0.08)',
         transition: 'width 0.2s ease, min-width 0.2s ease',
       }}>
         {/* Logo + Org */}
         <div style={{
           padding: sidebarCollapsed ? '20px 16px 16px' : '20px 18px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(0,0,0,0.08)',
           display: 'flex',
           alignItems: sidebarCollapsed ? 'center' : 'center',
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
@@ -8818,7 +8818,7 @@ button:active { transform: scale(0.98); }`}</style>
           {!sidebarCollapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
-                fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
+                fontSize: 14, fontWeight: 700, color: '#1a3a5c', letterSpacing: '-0.01em',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
                 {(org?.name as string) || 'Vernacular'}
@@ -8827,15 +8827,15 @@ button:active { transform: scale(0.98); }`}</style>
                 value={activeAccountView}
                 onChange={e => setActiveAccountView(e.target.value)}
                 style={{
-                  marginTop: 4, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
+                  marginTop: 4, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
                   fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none',
                   fontFamily: "'Inter', sans-serif",
                   width: '100%', appearance: 'auto' as never,
-                  background: 'rgba(255,255,255,0.08)',
-                  color: activeAccountView === 'vip_manager' ? '#A78BFA' :
-                    activeAccountView === 'customer_support' ? '#60A5FA' :
-                    activeAccountView === 'sales_outreach' ? '#6EE7B7' :
-                    activeAccountView === 'app_testing' ? '#FFC107' : 'rgba(255,255,255,0.7)',
+                  background: 'rgba(255,255,255,0.5)',
+                  color: activeAccountView === 'vip_manager' ? '#7C3AED' :
+                    activeAccountView === 'customer_support' ? '#2563EB' :
+                    activeAccountView === 'sales_outreach' ? '#059669' :
+                    activeAccountView === 'app_testing' ? '#D97706' : '#1a3a5c',
                 }}
               >
                 <option value="all">All Solutions</option>
@@ -8849,7 +8849,7 @@ button:active { transform: scale(0.98); }`}</style>
           {/* Sound Toggle */}
           <button onClick={() => { setSoundEnabled(!soundEnabled); playSound('click'); }} style={{
             width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
-            background: soundEnabled ? 'rgba(55,138,221,0.15)' : 'rgba(255,255,255,0.05)',
+            background: soundEnabled ? 'rgba(26,58,92,0.15)' : 'rgba(0,0,0,0.05)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, transition: 'all 0.15s',
           }} title={soundEnabled ? 'Sound ON — click to mute' : 'Sound OFF — click to unmute'}>
@@ -8867,17 +8867,17 @@ button:active { transform: scale(0.98); }`}</style>
           <div ref={notificationBellRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setShowNotifications(!showNotifications)} style={{
               width: 28, height: 28, borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: showNotifications ? 'rgba(55,138,221,0.15)' : 'rgba(255,255,255,0.05)',
+              background: showNotifications ? 'rgba(26,58,92,0.15)' : 'rgba(0,0,0,0.05)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'all 0.15s', position: 'relative',
             }} title="Notifications">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={notifications.filter(n => !n.read).length > 0 ? '#378ADD' : 'rgba(255,255,255,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={notifications.filter(n => !n.read).length > 0 ? '#2563EB' : 'rgba(26,58,92,0.4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
               {notifications.filter(n => !n.read).length > 0 && (
                 <div style={{
                   position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: 4,
-                  background: '#EF4444', border: '1.5px solid #1a1a2e',
+                  background: '#EF4444', border: '1.5px solid #C2DEF0',
                 }} />
               )}
             </button>
@@ -8926,7 +8926,7 @@ button:active { transform: scale(0.98); }`}</style>
           const statusColor = getStationDotColor(primaryStation);
           const statusLabel = getStationLabel(primaryStation);
           return (
-            <div style={{ position: 'relative', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ position: 'relative', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
               <button
                 onClick={() => setShowStationMenu(!showStationMenu)}
                 style={{
@@ -9031,10 +9031,10 @@ button:active { transform: scale(0.98); }`}</style>
                     fontSize: 14, fontWeight: isActive ? 600 : 500,
                     fontFamily: "'Inter', sans-serif",
                     letterSpacing: '-0.01em',
-                    color: isActive ? '#fff' : ((item as Record<string, unknown>).color as string) || 'rgba(255,255,255,0.85)',
+                    color: isActive ? '#1a3a5c' : ((item as Record<string, unknown>).color as string) || 'rgba(26,58,92,0.8)',
                     background: isActive
-                      ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.2)' : 'rgba(55,138,221,0.15)')
-                      : isHovered ? 'rgba(255,255,255,0.08)' : 'transparent',
+                      ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.15)' : 'rgba(255,255,255,0.5)')
+                      : isHovered ? 'rgba(255,255,255,0.3)' : 'transparent',
                     marginBottom: 3, transition: 'all 0.15s ease', textAlign: 'left',
                     position: 'relative',
                   }}
@@ -9042,10 +9042,10 @@ button:active { transform: scale(0.98); }`}</style>
                   {isActive && (
                     <div style={{
                       position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                      width: 3, height: 20, borderRadius: '0 3px 3px 0', background: '#378ADD',
+                      width: 3, height: 20, borderRadius: '0 3px 3px 0', background: '#2563EB',
                     }} />
                   )}
-                  <span style={{ color: isActive ? '#378ADD' : 'rgba(255,255,255,0.6)', display: 'flex', flexShrink: 0 }}>
+                  <span style={{ color: isActive ? '#2563EB' : 'rgba(26,58,92,0.5)', display: 'flex', flexShrink: 0 }}>
                     {item.icon}
                   </span>
                   {!sidebarCollapsed && item.label}
@@ -9080,18 +9080,18 @@ button:active { transform: scale(0.98); }`}</style>
         </nav>
 
         {/* Collapse Toggle */}
-        <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
+        <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}>
           <button
             onClick={() => { setSidebarCollapsed(c => !c); playSound('click'); }}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, width: sidebarCollapsed ? 36 : '100%',
               height: 36, borderRadius: 8, border: 'none', justifyContent: 'center',
-              background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+              background: 'rgba(0,0,0,0.06)', color: 'rgba(26,58,92,0.5)',
               cursor: 'pointer', transition: 'all 0.15s ease',
               fontSize: 12, fontWeight: 500, fontFamily: "'Inter', sans-serif",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.1)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.06)')}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {sidebarCollapsed
@@ -9104,10 +9104,10 @@ button:active { transform: scale(0.98); }`}</style>
         </div>
 
         {/* Bottom: User + Logout */}
-        <div style={{ padding: sidebarCollapsed ? '14px 8px' : '14px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: sidebarCollapsed ? '14px 8px' : '14px 16px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
           {!sidebarCollapsed && (
             <div style={{
-              fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 500, marginBottom: 10,
+              fontSize: 12, color: 'rgba(26,58,92,0.5)', fontWeight: 500, marginBottom: 10,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {user?.email as string}
@@ -9117,8 +9117,8 @@ button:active { transform: scale(0.98); }`}</style>
             onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
             style={{
               width: '100%', padding: '7px 0', borderRadius: 6, fontSize: 12, fontWeight: 600,
-              fontFamily: "'Inter', sans-serif", background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.08)',
+              fontFamily: "'Inter', sans-serif", background: 'rgba(0,0,0,0.06)',
+              color: 'rgba(26,58,92,0.5)', border: '1px solid rgba(0,0,0,0.08)',
               cursor: 'pointer', transition: 'all 0.15s ease',
             }}
           >
