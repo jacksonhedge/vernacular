@@ -423,6 +423,8 @@ export default function DashboardPage() {
   });
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
   const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>('unread');
+  const [activeInitiativeFilter, setActiveInitiativeFilter] = useState<string | null>(null);
+  const [initiativePhones, setInitiativePhones] = useState<Set<string>>(new Set());
   const [activeAccountView, setActiveAccountView] = useState<string>('all');
   const [showAICopilot, setShowAICopilot] = useState(false);
   const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
@@ -482,6 +484,20 @@ export default function DashboardPage() {
       })
       .catch(err => { console.error('[initiative contacts] fetch failed:', err); setLoadingInitContacts(false); });
   }, [selectedInitiative]);
+
+  // Load phone numbers for the active initiative filter (used across Streams, Messages, Summary)
+  useEffect(() => {
+    if (!activeInitiativeFilter) { setInitiativePhones(new Set()); return; }
+    fetch(`/api/contacts/by-initiative?initiativeId=${activeInitiativeFilter}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.contacts) {
+          const phones = new Set<string>(data.contacts.map((c: { phone: string }) => c.phone?.replace(/\D/g, '').slice(-10)).filter(Boolean));
+          setInitiativePhones(phones);
+        }
+      })
+      .catch(() => {});
+  }, [activeInitiativeFilter]);
 
   // Load Craig's knowledge: global .md files + org-specific from DB
   useEffect(() => {
@@ -2495,6 +2511,13 @@ button:active { transform: scale(0.98); }`}</style>
       {/* Summary View */}
       {conversationViewMode === 'summary' && (
         <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+          {/* Initiative Filter */}
+          <div style={{ display: 'flex', gap: 6, padding: '12px 0 8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => setActiveInitiativeFilter(null)} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: !activeInitiativeFilter ? '#378ADD' : 'rgba(0,0,0,0.06)', color: !activeInitiativeFilter ? '#fff' : '#6b7280' }}>All</button>
+            {dbInitiatives.filter(i => !i.parent_id).map(init => (
+              <button key={init.id} onClick={() => setActiveInitiativeFilter(activeInitiativeFilter === init.id ? null : init.id)} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: activeInitiativeFilter === init.id ? '#378ADD' : 'rgba(0,0,0,0.06)', color: activeInitiativeFilter === init.id ? '#fff' : '#6b7280' }}>{init.title}</button>
+            ))}
+          </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Inter', sans-serif" }}>
             <thead>
               <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.06)' }}>
@@ -2517,7 +2540,11 @@ button:active { transform: scale(0.98); }`}</style>
               </tr>
             </thead>
             <tbody>
-              {SUMMARY_DATA.map((row, i) => (
+              {SUMMARY_DATA.filter(row => {
+                if (!activeInitiativeFilter || initiativePhones.size === 0) return true;
+                const digits = (row.phone || '').replace(/\D/g, '').slice(-10);
+                return initiativePhones.has(digits);
+              }).map((row, i) => (
                 <tr
                   key={i}
                   style={{ borderBottom: '1px solid rgba(0,0,0,0.04)', cursor: 'pointer', transition: 'background 0.1s' }}
@@ -3135,13 +3162,28 @@ button:active { transform: scale(0.98); }`}</style>
       {/* Messages Timeline View */}
       {conversationViewMode === 'messages' && (
         <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+          {/* Initiative Filter */}
+          <div style={{ display: 'flex', gap: 6, padding: '12px 0 8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={() => setActiveInitiativeFilter(null)} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: !activeInitiativeFilter ? '#378ADD' : 'rgba(0,0,0,0.06)', color: !activeInitiativeFilter ? '#fff' : '#6b7280' }}>All</button>
+            {dbInitiatives.filter(i => !i.parent_id).map(init => (
+              <button key={init.id} onClick={() => setActiveInitiativeFilter(activeInitiativeFilter === init.id ? null : init.id)} style={{ padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: activeInitiativeFilter === init.id ? '#378ADD' : 'rgba(0,0,0,0.06)', color: activeInitiativeFilter === init.id ? '#fff' : '#6b7280' }}>{init.title}</button>
+            ))}
+          </div>
           {(() => {
             // Collect all messages from all columns, sorted by timestamp
             const allMsgs: Array<{
               contactName: string; contactPhone: string; text: string;
               direction: string; timestamp: string; isAIDraft?: boolean; colId: string;
             }> = [];
-            columns.filter(col => col.contact).forEach(col => {
+            const filteredCols = columns.filter(col => {
+              if (!col.contact) return false;
+              if (activeInitiativeFilter && initiativePhones.size > 0) {
+                const digits = (col.contact.phone || '').replace(/\D/g, '').slice(-10);
+                return initiativePhones.has(digits);
+              }
+              return true;
+            });
+            filteredCols.forEach(col => {
               col.messages.forEach(msg => {
                 allMsgs.push({
                   contactName: col.contact?.name || 'Unknown',
@@ -3689,6 +3731,20 @@ button:active { transform: scale(0.98); }`}</style>
         </div>{/* end Contact List Panel */}
         {/* Stream Columns — minWidth:0 prevents flex child from expanding beyond allocated space */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
+        {/* Initiative Filter Bar */}
+        <div style={{ display: 'flex', gap: 6, padding: '8px 16px 4px', flexShrink: 0, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button onClick={() => setActiveInitiativeFilter(null)} style={{
+            padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            background: !activeInitiativeFilter ? '#378ADD' : 'rgba(0,0,0,0.06)', color: !activeInitiativeFilter ? '#fff' : '#6b7280',
+          }}>All</button>
+          {dbInitiatives.filter(i => !i.parent_id).map(init => (
+            <button key={init.id} onClick={() => setActiveInitiativeFilter(activeInitiativeFilter === init.id ? null : init.id)} style={{
+              padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+              background: activeInitiativeFilter === init.id ? '#378ADD' : 'rgba(0,0,0,0.06)',
+              color: activeInitiativeFilter === init.id ? '#fff' : '#6b7280',
+            }}>{init.title}</button>
+          ))}
+        </div>
         {/* Stream Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 0', flexShrink: 0 }}>
           <button onClick={() => setShowReadStreams(prev => !prev)} style={{
@@ -3776,9 +3832,17 @@ button:active { transform: scale(0.98); }`}</style>
             return getLastMsgTime(b) - getLastMsgTime(a);
           });
           // Filter: if showReadStreams is off, only show pinned + unread
-          const visible = showReadStreams ? sorted : sorted.filter(c =>
+          let visible = showReadStreams ? sorted : sorted.filter(c =>
             pinnedConversations.has(c.id) || c.contact?.tag === 'UNREAD' || !c.contact
           );
+          // Filter by initiative if active
+          if (activeInitiativeFilter && initiativePhones.size > 0) {
+            visible = visible.filter(c => {
+              if (!c.contact?.phone) return false;
+              const digits = c.contact.phone.replace(/\D/g, '').slice(-10);
+              return initiativePhones.has(digits);
+            });
+          }
           return visible;
         })().map(col => (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
