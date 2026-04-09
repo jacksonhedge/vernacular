@@ -4456,11 +4456,26 @@ button:active { transform: scale(0.98); }`}</style>
         <>
           <div onClick={() => setMsgContextMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
           <div style={{
-            position: 'fixed', left: msgContextMenu.x, top: msgContextMenu.y, zIndex: 300,
+            position: 'fixed', left: msgContextMenu.x, bottom: typeof window !== 'undefined' ? window.innerHeight - msgContextMenu.y : 0, zIndex: 300,
             background: '#fff', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-            border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 140,
+            border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 180,
           }}>
             {[
+              { label: 'Resend', icon: '🔄', action: async () => {
+                const col = columns.find(c => c.id === msgContextMenu.colId);
+                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+                if (!msg || !col?.contact?.phone) { setMsgContextMenu(null); return; }
+                const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                await fetch('/api/messages/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ phoneNumber: col.contact.phone, message: msg.text, contactName: col.contact.name || '', organizationId: orgId }),
+                });
+                setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
+                  ...c, messages: c.messages.map(m => m.id === msgContextMenu.msgId ? { ...m, status: 'Queued' } : m),
+                } : c));
+                setMsgContextMenu(null);
+              }},
               { label: 'Hide Message', icon: '👁', action: () => {
                 setHiddenMessages(prev => {
                   const next = new Set(prev).add(msgContextMenu.msgId);
