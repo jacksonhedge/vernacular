@@ -2702,20 +2702,75 @@ button:active { transform: scale(0.98); }`}</style>
             `}</style>
 
             {/* Header */}
-            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
-                  Contact Matrix
-                </h2>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {allTiles.length} conversations{stagedContacts.length > 0 ? ` · ${stagedContacts.length} staged` : ''}
-                </span>
+            <div style={{ padding: '16px 24px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {/* Top row: title + legend */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                    Contact Matrix
+                  </h2>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {allTiles.length} conversations{stagedContacts.length > 0 ? ` · ${stagedContacts.length} staged` : ''}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  {[
+                    { label: 'Needs Reply', color: '#22C55E' },
+                    { label: 'AI Draft', color: '#F59E0B' },
+                    { label: 'Active', color: '#7C3AED' },
+                    { label: 'Staged', color: '#EF4444' },
+                  ].map(l => (
+                    <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}60` }} />
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{l.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              {/* Stage + Launch controls */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Bottom row: Initiative buttons + launch controls */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Initiative toggle buttons */}
+                {dbInitiatives.filter(i => !i.parent_id).map(init => {
+                  const isActive = stagedContacts.length > 0 && stagedContacts[0]?.name; // basic check
+                  return (
+                    <button key={init.id} onClick={async () => {
+                      const res = await fetch('/api/ai/search-history', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'initiative_details', query: init.title, orgId: getOrgId() }),
+                      });
+                      const data = await res.json();
+                      const contactLines = (data.result || '').split('\n').filter((l: string) => l.startsWith('- '));
+                      const parsed = contactLines.map((l: string) => {
+                        const match = l.match(/- (.+?) \| \((\d{3})\) (\d{3})-(\d{4})(?:\s*\|\s*([^|]*))?/);
+                        if (!match) return null;
+                        const name = match[1].trim();
+                        const phone = `(${match[2]}) ${match[3]}-${match[4]}`;
+                        const state = (match[5] || '').trim();
+                        const firstName = name.split(' ')[0];
+                        const isPhoneNum = name.startsWith('(') || name.startsWith('+') || name.match(/^\d/);
+                        const initials = isPhoneNum ? name.replace(/\D/g, '').slice(-4) : name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+                        return { name, phone, firstName, initials, state };
+                      }).filter(Boolean) as typeof stagedContacts;
+                      setStagedContacts(parsed);
+                      setStagedMessages([]);
+                    }} style={{
+                      padding: '8px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: isActive ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)',
+                      color: '#fff', fontSize: 13, fontWeight: 700,
+                      transition: 'all 0.15s',
+                    }}>
+                      {init.title}
+                    </button>
+                  );
+                })}
+
+                {/* Spacer */}
+                <div style={{ flex: 1 }} />
+
+                {/* Launch controls — only when staged */}
                 {stagedContacts.length > 0 && (
                   <>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#F59E0B', fontFamily: "'JetBrains Mono', monospace" }}>
                       {stagedContacts.length} STAGED
                     </span>
                     <button onClick={() => {
@@ -2723,8 +2778,8 @@ button:active { transform: scale(0.98); }`}</style>
                       if (!msg1) return;
                       const msg2 = prompt('Message 2 (optional):', 'We are kicking that off again, wanted to see if you were still interested');
                       setStagedMessages(msg2 ? [msg1, msg2] : [msg1]);
-                    }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #F59E0B', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                      Set Messages
+                    }} style={{ padding: '8px 18px', borderRadius: 10, border: '1px solid #F59E0B', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      ✏️ Set Messages
                     </button>
                     {stagedMessages.length > 0 && (
                       <button onClick={async () => {
@@ -2743,55 +2798,15 @@ button:active { transform: scale(0.98); }`}</style>
                         alert(`Launched! ${stagedContacts.length * stagedMessages.length} messages queued.`);
                         setStagedContacts([]);
                         setStagedMessages([]);
-                      }} style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: '#EF4444', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', animation: 'nasaPulse 2s ease-in-out infinite', letterSpacing: '0.05em' }}>
+                      }} style={{ padding: '8px 20px', borderRadius: 10, border: 'none', background: '#EF4444', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', animation: 'nasaPulse 2s ease-in-out infinite', letterSpacing: '0.05em' }}>
                         🚀 LAUNCH
                       </button>
                     )}
-                    <button onClick={() => { setStagedContacts([]); setStagedMessages([]); }} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => { setStagedContacts([]); setStagedMessages([]); }} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       Clear
                     </button>
                   </>
                 )}
-                {stagedContacts.length === 0 && (
-                  <button onClick={async () => {
-                    const initName = prompt('Load contacts from which initiative?', 'Testers in NJ');
-                    if (!initName) return;
-                    const res = await fetch('/api/ai/search-history', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ action: 'initiative_details', query: initName, orgId: getOrgId() }),
-                    });
-                    const data = await res.json();
-                    const contactLines = (data.result || '').split('\n').filter((l: string) => l.startsWith('- '));
-                    const parsed = contactLines.map((l: string) => {
-                      const match = l.match(/- (.+?) \| \((\d{3})\) (\d{3})-(\d{4})(?:\s*\|\s*([^|]*))?/);
-                      if (!match) return null;
-                      const name = match[1].trim();
-                      const phone = `(${match[2]}) ${match[3]}-${match[4]}`;
-                      const state = (match[5] || '').trim();
-                      const firstName = name.split(' ')[0];
-                      const isPhone = name.startsWith('(') || name.startsWith('+') || name.match(/^\d/);
-                      const initials = isPhone ? name.replace(/\D/g, '').slice(-4) : name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-                      return { name, phone, firstName, initials, state };
-                    }).filter(Boolean) as typeof stagedContacts;
-                    setStagedContacts(parsed);
-                  }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                    + Stage Initiative
-                  </button>
-                )}
-              </div>
-              {/* Legend */}
-              <div style={{ display: 'flex', gap: 12 }}>
-                {[
-                  { label: 'Needs Reply', color: '#22C55E' },
-                  { label: 'AI Draft', color: '#F59E0B' },
-                  { label: 'Active', color: '#7C3AED' },
-                  { label: 'Staged', color: '#EF4444' },
-                ].map(l => (
-                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}60` }} />
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{l.label}</span>
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -2875,12 +2890,20 @@ button:active { transform: scale(0.98); }`}</style>
                     <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 11, opacity: 0.7 }}>
                       {tile.direction === 'incoming' ? '↙' : '↗'}
                     </span>
-                    {/* Top-right: state abbreviation */}
-                    {tile.state && (
-                      <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 9, fontWeight: 800, opacity: 0.8, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em' }}>
-                        {tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()}
-                      </span>
-                    )}
+                    {/* Top-right: greek org logo or state */}
+                    <span style={{ position: 'absolute', top: 3, right: 4, fontSize: tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' ? 8 : 9, fontWeight: 800, opacity: 0.85, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em', background: 'rgba(0,0,0,0.2)', padding: '1px 4px', borderRadius: 3 }}>
+                      {tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' && tile.greekOrg !== 'n/a'
+                        ? (tile.greekOrg.toLowerCase().includes('sigma chi') ? 'ΣΧ' :
+                           tile.greekOrg.toLowerCase().includes('chi phi') ? 'ΧΦ' :
+                           tile.greekOrg.toLowerCase().includes('delta zeta') ? 'ΔΖ' :
+                           tile.greekOrg.toLowerCase().includes('zeta tau') ? 'ΖΤΑ' :
+                           tile.greekOrg.toLowerCase().includes('alpha sig') ? 'ΑΣΦ' :
+                           tile.greekOrg.toLowerCase().includes('beta theta') ? 'ΒΘΠ' :
+                           tile.greekOrg.toLowerCase().includes('phi sigma') ? 'ΦΣΚ' :
+                           tile.greekOrg.toLowerCase().includes('theta chi') ? 'ΘΧ' :
+                           tile.greekOrg.slice(0, 3).toUpperCase())
+                        : tile.state ? (tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()) : ''}
+                    </span>
                     {/* Bottom-left: message count */}
                     <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 10, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
                       {tile.msgCount}
