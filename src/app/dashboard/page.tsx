@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'team' | 'stations' | 'ai-drafts' | 'integrations' | 'profile' | 'settings';
+type NavTab = 'dashboard' | 'conversations' | 'contacts' | 'team' | 'stations' | 'ai-drafts' | 'calendar' | 'integrations' | 'profile' | 'settings';
 
 interface Message {
   id: string;
@@ -160,6 +160,7 @@ const TAB_PERMISSIONS: Record<NavTab, string[]> = {
   'team': [],                // all plans
   'stations': [],            // all plans — every type gets a dedicated line
   'ai-drafts': [],           // all plans — AI is core to every solution
+  'calendar': [],            // all plans
   'integrations': [],        // all plans
   'profile': [],             // all plans
   'settings': [],            // all plans
@@ -191,6 +192,15 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 3l1.912 5.813L20 10.5l-4.376 3.937L16.824 21 12 17.5 7.176 21l1.2-6.75L4 10.5l6.088-1.687L12 3z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Calendar',
+    tab: 'calendar' as NavTab,
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     ),
   },
@@ -255,7 +265,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
 const getInitialTab = (): NavTab => {
   if (typeof window !== 'undefined') {
     const hash = window.location.hash.replace('#', '') as NavTab;
-    const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'integrations', 'profile', 'settings'];
+    const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'calendar', 'integrations', 'profile', 'settings'];
     if (validTabs.includes(hash)) return hash;
   }
   return 'dashboard';
@@ -390,6 +400,9 @@ export default function DashboardPage() {
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
   const [aiResponderTab, setAiResponderTab] = useState<'agents' | 'goals' | 'knowledge' | 'usage'>('agents');
+  const [calendarEvents, setCalendarEvents] = useState<{ id: string; title: string; contact_name: string; contact_phone: string; scheduled_at: string | null; status: string; source: string; description: string; detected_from_message: string | null; created_at: string }[]>([]);
+  const [calendarView, setCalendarView] = useState<'list' | 'week'>('list');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
   const [hiddenMessages, setHiddenMessages] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -575,7 +588,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const onHashChange = () => {
       const hash = window.location.hash.replace('#', '') as NavTab;
-      const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'integrations', 'profile', 'settings'];
+      const validTabs: NavTab[] = ['dashboard', 'conversations', 'contacts', 'team', 'stations', 'ai-drafts', 'calendar', 'integrations', 'profile', 'settings'];
       if (validTabs.includes(hash)) setActiveTab(hash);
       else setActiveTab('dashboard');
     };
@@ -763,6 +776,21 @@ export default function DashboardPage() {
       }
     }).catch(() => {});
   }, [user]);
+
+  // ── Calendar: fetch scheduled events ────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    supabase.from('scheduled_events')
+      .select('id, title, contact_name, contact_phone, scheduled_at, status, source, description, detected_from_message, created_at')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => {
+        if (data) setCalendarEvents(data as typeof calendarEvents);
+      });
+  }, [user, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Polling: re-fetch station status + unread counts every 30s ────────────
   useEffect(() => {
@@ -7945,6 +7973,262 @@ button:active { transform: scale(0.98); }`}</style>
           )}
         </div>
       );
+      case 'calendar': return (() => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        // Group events by date
+        const upcoming = calendarEvents.filter(e => {
+          if (!e.scheduled_at) return true; // tentative with no date
+          return parseTimestamp(e.scheduled_at).getTime() >= today.getTime();
+        }).sort((a, b) => {
+          const aT = a.scheduled_at ? parseTimestamp(a.scheduled_at).getTime() : Infinity;
+          const bT = b.scheduled_at ? parseTimestamp(b.scheduled_at).getTime() : Infinity;
+          return aT - bT;
+        });
+
+        const past = calendarEvents.filter(e => {
+          if (!e.scheduled_at) return false;
+          return parseTimestamp(e.scheduled_at).getTime() < today.getTime();
+        }).sort((a, b) => {
+          const aT = parseTimestamp(a.scheduled_at!).getTime();
+          const bT = parseTimestamp(b.scheduled_at!).getTime();
+          return bT - aT;
+        });
+
+        const statusColor = (s: string) => {
+          switch (s) {
+            case 'confirmed': return { bg: '#DCFCE7', text: '#16A34A' };
+            case 'tentative': return { bg: '#FEF3C7', text: '#D97706' };
+            case 'cancelled': return { bg: '#FEE2E2', text: '#DC2626' };
+            case 'completed': return { bg: '#E0E7FF', text: '#4F46E5' };
+            default: return { bg: '#F3F4F6', text: '#6B7280' };
+          }
+        };
+
+        const formatEventDate = (dateStr: string) => {
+          const d = parseTimestamp(dateStr);
+          if (isNaN(d.getTime())) return dateStr;
+          const diff = Math.floor((d.getTime() - today.getTime()) / 86400000);
+          if (diff === 0) return 'Today';
+          if (diff === 1) return 'Tomorrow';
+          if (diff < 7) return d.toLocaleDateString('en-US', { weekday: 'long' });
+          return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        };
+
+        const handleAddEvent = async () => {
+          const title = prompt('Event title:');
+          if (!title) return;
+          const contactPhone = prompt('Contact phone (optional):');
+          const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+          await supabase.from('scheduled_events').insert({
+            organization_id: orgId,
+            title,
+            contact_phone: contactPhone || null,
+            contact_name: contactPhone ? contacts.find(c => c.phone?.includes(contactPhone.slice(-4)))?.full_name || '' : '',
+            status: 'tentative',
+            source: 'manual',
+          });
+          // Refresh
+          const { data } = await supabase.from('scheduled_events')
+            .select('id, title, contact_name, contact_phone, scheduled_at, status, source, description, detected_from_message, created_at')
+            .eq('organization_id', orgId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (data) setCalendarEvents(data as typeof calendarEvents);
+        };
+
+        const updateEventStatus = async (eventId: string, newStatus: string) => {
+          await supabase.from('scheduled_events').update({ status: newStatus }).eq('id', eventId);
+          setCalendarEvents(prev => prev.map(e => e.id === eventId ? { ...e, status: newStatus } : e));
+        };
+
+        return (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>Calendar</h2>
+                <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>
+                  {calendarEvents.length} events &middot; {upcoming.length} upcoming
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select value={calendarView} onChange={e => setCalendarView(e.target.value as 'list' | 'week')}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, background: '#fff', cursor: 'pointer' }}>
+                  <option value="list">List View</option>
+                  <option value="week">Week View</option>
+                </select>
+                <button onClick={handleAddEvent}
+                  style={{ padding: '8px 16px', borderRadius: 10, background: '#007AFF', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  + Add Event
+                </button>
+              </div>
+            </div>
+
+            {calendarView === 'list' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Upcoming */}
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Upcoming
+                  </h3>
+                  {upcoming.length === 0 ? (
+                    <div style={{ padding: 40, textAlign: 'center', color: '#8e8e93', background: '#f8f9fa', borderRadius: 12, fontSize: 14 }}>
+                      No upcoming events. Events are auto-detected from messages with time references.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {upcoming.map(event => {
+                        const sc = statusColor(event.status);
+                        return (
+                          <div key={event.id} style={{
+                            padding: '14px 18px', borderRadius: 12, background: '#fff',
+                            border: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 14,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          }}>
+                            <div style={{ width: 4, height: 44, borderRadius: 2, background: sc.text, flexShrink: 0 }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>{event.title}</span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: sc.bg, color: sc.text, textTransform: 'uppercase' }}>
+                                  {event.status}
+                                </span>
+                                {event.source === 'ai_detected' && (
+                                  <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 6, background: '#EDE9FE', color: '#7C3AED' }}>AI detected</span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#8e8e93' }}>
+                                {event.scheduled_at && <span>{formatEventDate(event.scheduled_at)} &middot; {fmtMsgTime(event.scheduled_at)}</span>}
+                                {event.contact_name && <span>{event.contact_name}</span>}
+                                {event.contact_phone && <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{event.contact_phone}</span>}
+                              </div>
+                              {event.detected_from_message && (
+                                <div style={{ fontSize: 11, color: '#a0a0a5', marginTop: 4, fontStyle: 'italic' }}>
+                                  &ldquo;{event.detected_from_message.substring(0, 80)}&rdquo;
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                              {event.status === 'tentative' && (
+                                <>
+                                  <button onClick={() => updateEventStatus(event.id, 'confirmed')}
+                                    style={{ padding: '4px 10px', borderRadius: 6, background: '#DCFCE7', color: '#16A34A', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    Confirm
+                                  </button>
+                                  <button onClick={() => updateEventStatus(event.id, 'cancelled')}
+                                    style={{ padding: '4px 10px', borderRadius: 6, background: '#FEE2E2', color: '#DC2626', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                    Cancel
+                                  </button>
+                                </>
+                              )}
+                              {event.status === 'confirmed' && (
+                                <button onClick={() => updateEventStatus(event.id, 'completed')}
+                                  style={{ padding: '4px 10px', borderRadius: 6, background: '#E0E7FF', color: '#4F46E5', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                  Complete
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Past events */}
+                {past.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: '#8e8e93', margin: '16px 0 12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Past
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {past.slice(0, 20).map(event => {
+                        const sc = statusColor(event.status);
+                        return (
+                          <div key={event.id} style={{
+                            padding: '10px 16px', borderRadius: 10, background: '#fafafa',
+                            border: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 12,
+                            opacity: 0.7,
+                          }}>
+                            <div style={{ width: 3, height: 32, borderRadius: 2, background: sc.text, flexShrink: 0 }} />
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: '#6b7280' }}>{event.title}</span>
+                              <div style={{ fontSize: 11, color: '#a0a0a5', marginTop: 2 }}>
+                                {event.scheduled_at && <span>{parseTimestamp(event.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                                {event.contact_name && <span> &middot; {event.contact_name}</span>}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: sc.bg, color: sc.text, textTransform: 'uppercase' }}>
+                              {event.status}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Week view */
+              (() => {
+                const startOfWeek = new Date(calendarMonth);
+                const day = startOfWeek.getDay();
+                startOfWeek.setDate(startOfWeek.getDate() - day);
+                const days = Array.from({ length: 7 }, (_, i) => {
+                  const d = new Date(startOfWeek);
+                  d.setDate(d.getDate() + i);
+                  return d;
+                });
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                      <button onClick={() => { const d = new Date(calendarMonth); d.setDate(d.getDate() - 7); setCalendarMonth(d); }}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', cursor: 'pointer', fontSize: 13 }}>&larr;</button>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e' }}>
+                        {days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <button onClick={() => { const d = new Date(calendarMonth); d.setDate(d.getDate() + 7); setCalendarMonth(d); }}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', cursor: 'pointer', fontSize: 13 }}>&rarr;</button>
+                      <button onClick={() => setCalendarMonth(new Date())}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', cursor: 'pointer', fontSize: 13 }}>Today</button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+                      {days.map(d => {
+                        const isToday = d.toDateString() === now.toDateString();
+                        const dayEvents = calendarEvents.filter(e => {
+                          if (!e.scheduled_at) return false;
+                          return parseTimestamp(e.scheduled_at).toDateString() === d.toDateString();
+                        });
+                        return (
+                          <div key={d.toISOString()} style={{
+                            minHeight: 140, borderRadius: 10, padding: 10,
+                            background: isToday ? '#EFF6FF' : '#fff',
+                            border: isToday ? '2px solid #007AFF' : '1px solid rgba(0,0,0,0.06)',
+                          }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? '#007AFF' : '#8e8e93', marginBottom: 6 }}>
+                              {d.toLocaleDateString('en-US', { weekday: 'short' })} {d.getDate()}
+                            </div>
+                            {dayEvents.map(ev => (
+                              <div key={ev.id} style={{
+                                padding: '4px 8px', borderRadius: 6, marginBottom: 4, fontSize: 11,
+                                background: statusColor(ev.status).bg, color: statusColor(ev.status).text,
+                                fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                                {ev.title}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+          </div>
+        );
+      })();
       default: return renderDashboard();
     }
   };
@@ -7958,6 +8242,7 @@ button:active { transform: scale(0.98); }`}</style>
     team: 'Team',
     stations: 'Phone Lines',
     'ai-drafts': 'AI Drafts',
+    calendar: 'Calendar',
     integrations: 'Integrations',
     profile: 'Profile',
     settings: 'Settings',
@@ -8720,7 +9005,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                       const navMap: Record<string, NavTab> = {
                         'dashboard': 'dashboard', 'conversations': 'conversations', 'contacts': 'contacts',
                         'team': 'team', 'phone lines': 'stations', 'stations': 'stations',
-                        'ai responder': 'ai-drafts', 'integrations': 'integrations',
+                        'ai responder': 'ai-drafts', 'calendar': 'calendar', 'integrations': 'integrations',
                         'profile': 'profile', 'settings': 'settings',
                       };
                       const lowerReply = reply.toLowerCase();
