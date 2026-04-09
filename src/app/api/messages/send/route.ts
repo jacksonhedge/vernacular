@@ -148,6 +148,11 @@ export async function POST(request: Request) {
         .select('id').single();
       messageId = msg?.id || null;
 
+      // Link message_id back to outbound_queue so confirm-sent can update both
+      if (messageId && queueId) {
+        await supabase.from('outbound_queue').update({ message_id: messageId }).eq('id', queueId);
+      }
+
       // Update conversation
       await supabase.from('conversations').update({
         last_message_at: new Date().toISOString(),
