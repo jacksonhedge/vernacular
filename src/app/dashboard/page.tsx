@@ -4278,7 +4278,7 @@ button:active { transform: scale(0.98); }`}</style>
               background: '#f8f9fa',
             }}>
               {(() => {
-                const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off') && (showHiddenMessages || !hiddenMessages.has(m.id)));
+                const visibleMsgs = col.messages.filter(m => (showHiddenMessages || !hiddenMessages.has(m.id)));
                 // Helper: format date separator like iMessage
                 const formatDateSep = (dateStr: string) => {
                   const d = parseTimestamp(dateStr);
