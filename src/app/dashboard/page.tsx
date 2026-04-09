@@ -9488,10 +9488,49 @@ button:active { transform: scale(0.98); }`}</style>
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
-                    background: m.role === 'user' ? '#378ADD' : 'rgba(0,0,0,0.04)',
+                    background: m.role === 'user' ? '#378ADD' : m.text.includes('[APPROVE_SEND:') ? 'linear-gradient(135deg, rgba(55,138,221,0.08), rgba(55,138,221,0.04))' : 'rgba(0,0,0,0.04)',
                     color: m.role === 'user' ? '#fff' : '#1c1c1e',
                     fontSize: 13, lineHeight: 1.5,
-                  }}>{m.text}</div>
+                    border: m.text.includes('[APPROVE_SEND:') ? '1px solid rgba(55,138,221,0.2)' : 'none',
+                  }}>
+                    {m.text.includes('[APPROVE_SEND:') ? (() => {
+                      const match = m.text.match(/\[APPROVE_SEND:([^:]+):([^:]+):([^\]]+)\]/);
+                      if (!match) return m.text;
+                      const phone = match[1], name = match[2], msgText = match[3];
+                      const displayText = m.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '').trim();
+                      return (
+                        <div>
+                          <div style={{ whiteSpace: 'pre-wrap' }}>{displayText}</div>
+                          {!m.text.includes('✅ Sent') && !m.text.includes('❌ Cancelled') && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                              <button onClick={async () => {
+                                const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                                try {
+                                  await fetch('/api/messages/send', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ phoneNumber: phone, message: msgText, contactName: name, organizationId: orgId }),
+                                  });
+                                  setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '✅ Sent!') } : msg));
+                                } catch {
+                                  setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '❌ Failed to send') } : msg));
+                                }
+                              }} style={{
+                                padding: '6px 16px', borderRadius: 8, border: 'none',
+                                background: '#22C55E', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                              }}>✓ Approve & Send</button>
+                              <button onClick={() => {
+                                setAiCopilotMessages(prev => prev.map((msg, idx) => idx === i ? { ...msg, text: msg.text.replace(/\[APPROVE_SEND:[^\]]+\]/, '❌ Cancelled') } : msg));
+                              }} style={{
+                                padding: '6px 16px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                                background: '#fff', color: '#8e8e93', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              }}>✕ Reject</button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })() : m.text}
+                  </div>
                   {/* Like/Dislike on AI responses */}
                   {m.role === 'assistant' && (
                     <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
@@ -9645,7 +9684,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         }),
                       });
                       const data = await res.json();
-                      const reply = data.content || 'Sorry, I couldn\'t process that.';
+                      let reply = data.content || 'Sorry, I couldn\'t process that.';
                       setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply }]);
 
                       // Check for navigation commands in Craig's response
@@ -9664,14 +9703,12 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         }
                       }
 
-                      // Check for send message commands in Craig's response
-                      if (aiPermissions.sendMessages && reply.includes('[SEND:')) {
-                        // Parse: [SEND:phone:message]
-                        const sendMatch = reply.match(/\[SEND:([^:]+):([^\]]+)\]/);
-                        if (sendMatch) {
+                      // Check for send message commands in Craig's response — show approval cards
+                      if (reply.includes('[SEND:')) {
+                        const sendMatches = [...reply.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)];
+                        for (const sendMatch of sendMatches) {
                           const sendPhone = sendMatch[1].trim();
                           const sendText = sendMatch[2].trim();
-                          const orgId = getOrgId();
                           // Find contact by name or phone
                           const contact = contacts.find(c =>
                             (c.full_name || '').toLowerCase().includes(sendPhone.toLowerCase()) ||
@@ -9680,28 +9717,14 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                           const phone = contact?.phone || sendPhone;
                           const name = contact?.full_name || sendPhone;
 
-                          try {
-                            await fetch('/api/messages/send', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                phoneNumber: phone,
-                                message: sendText,
-                                contactName: name,
-                                organizationId: orgId,
-                              }),
-                            });
-                            setAiCopilotMessages(prev => [...prev, {
-                              role: 'assistant',
-                              text: `✅ Sent to ${name}: "${sendText}"`,
-                            }]);
-                          } catch {
-                            setAiCopilotMessages(prev => [...prev, {
-                              role: 'assistant',
-                              text: `❌ Failed to send to ${name}`,
-                            }]);
-                          }
+                          // Add approval card to chat
+                          setAiCopilotMessages(prev => [...prev, {
+                            role: 'assistant',
+                            text: `📨 **Send to ${name}** (${phone}):\n"${sendText}"\n\n[APPROVE_SEND:${phone}:${name}:${sendText}]`,
+                          }]);
                         }
+                        // Strip [SEND:] tags from the displayed reply
+                        reply = reply.replace(/\[SEND:[^\]]+\]/g, '').trim();
                       }
 
                       // Check for contact update commands [UPDATE:phone:field:value]
