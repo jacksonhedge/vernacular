@@ -2637,20 +2637,30 @@ button:active { transform: scale(0.98); }`}</style>
 
       {/* Matrix View — Icon Rail + Dot Grid + Collapsible Threads */}
       {conversationViewMode === 'matrix' && (() => {
-        // Build one tile per conversation (not per message)
-        const allTiles = columns.filter(col => col.contact).map(col => {
+        // Build one tile per unique contact (dedup by phone)
+        const seenPhones = new Set<string>();
+        const allTiles = columns.filter(col => {
+          if (!col.contact) return false;
+          const ph = col.contact.phone?.replace(/\D/g, '').slice(-10) || col.id;
+          if (seenPhones.has(ph)) return false;
+          seenPhones.add(ph);
+          return true;
+        }).map(col => {
           const contactRecord = contacts.find(c => c.phone === col.contact!.phone);
+          const fullName = (contactRecord as unknown as Record<string, string>)?.full_name || col.contact!.name;
           const state = (contactRecord as unknown as Record<string, string>)?.state || '';
           const greekOrg = (contactRecord as unknown as Record<string, string>)?.greek_org || '';
-          const initials = col.contact!.name.startsWith('+') || col.contact!.name.match(/^\d/)
-            ? '##' : col.contact!.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+          const isPhone = fullName.startsWith('+') || fullName.startsWith('(') || fullName.match(/^\d/);
+          const initials = isPhone
+            ? fullName.replace(/\D/g, '').slice(-4)
+            : fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
           const lastMsg = col.messages[col.messages.length - 1];
           const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
           const hasAiDraft = col.messages.some(m => m.isAIDraft);
           const lastStatus = (lastMsg?.status || (lastMsg?.direction === 'incoming' ? 'received' : 'sent')).toLowerCase();
           const tileStatus = hasAiDraft ? 'draft' : hasUnread ? 'received' : lastStatus;
           return {
-            id: col.id, text: lastMsg?.text || '', name: col.contact!.name, initials,
+            id: col.id, text: lastMsg?.text || '', name: fullName, initials,
             phone: col.contact!.phone || '', direction: lastMsg?.direction || 'outgoing',
             status: tileStatus, colId: col.id,
             timestamp: lastMsg?.timestamp || '', state, greekOrg, msgCount: col.messages.length,
@@ -2757,22 +2767,22 @@ button:active { transform: scale(0.98); }`}</style>
                     }}
                   >
                     {/* Top-left: direction arrow */}
-                    <span style={{ position: 'absolute', top: 2, left: 3, fontSize: 7, opacity: 0.6 }}>
+                    <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 11, opacity: 0.7 }}>
                       {tile.direction === 'incoming' ? '↙' : '↗'}
                     </span>
                     {/* Top-right: state abbreviation */}
                     {tile.state && (
-                      <span style={{ position: 'absolute', top: 2, right: 3, fontSize: 6, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 9, fontWeight: 800, opacity: 0.8, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em' }}>
                         {tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()}
                       </span>
                     )}
                     {/* Bottom-left: message count */}
-                    <span style={{ position: 'absolute', bottom: 2, left: 3, fontSize: 6, fontWeight: 600, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 10, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
                       {tile.msgCount}
                     </span>
                     {/* Bottom-right: greek org or AI */}
-                    <span style={{ position: 'absolute', bottom: 2, right: 3, fontSize: 6, fontWeight: 700, opacity: 0.7 }}>
-                      {tile.status === 'draft' ? 'AI' : tile.greekOrg ? tile.greekOrg.slice(0, 3) : ''}
+                    <span style={{ position: 'absolute', bottom: 3, right: 5, fontSize: 9, fontWeight: 800, opacity: 0.8 }}>
+                      {tile.status === 'draft' ? 'AI' : tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' ? tile.greekOrg.slice(0, 4) : ''}
                     </span>
                     {/* Center: big name or initials */}
                     <span style={{
