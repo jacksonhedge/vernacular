@@ -422,8 +422,17 @@ export default function DashboardPage() {
     return new Set();
   });
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
-  const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>('unread');
-  const [activeInitiativeFilter, setActiveInitiativeFilter] = useState<string | null>(null);
+  const [streamSortMode, setStreamSortMode] = useState<'unread' | 'recent' | 'name' | 'most-messages'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vernacular-sort-mode');
+      if (saved && ['unread', 'recent', 'name', 'most-messages'].includes(saved)) return saved as 'unread' | 'recent' | 'name' | 'most-messages';
+    }
+    return 'unread';
+  });
+  const [activeInitiativeFilter, setActiveInitiativeFilter] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('vernacular-initiative-filter') || null;
+    return null;
+  });
   const [initiativePhones, setInitiativePhones] = useState<Set<string>>(new Set());
   const [activeAccountView, setActiveAccountView] = useState<string>('all');
   const [showAICopilot, setShowAICopilot] = useState(false);
@@ -589,7 +598,17 @@ export default function DashboardPage() {
   const [testingSlack, setTestingSlack] = useState(false);
 
   // Conversations view mode
-  const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>('streams');
+  const [conversationViewMode, setConversationViewMode] = useState<ConversationViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vernacular-view-mode') as ConversationViewMode;
+      if (saved && ['streams', 'summary', 'schedule', 'matrix', 'messages'].includes(saved)) return saved;
+    }
+    return 'matrix';
+  });
+  // Persist settings
+  useEffect(() => { localStorage.setItem('vernacular-view-mode', conversationViewMode); }, [conversationViewMode]);
+  useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
+  useEffect(() => { if (activeInitiativeFilter) localStorage.setItem('vernacular-initiative-filter', activeInitiativeFilter); else localStorage.removeItem('vernacular-initiative-filter'); }, [activeInitiativeFilter]);
   const [conversationSearch, setConversationSearch] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
@@ -2842,6 +2861,33 @@ button:active { transform: scale(0.98); }`}</style>
                   </>
                 )}
               </div>
+            </div>
+
+            {/* Ghost Squad — 8 ghosts at the top, idle ones sit here, active ones move to tiles */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, padding: '8px 24px 12px' }}>
+              {ghostConfig.map((ghost, gi) => {
+                // Check if this ghost is assigned to an active tile
+                const activeTile = allTiles.find((t, ti) => (t.aiMode === 'draft' || t.aiMode === 'auto' || t.status === 'draft') && ti % ghostConfig.length === gi);
+                const isWorking = !!activeTile;
+                return (
+                  <div key={ghost.name} title={`${ghost.name} — ${ghost.role}${isWorking ? ` (working on ${activeTile?.name})` : ' (idle)'}`} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    opacity: isWorking ? 0.3 : 1,
+                    transition: 'all 0.5s ease',
+                  }}>
+                    <svg width="24" height="24" viewBox="0 0 14 16" style={{ animation: isWorking ? 'none' : 'ghostFloat 3s ease-in-out infinite', animationDelay: `${gi * 0.2}s` }}>
+                      <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z" fill={ghost.color} opacity="0.9" />
+                      <circle cx="5" cy="7" r="1.2" fill="#fff" />
+                      <circle cx="9" cy="7" r="1.2" fill="#fff" />
+                      <circle cx="5.5" cy="7" r="0.6" fill="#111" />
+                      <circle cx="9.5" cy="7" r="0.6" fill="#111" />
+                    </svg>
+                    <span style={{ fontSize: 7, color: isWorking ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: '0.03em' }}>
+                      {ghost.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Disco Floor Grid */}
