@@ -2850,10 +2850,7 @@ button:active { transform: scale(0.98); }`}</style>
                       boxShadow: '0 0 10px rgba(59,130,246,0.3)',
                       border: '1px solid rgba(255,255,255,0.15)',
                     }} title={`STAGED: ${staged.name} (${staged.phone})`}
-                      onClick={() => {
-                        const remove = window.confirm(`Remove ${staged.name} from staging?`);
-                        if (remove) setStagedContacts(prev => prev.filter((_, i) => i !== stagedIdx));
-                      }}>
+                      onClick={() => setExpandedMatrixId(`staged-${stagedIdx}`)}>
                       {/* Top-right: state — big and bright */}
                       {staged.state && <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 12, fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.4)', letterSpacing: '0.03em' }}>{staged.state.length > 3 ? staged.state.slice(0, 2).toUpperCase() : staged.state.toUpperCase()}</span>}
                       {/* Top-left: direction arrow placeholder */}
@@ -2958,8 +2955,67 @@ button:active { transform: scale(0.98); }`}</style>
               })}
             </div>
 
+            {/* Staged Contact Modal */}
+            {expandedMatrixId && expandedMatrixId.startsWith('staged-') && (() => {
+              const stagedIdx = parseInt(expandedMatrixId.replace('staged-', ''));
+              const staged = stagedContacts[stagedIdx];
+              if (!staged) return null;
+              return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}
+                  onClick={() => setExpandedMatrixId(null)}>
+                  <div onClick={e => e.stopPropagation()} style={{
+                    background: '#fff', borderRadius: 20, width: 400,
+                    boxShadow: '0 24px 80px rgba(0,0,0,0.3)', overflow: 'hidden',
+                  }}>
+                    {/* Header */}
+                    <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg, #60A5FA, #3B82F6)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 24, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 800 }}>
+                        {staged.initials}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{staged.name}</div>
+                        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: "'JetBrains Mono', monospace" }}>{staged.phone}</div>
+                      </div>
+                      <button onClick={() => setExpandedMatrixId(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 16, width: 30, height: 30, borderRadius: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                    </div>
+                    {/* Details */}
+                    <div style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                        {staged.state && <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 6, background: '#EFF6FF', color: '#2563EB' }}>{staged.state}</span>}
+                        <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 6, background: '#F0FDF4', color: '#16A34A' }}>⏳ Staged</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+                        This contact is staged and ready to receive messages when you hit Launch.
+                      </div>
+                      {stagedMessages.length > 0 && (
+                        <div style={{ marginBottom: 16 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#8e8e93', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Queued Messages</div>
+                          {stagedMessages.map((msg, mi) => (
+                            <div key={mi} style={{ padding: '8px 12px', borderRadius: 10, background: '#EFF6FF', marginBottom: 4, fontSize: 13, color: '#1c1c1e' }}>
+                              {msg.replace(/\{name\}/g, staged.firstName)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => {
+                          setStagedContacts(prev => prev.filter((_, i) => i !== stagedIdx));
+                          setExpandedMatrixId(null);
+                        }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #EF4444', background: 'rgba(239,68,68,0.05)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          Remove from Staging
+                        </button>
+                        <button onClick={() => setExpandedMatrixId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#1c1c1e', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Message Detail Modal */}
-            {expandedMatrixId && (() => {
+            {expandedMatrixId && !expandedMatrixId.startsWith('staged-') && (() => {
               const tile = allTiles.find(t => t.id === expandedMatrixId);
               if (!tile) return null;
               const colors = tileColor(tile.status);
