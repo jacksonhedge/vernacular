@@ -421,6 +421,8 @@ export default function DashboardPage() {
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
   const [craigNavigating, setCraigNavigating] = useState(false);
   const [selectedInitiative, setSelectedInitiative] = useState<string | null>(null);
+  const [initiativeContacts, setInitiativeContacts] = useState<Array<{ id: string; full_name: string; phone: string; email: string; state: string; greek_org: string; apps_used: string; device_types: string; ambassador_interest: string }>>([]);
+  const [initiativeContactCounts, setInitiativeContactCounts] = useState<Record<string, number>>({});
   const [dbInitiatives, setDbInitiatives] = useState<Array<{ id: string; title: string; content: string; parent_id: string | null }>>([]);
   const [craigPos, setCraigPos] = useState({ x: 0, y: 0 }); // 0,0 = center (relative)
   const [craigDragging, setCraigDragging] = useState(false);
@@ -439,8 +441,39 @@ export default function DashboardPage() {
     if (!orgId) return;
     supabase.from('org_knowledge').select('id, title, content, parent_id')
       .eq('organization_id', orgId).eq('category', 'initiative')
-      .then(({ data }) => { if (data) setDbInitiatives(data); });
+      .then(({ data }) => {
+        if (data) {
+          setDbInitiatives(data);
+          // Fetch contact counts for each initiative
+          data.forEach(init => {
+            supabase.from('initiative_contacts').select('id', { count: 'exact', head: true })
+              .eq('initiative_id', init.id)
+              .then(({ count }) => {
+                if (count !== null) setInitiativeContactCounts(prev => ({ ...prev, [init.id]: count }));
+              });
+          });
+        }
+      });
   }, [user, activeTab]);
+
+  // Load contacts for selected initiative
+  useEffect(() => {
+    if (!selectedInitiative || selectedInitiative === 'new') { setInitiativeContacts([]); return; }
+    // Check if this is a DB initiative (UUID format) or a hardcoded default
+    if (!/^[0-9a-f-]{36}$/.test(selectedInitiative)) { setInitiativeContacts([]); return; }
+    supabase.from('initiative_contacts')
+      .select('contact_id, contacts(id, full_name, phone, email, state, greek_org, apps_used, device_types, ambassador_interest)')
+      .eq('initiative_id', selectedInitiative)
+      .limit(500)
+      .then(({ data }) => {
+        if (data) {
+          const mapped = data
+            .map((row: Record<string, unknown>) => row.contacts as typeof initiativeContacts[0])
+            .filter(Boolean);
+          setInitiativeContacts(mapped);
+        }
+      });
+  }, [selectedInitiative]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load Craig's knowledge: global .md files + org-specific from DB
   useEffect(() => {
@@ -7671,7 +7704,7 @@ button:active { transform: scale(0.98); }`}</style>
                   </div>
                   <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: '0 0 12px' }}>{init.desc}</p>
                   <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#8e8e93' }}>
-                    <span>{init.agents} agent{init.agents !== 1 ? 's' : ''}</span>
+                    <span>👥 {initiativeContactCounts[init.id] || 0} contact{(initiativeContactCounts[init.id] || 0) !== 1 ? 's' : ''}</span>
                     <span>{init.convos} conversation{init.convos !== 1 ? 's' : ''}</span>
                   </div>
                   {/* Sub-initiatives */}
@@ -7919,41 +7952,103 @@ button:active { transform: scale(0.98); }`}</style>
                 );
               })()}
 
-              {/* Contact Management */}
+              {/* Contact Database for this Initiative */}
               <div style={{ marginTop: 16 }}>
                 <div style={{ ...cardStyle, padding: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      👥 Contact Management
+                      👥 Contacts <span style={{ fontSize: 12, fontWeight: 500, color: '#8e8e93' }}>({initiativeContacts.length})</span>
                     </div>
-                    <button style={{ ...primaryBtnStyle, fontSize: 11 }}>+ Add Contact</button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={async () => {
+                        const phone = prompt('Contact phone number:');
+                        if (!phone) return;
+                        const digits = phone.replace(/\D/g, '').slice(-10);
+                        const formatted = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+                        const { data: found } = await supabase.from('contacts').select('id').or(`phone.eq.${formatted},phone.ilike.%${digits.slice(-4)}%`).limit(1);
+                        if (!found || found.length === 0) { alert('Contact not found. Add them in the Contacts tab first.'); return; }
+                        await supabase.from('initiative_contacts').insert({ initiative_id: selectedInitiative, contact_id: found[0].id }).select();
+                        // Refresh
+                        const { data } = await supabase.from('initiative_contacts')
+                          .select('contact_id, contacts(id, full_name, phone, email, state, greek_org, apps_used, device_types, ambassador_interest)')
+                          .eq('initiative_id', selectedInitiative!).limit(500);
+                        if (data) setInitiativeContacts(data.map((r: Record<string, unknown>) => r.contacts as typeof initiativeContacts[0]).filter(Boolean));
+                      }} style={{ padding: '5px 12px', borderRadius: 6, background: '#378ADD', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>+ Add Contact</button>
+                    </div>
                   </div>
-                  <p style={{ fontSize: 11, color: '#8e8e93', margin: '0 0 12px' }}>Contacts assigned to this initiative. Import contacts or add manually.</p>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>Import VCF</button>
-                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>Import CSV</button>
-                    <button style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', fontSize: 11, fontWeight: 600, color: '#378ADD', cursor: 'pointer' }}>From Existing</button>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {contacts.slice(0, 5).map(c => (
-                      <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.02)' }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 14, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700 }}>
-                          {(c.full_name || c.phone || '?').slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{c.full_name || 'Unknown'}</div>
-                          <div style={{ fontSize: 10, color: '#8e8e93' }}>{c.phone}</div>
-                        </div>
-                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{(c as unknown as Record<string, string>).lifecycle_stage || 'new'}</span>
+                  {initiativeContacts.length === 0 ? (
+                    <div style={{ padding: 30, textAlign: 'center', color: '#8e8e93', background: '#f8f9fa', borderRadius: 10, fontSize: 13 }}>
+                      No contacts linked to this initiative yet.
+                    </div>
+                  ) : (
+                    <>
+                      {/* Stats bar */}
+                      <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                        {(() => {
+                          const states = new Map<string, number>();
+                          const orgs = new Map<string, number>();
+                          let iphone = 0, android = 0, ambassador = 0;
+                          initiativeContacts.forEach(c => {
+                            if (c.state) states.set(c.state, (states.get(c.state) || 0) + 1);
+                            if (c.greek_org && c.greek_org !== 'None' && c.greek_org !== 'NA' && c.greek_org !== 'n/a' && c.greek_org !== '-') orgs.set(c.greek_org, (orgs.get(c.greek_org) || 0) + 1);
+                            if (c.device_types?.toLowerCase().includes('iphone')) iphone++;
+                            if (c.device_types?.toLowerCase().includes('android')) android++;
+                            if (c.ambassador_interest && c.ambassador_interest !== 'None') ambassador++;
+                          });
+                          const topStates = [...states.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+                          return (
+                            <>
+                              <span style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', padding: '3px 8px', borderRadius: 6 }}>
+                                📱 {iphone} iPhone{android > 0 ? `, ${android} Android` : ''}
+                              </span>
+                              {topStates.map(([st, count]) => (
+                                <span key={st} style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', padding: '3px 8px', borderRadius: 6 }}>
+                                  📍 {st} ({count})
+                                </span>
+                              ))}
+                              {ambassador > 0 && (
+                                <span style={{ fontSize: 11, color: '#7C3AED', background: '#EDE9FE', padding: '3px 8px', borderRadius: 6 }}>
+                                  🤝 {ambassador} want ambassador
+                                </span>
+                              )}
+                              {orgs.size > 0 && (
+                                <span style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', padding: '3px 8px', borderRadius: 6 }}>
+                                  🏛 {orgs.size} orgs
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
-                    ))}
-                    {contacts.length > 5 && (
-                      <div style={{ fontSize: 11, color: '#378ADD', fontWeight: 600, textAlign: 'center', padding: 8, cursor: 'pointer' }}
-                        onClick={() => setActiveTab('contacts')}>
-                        View all {contacts.length} contacts →
+                      {/* Contact list */}
+                      <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {initiativeContacts.map(c => (
+                          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.02)' }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 15, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+                              {(c.full_name || c.phone || '?').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#1c1c1e' }}>{c.full_name || 'Unknown'}</div>
+                              <div style={{ fontSize: 10, color: '#8e8e93', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{c.phone}</span>
+                                {c.email && <span>{c.email}</span>}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 200 }}>
+                              {c.state && <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: '#f3f4f6', color: '#6b7280' }}>{c.state}</span>}
+                              {c.greek_org && c.greek_org !== 'None' && c.greek_org !== 'NA' && c.greek_org !== 'n/a' && (
+                                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: '#EDE9FE', color: '#7C3AED' }}>{c.greek_org}</span>
+                              )}
+                            </div>
+                            <button onClick={async () => {
+                              await supabase.from('initiative_contacts').delete().eq('initiative_id', selectedInitiative!).eq('contact_id', c.id);
+                              setInitiativeContacts(prev => prev.filter(p => p.id !== c.id));
+                            }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#ccc', padding: 4 }} title="Remove from initiative">×</button>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
 
