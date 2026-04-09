@@ -10109,7 +10109,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                       const navMap: Record<string, NavTab> = {
                         'dashboard': 'dashboard', 'conversations': 'conversations', 'contacts': 'contacts',
                         'team': 'team', 'phone lines': 'stations', 'stations': 'stations',
-                        'ai responder': 'ai-drafts', 'calendar': 'calendar', 'integrations': 'integrations',
+                        'ai responder': 'ai-drafts', 'initiatives': 'ai-drafts', 'initiative': 'ai-drafts', 'calendar': 'calendar', 'integrations': 'integrations',
                         'profile': 'profile', 'settings': 'settings',
                       };
                       const lowerReply = reply.toLowerCase();
