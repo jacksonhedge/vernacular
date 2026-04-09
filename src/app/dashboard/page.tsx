@@ -9078,8 +9078,8 @@ button:active { transform: scale(0.98); }`}</style>
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
                         fontSize: 13, fontWeight: conversationViewMode === mode ? 600 : 400,
-                        color: conversationViewMode === mode ? '#378ADD' : 'rgba(255,255,255,0.6)',
-                        background: conversationViewMode === mode ? 'rgba(55,138,221,0.1)' : 'transparent',
+                        color: conversationViewMode === mode ? '#2563EB' : '#1a1a1a',
+                        background: conversationViewMode === mode ? 'rgba(37,99,235,0.1)' : 'transparent',
                         fontFamily: "'Inter', sans-serif", textTransform: 'capitalize',
                         marginBottom: 1,
                       }}>{mode}</button>
