@@ -5,37 +5,45 @@ import { createServiceClient } from '@/lib/supabase';
 // Station calls this after sending a message via AppleScript
 export async function POST(request: Request) {
   try {
-    const { queueId, success, error: errorMsg } = await request.json();
+    const body = await request.json();
+    // Support both field names: queueId (API) and messageId (Wade's outbound.sh)
+    const queueId = body.queueId || body.messageId;
+    const status = body.status || (body.success ? 'sent' : 'failed');
+    const errorMsg = body.error || '';
 
     if (!queueId) {
-      return NextResponse.json({ error: 'queueId required' }, { status: 400 });
+      return NextResponse.json({ error: 'queueId or messageId required' }, { status: 400 });
     }
 
     const supabase = createServiceClient();
+    const isSent = status === 'sent';
 
-    if (success) {
+    // Update outbound_queue
+    await supabase
+      .from('outbound_queue')
+      .update({
+        status: isSent ? 'sent' : 'failed',
+        ...(isSent ? { sent_at: new Date().toISOString() } : { error: errorMsg || 'Unknown error' }),
+      })
+      .eq('id', queueId);
+
+    // Also update the messages table — find by queue's message_id
+    const { data: queueRow } = await supabase
+      .from('outbound_queue')
+      .select('message_id')
+      .eq('id', queueId)
+      .single();
+
+    if (queueRow?.message_id) {
       await supabase
-        .from('outbound_queue')
-        .update({
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-        })
-        .eq('id', queueId);
-
-      console.log(`[engine] ✅ Message ${queueId} confirmed sent`);
-    } else {
-      await supabase
-        .from('outbound_queue')
-        .update({
-          status: 'failed',
-          error: errorMsg || 'Unknown error',
-        })
-        .eq('id', queueId);
-
-      console.log(`[engine] ❌ Message ${queueId} failed: ${errorMsg}`);
+        .from('messages')
+        .update({ status: isSent ? 'Sent' : 'Failed' })
+        .eq('id', queueRow.message_id);
     }
 
-    return NextResponse.json({ ok: true, queueId, status: success ? 'sent' : 'failed' });
+    console.log(`[engine] ${isSent ? '✅' : '❌'} Message ${queueId} ${isSent ? 'confirmed sent' : `failed: ${errorMsg}`}`);
+
+    return NextResponse.json({ ok: true, queueId, status: isSent ? 'sent' : 'failed' });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed' }, { status: 500 });
   }
