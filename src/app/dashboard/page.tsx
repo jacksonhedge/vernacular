@@ -400,6 +400,13 @@ export default function DashboardPage() {
   const [timelineMessages, setTimelineMessages] = useState<Array<Record<string, unknown>>>([]);
   const [messageTimeFilter, setMessageTimeFilter] = useState<'24h' | '48h' | '72h' | '1w' | '2w'>('24h');
   const [aiResponderTab, setAiResponderTab] = useState<'agents' | 'goals' | 'knowledge' | 'usage'>('agents');
+  const [calendarPopup, setCalendarPopup] = useState<{
+    contactName: string; contactPhone: string; msgText: string; contactId: string | null;
+  } | null>(null);
+  const [calendarPopupTitle, setCalendarPopupTitle] = useState('');
+  const [calendarPopupDay, setCalendarPopupDay] = useState(0); // 0=today, 1=tomorrow, etc
+  const [calendarPopupTime, setCalendarPopupTime] = useState('12:00');
+  const [calendarPopupDuration, setCalendarPopupDuration] = useState(20);
   const [calendarEvents, setCalendarEvents] = useState<{ id: string; title: string; contact_name: string; contact_phone: string; scheduled_at: string | null; status: string; source: string; description: string; detected_from_message: string | null; created_at: string }[]>([]);
   const [calendarView, setCalendarView] = useState<'list' | 'week'>('list');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -4232,32 +4239,17 @@ button:active { transform: scale(0.98); }`}</style>
                 if (msg) navigator.clipboard.writeText(msg.text);
                 setMsgContextMenu(null);
               }},
-              { label: 'Create Calendar Event', icon: '📅', action: async () => {
+              { label: 'Create Calendar Event', icon: '📅', action: () => {
                 const col = columns.find(c => c.id === msgContextMenu.colId);
                 const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
                 const contactName = col?.contact?.name || '';
                 const contactPhone = col?.contact?.phone || '';
-                const title = prompt('Event title:', `${contactName || 'Contact'} — follow up`);
-                if (!title) { setMsgContextMenu(null); return; }
-                const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
-                await supabase.from('scheduled_events').insert({
-                  organization_id: orgId,
-                  contact_id: col?.contact ? (contacts.find(c => c.phone === contactPhone) as unknown as Record<string, unknown>)?.id || null : null,
-                  contact_name: contactName,
-                  contact_phone: contactPhone,
-                  title,
-                  description: msg?.text ? `From message: "${msg.text.substring(0, 200)}"` : '',
-                  status: 'tentative',
-                  source: 'manual',
-                  detected_from_message: msg?.text || null,
-                });
-                // Refresh calendar events
-                const { data } = await supabase.from('scheduled_events')
-                  .select('id, title, contact_name, contact_phone, scheduled_at, status, source, description, detected_from_message, created_at')
-                  .eq('organization_id', orgId)
-                  .order('created_at', { ascending: false })
-                  .limit(100);
-                if (data) setCalendarEvents(data as typeof calendarEvents);
+                const contactId = col?.contact ? ((contacts.find(c => c.phone === contactPhone) as unknown as Record<string, unknown>)?.id as string || null) : null;
+                setCalendarPopupTitle(`${contactName || 'Contact'} — follow up`);
+                setCalendarPopupDay(0);
+                setCalendarPopupTime('12:00');
+                setCalendarPopupDuration(20);
+                setCalendarPopup({ contactName, contactPhone, msgText: msg?.text || '', contactId });
                 setMsgContextMenu(null);
               }},
             ].map(item => (
@@ -4279,6 +4271,163 @@ button:active { transform: scale(0.98); }`}</style>
       )}
 
       {/* Invite Member Modal — rendered globally at bottom of component */}
+
+      {/* Calendar Event Popup */}
+      {calendarPopup && (() => {
+        const now = new Date();
+        const days = Array.from({ length: 4 }, (_, i) => {
+          const d = new Date(now);
+          d.setDate(d.getDate() + i);
+          return d;
+        });
+        const selectedDate = days[calendarPopupDay];
+        const [hours, minutes] = calendarPopupTime.split(':').map(Number);
+        const scheduledAt = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), hours, minutes);
+        const endTime = new Date(scheduledAt.getTime() + calendarPopupDuration * 60000);
+
+        const handleCreate = async () => {
+          const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+          await supabase.from('scheduled_events').insert({
+            organization_id: orgId,
+            contact_id: calendarPopup.contactId,
+            contact_name: calendarPopup.contactName,
+            contact_phone: calendarPopup.contactPhone,
+            title: calendarPopupTitle,
+            description: calendarPopup.msgText ? `From message: "${calendarPopup.msgText.substring(0, 200)}"` : '',
+            scheduled_at: scheduledAt.toISOString(),
+            duration_minutes: calendarPopupDuration,
+            status: 'tentative',
+            source: 'manual',
+            detected_from_message: calendarPopup.msgText || null,
+          });
+          const { data } = await supabase.from('scheduled_events')
+            .select('id, title, contact_name, contact_phone, scheduled_at, status, source, description, detected_from_message, created_at')
+            .eq('organization_id', orgId)
+            .order('created_at', { ascending: false }).limit(100);
+          if (data) setCalendarEvents(data as typeof calendarEvents);
+          setCalendarPopup(null);
+        };
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}
+            onClick={() => setCalendarPopup(null)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: '#fff', borderRadius: 16, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+              border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden',
+            }}>
+              {/* Header */}
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>📅</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#1c1c1e' }}>Create Event</span>
+                </div>
+                <button onClick={() => setCalendarPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#8e8e93' }}>×</button>
+              </div>
+
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Contact */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#f8f9fa', borderRadius: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 16, background: 'linear-gradient(135deg, #378ADD, #5B9FE8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+                    {(calendarPopup.contactName || '?').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1c1c1e' }}>{calendarPopup.contactName || 'Unknown'}</div>
+                    <div style={{ fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>{calendarPopup.contactPhone}</div>
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Event Title</label>
+                  <input value={calendarPopupTitle} onChange={e => setCalendarPopupTitle(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, outline: 'none', fontFamily: "'Inter', sans-serif" }} />
+                </div>
+
+                {/* Day selector — 4 day cards */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 8 }}>Day</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                    {days.map((d, i) => {
+                      const isSelected = calendarPopupDay === i;
+                      const isToday = i === 0;
+                      return (
+                        <button key={i} onClick={() => setCalendarPopupDay(i)} style={{
+                          padding: '10px 4px', borderRadius: 10, border: isSelected ? '2px solid #007AFF' : '1px solid rgba(0,0,0,0.08)',
+                          background: isSelected ? '#EFF6FF' : '#fff', cursor: 'pointer', textAlign: 'center',
+                          transition: 'all 0.15s',
+                        }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: isSelected ? '#007AFF' : '#8e8e93', textTransform: 'uppercase' }}>
+                            {isToday ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short' })}
+                          </div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: isSelected ? '#007AFF' : '#1c1c1e', margin: '2px 0' }}>
+                            {d.getDate()}
+                          </div>
+                          <div style={{ fontSize: 10, color: isSelected ? '#007AFF' : '#8e8e93' }}>
+                            {d.toLocaleDateString('en-US', { month: 'short' })}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Time + Duration */}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Time</label>
+                    <input type="time" value={calendarPopupTime} onChange={e => setCalendarPopupTime(e.target.value)}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'JetBrains Mono', monospace" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Duration</label>
+                    <select value={calendarPopupDuration} onChange={e => setCalendarPopupDuration(Number(e.target.value))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, background: '#fff', cursor: 'pointer' }}>
+                      <option value={10}>10 min</option>
+                      <option value={15}>15 min</option>
+                      <option value={20}>20 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                      <option value={90}>1.5 hours</option>
+                      <option value={120}>2 hours</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: '#f0f9ff', border: '1px solid rgba(0,122,255,0.1)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#007AFF' }}>
+                    {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#1c1c1e', marginTop: 2 }}>
+                    {scheduledAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} — {endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                    <span style={{ color: '#8e8e93', marginLeft: 8 }}>({calendarPopupDuration} min)</span>
+                  </div>
+                </div>
+
+                {/* Message context */}
+                {calendarPopup.msgText && (
+                  <div style={{ fontSize: 11, color: '#8e8e93', fontStyle: 'italic', padding: '6px 10px', background: '#fafafa', borderRadius: 8 }}>
+                    &ldquo;{calendarPopup.msgText.substring(0, 100)}&rdquo;
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button onClick={() => setCalendarPopup(null)}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', color: '#6b7280' }}>
+                  Cancel
+                </button>
+                <button onClick={handleCreate}
+                  style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#007AFF', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Create Event
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Ghost Edit Modal */}
       {editingGhost !== null && (
