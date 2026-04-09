@@ -19,7 +19,7 @@ while true; do
     # Poll for queued messages
     RESPONSE=$(curl -s "${VERNACULAR_URL}/api/engine/poll-outbound?station=${STATION_NAME}")
 
-    # Parse messages from response
+    # Parse messages from response (now includes attachment_url)
     MESSAGES=$(echo "$RESPONSE" | python3 -c "
 import sys, json
 try:
@@ -29,26 +29,63 @@ try:
         phone = m.get('phone', '') or m.get('contact_phone', '')
         text = m.get('message', '')
         msg_id = m.get('id', '')
-        if phone and text:
-            # Escape for shell safety
-            text_escaped = text.replace(\"'\", \"'\\\\''\")
-            print(f'{msg_id}|{phone}|{text_escaped}')
+        att_url = m.get('attachment_url', '')
+        if phone and (text or att_url):
+            text_escaped = (text or '').replace(\"'\", \"'\\\\''\")
+            print(f'{msg_id}|{phone}|{text_escaped}|{att_url}')
 except:
     pass
 " 2>/dev/null)
 
     if [ -n "$MESSAGES" ]; then
-        while IFS='|' read -r MSG_ID PHONE TEXT; do
+        while IFS='|' read -r MSG_ID PHONE TEXT ATT_URL; do
             echo "[$(date '+%H:%M:%S')] Sending to ${PHONE}: ${TEXT:0:60}..."
 
+            # If there's an attachment URL, download and send as file
+            if [ -n "$ATT_URL" ] && [ "$ATT_URL" != "" ]; then
+                echo "[$(date '+%H:%M:%S')] Downloading attachment: ${ATT_URL:0:80}..."
+                ATT_FILENAME=$(basename "$ATT_URL" | sed 's/?.*//')
+                ATT_PATH="/tmp/vernacular_att_${ATT_FILENAME}"
+                curl -s -o "$ATT_PATH" "$ATT_URL"
+
+                if [ -f "$ATT_PATH" ] && [ -s "$ATT_PATH" ]; then
+                    # Send text first if it's not just the placeholder
+                    if [ -n "$TEXT" ] && ! echo "$TEXT" | grep -qE '^\[IMAGE|^\[VIDEO|^\[PDF|^\[FILE|^\[AUDIO'; then
+                        osascript -e "
+                            tell application \"Messages\"
+                                set targetService to 1st account whose service type = iMessage
+                                set targetBuddy to participant \"${PHONE}\" of targetService
+                                send \"${TEXT}\" to targetBuddy
+                            end tell
+                        " 2>/dev/null
+                        sleep 1
+                    fi
+
+                    # Send the file
+                    osascript -e "
+                        tell application \"Messages\"
+                            set targetService to 1st account whose service type = iMessage
+                            set targetBuddy to participant \"${PHONE}\" of targetService
+                            send POSIX file \"${ATT_PATH}\" to targetBuddy
+                        end tell
+                    " 2>/dev/null
+                    rm -f "$ATT_PATH"
+                else
+                    echo "[$(date '+%H:%M:%S')] Download failed, sending text only"
+                    osascript -e "
+                        tell application \"Messages\"
+                            set targetService to 1st account whose service type = iMessage
+                            set targetBuddy to participant \"${PHONE}\" of targetService
+                            send \"${TEXT}\" to targetBuddy
+                        end tell
+                    " 2>/dev/null
+                fi
             # Check if message contains a URL — split into text + link
-            URL_PATTERN='https?://[^ ]*'
-            if echo "$TEXT" | grep -qE "$URL_PATTERN"; then
-                # Extract the URL and the non-URL text
+            elif echo "$TEXT" | grep -qE 'https?://[^ ]*'; then
+                URL_PATTERN='https?://[^ ]*'
                 URL=$(echo "$TEXT" | grep -oE "$URL_PATTERN" | head -1)
                 TEXT_ONLY=$(echo "$TEXT" | sed "s|$URL||g" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
-                # Send text part first (if there is any)
                 if [ -n "$TEXT_ONLY" ]; then
                     osascript -e "
                         tell application \"Messages\"
@@ -60,7 +97,6 @@ except:
                     sleep 1
                 fi
 
-                # Send URL alone (better chance of link preview)
                 osascript -e "
                     tell application \"Messages\"
                         set targetService to 1st account whose service type = iMessage
@@ -69,7 +105,7 @@ except:
                     end tell
                 " 2>/dev/null
             else
-                # No URL — send as single message
+                # No URL, no attachment — send as single message
                 osascript -e "
                     tell application \"Messages\"
                         set targetService to 1st account whose service type = iMessage

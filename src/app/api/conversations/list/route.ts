@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const convIds = conversations.map(c => c.id);
     const { data: rawMessages } = await supabase
       .from('messages')
-      .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id')
+      .select('id, direction, message, status, source_system, sent_at, created_at, conversation_id, attachment_url, attachment_type')
       .in('conversation_id', convIds);
 
     // Sort: by sent_at first (as Date for proper comparison), then created_at as tiebreaker
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     // Group messages by conversation
     const messagesByConv: Record<string, Array<{
       id: string; text: string; direction: string; timestamp: string; status: string; isAIDraft: boolean;
+      attachmentUrl?: string; attachmentType?: string;
     }>> = {};
 
     messages.forEach(m => {
@@ -83,6 +84,8 @@ export async function GET(request: NextRequest) {
         timestamp: time || '',
         status: m.status,
         isAIDraft: m.source_system === 'vernacular-ai' && (m.status === 'Draft' || m.status === 'draft'),
+        attachmentUrl: m.attachment_url || undefined,
+        attachmentType: m.attachment_type || undefined,
       });
     });
 

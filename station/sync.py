@@ -106,7 +106,8 @@ def extract_text_from_blob(blob_data: bytes) -> str | None:
 
 
 def insert_message(phone: str, text: str, direction: str, sent_at: str,
-                    attachment_type: str | None = None, attachment_name: str | None = None):
+                    attachment_type: str | None = None, attachment_name: str | None = None,
+                    attachment_url: str | None = None):
     """Insert a message to Supabase."""
     payload = {
         "message": text[:500],
@@ -121,6 +122,8 @@ def insert_message(phone: str, text: str, direction: str, sent_at: str,
         payload["attachment_type"] = attachment_type
     if attachment_name:
         payload["attachment_name"] = attachment_name
+    if attachment_url:
+        payload["attachment_url"] = attachment_url
     result = subprocess.run(
         [
             "curl", "-s", "-X", "POST",
@@ -137,8 +140,8 @@ def insert_message(phone: str, text: str, direction: str, sent_at: str,
     return result.returncode == 0 and "error" not in result.stdout.lower()
 
 
-def get_attachment_info(db: sqlite3.Connection, message_rowid: int) -> tuple[str | None, str | None]:
-    """Check if a message has an attachment and return (type, filename)."""
+def get_attachment_info(db: sqlite3.Connection, message_rowid: int) -> tuple[str | None, str | None, str | None, str | None]:
+    """Check if a message has an attachment and return (type, filename, filepath, mime)."""
     try:
         row = db.execute(
             """
@@ -152,9 +155,13 @@ def get_attachment_info(db: sqlite3.Connection, message_rowid: int) -> tuple[str
         ).fetchone()
         if row:
             mime = row[0] or ""
-            name = row[2] or row[1] or ""
+            filepath = row[1] or ""  # full path like ~/Library/Messages/Attachments/...
+            name = row[2] or (filepath.rsplit("/", 1)[-1] if filepath else "")
             if name:
                 name = name.rsplit("/", 1)[-1]  # strip path, keep filename
+            # Expand ~ in filepath
+            if filepath and filepath.startswith("~"):
+                filepath = os.path.expanduser(filepath)
             # Simplify mime to type
             if "pdf" in mime:
                 atype = "pdf"
@@ -168,10 +175,47 @@ def get_attachment_info(db: sqlite3.Connection, message_rowid: int) -> tuple[str
                 atype = "file"
             else:
                 atype = "file"
-            return atype, name
+            return atype, name, filepath, mime
     except Exception:
         pass
-    return None, None
+    return None, None, None, None
+
+
+def upload_attachment(filepath: str, filename: str, mime: str) -> str | None:
+    """Upload a file to Supabase Storage and return the public URL."""
+    if not filepath or not os.path.exists(filepath):
+        return None
+    try:
+        # Generate unique storage path
+        ts = int(time.time() * 1000)
+        safe_name = re.sub(r'[^a-zA-Z0-9._-]', '_', filename or 'attachment')
+        storage_path = f"{STATION_NAME.lower()}/{ts}_{safe_name}"
+
+        # Determine content type
+        content_type = mime or "application/octet-stream"
+
+        result = subprocess.run(
+            [
+                "curl", "-s", "-X", "POST",
+                f"{SUPABASE_URL}/storage/v1/object/attachments/{storage_path}",
+                "-H", f"apikey: {SUPABASE_KEY}",
+                "-H", f"Authorization: Bearer {SUPABASE_KEY}",
+                "-H", f"Content-Type: {content_type}",
+                "--data-binary", f"@{filepath}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and "error" not in result.stdout.lower():
+            public_url = f"{SUPABASE_URL}/storage/v1/object/public/attachments/{storage_path}"
+            log(f"  📎 Uploaded: {safe_name} → {public_url[:80]}...")
+            return public_url
+        else:
+            log(f"  ⚠️ Upload failed: {result.stdout[:100]}")
+    except Exception as e:
+        log(f"  ⚠️ Upload error: {e}")
+    return None
 
 
 def sync_inbound(db: sqlite3.Connection):
@@ -206,20 +250,30 @@ def sync_inbound(db: sqlite3.Connection):
             continue
 
         # Detect file transfer GUID artifacts
-        att_type, att_name = None, None
+        att_type, att_name, att_path, att_mime = None, None, None, None
         if text and "kIMFileTransferGUID" in text:
             text = None  # Force attachment lookup
 
         # Check for attachment if no text
+        att_url = None
         if not text or len(text.strip()) < 1:
-            att_type, att_name = get_attachment_info(db, rowid)
+            att_type, att_name, att_path, att_mime = get_attachment_info(db, rowid)
             if att_type:
                 text = f"[{att_type.upper()}: {att_name}]" if att_name else f"[{att_type.upper()} attached]"
+                # Upload attachment to Supabase Storage
+                if att_path:
+                    att_url = upload_attachment(att_path, att_name or "attachment", att_mime or "")
             else:
                 write_state(INBOUND_STATE, rowid)
                 continue
+        else:
+            # Even if there's text, check for accompanying attachment
+            _at, _an, _ap, _am = get_attachment_info(db, rowid)
+            if _at and _ap:
+                att_type, att_name = _at, _an
+                att_url = upload_attachment(_ap, _an or "attachment", _am or "")
 
-        if insert_message(phone, text.strip(), "Inbound", msg_time, att_type, att_name):
+        if insert_message(phone, text.strip(), "Inbound", msg_time, att_type, att_name, att_url):
             log(f"IN  {normalize_phone(phone)}: {text[:60]}")
             count += 1
 
@@ -254,20 +308,29 @@ def sync_outbound(db: sqlite3.Connection):
             msg_text = extract_text_from_blob(attr_blob) if attr_blob else None
 
         # Detect file transfer GUID artifacts from BLOB extraction
-        att_type, att_name = None, None
+        att_type, att_name, att_path, att_mime = None, None, None, None
+        att_url = None
         if msg_text and "kIMFileTransferGUID" in msg_text:
             msg_text = None  # Force attachment lookup
 
         if not msg_text or len(msg_text.strip()) < 1:
             # No text and no BLOB — check for attachment
-            att_type, att_name = get_attachment_info(db, rowid)
+            att_type, att_name, att_path, att_mime = get_attachment_info(db, rowid)
             if att_type:
                 msg_text = f"[{att_type.upper()}: {att_name}]" if att_name else f"[{att_type.upper()} sent]"
+                if att_path:
+                    att_url = upload_attachment(att_path, att_name or "attachment", att_mime or "")
             else:
                 write_state(OUTBOUND_STATE, rowid)
                 continue
+        else:
+            # Check for accompanying attachment even when text exists
+            _at, _an, _ap, _am = get_attachment_info(db, rowid)
+            if _at and _ap:
+                att_type, att_name = _at, _an
+                att_url = upload_attachment(_ap, _an or "attachment", _am or "")
 
-        if insert_message(phone, msg_text.strip(), "Outbound", msg_time, att_type, att_name):
+        if insert_message(phone, msg_text.strip(), "Outbound", msg_time, att_type, att_name, att_url):
             log(f"OUT {normalize_phone(phone)}: {msg_text[:60]}")
             count += 1
 

@@ -13,6 +13,8 @@ interface Message {
   direction: 'outgoing' | 'incoming';
   timestamp: string;
   isAIDraft?: boolean;
+  attachmentUrl?: string;
+  attachmentType?: string;
 }
 
 interface Contact {
@@ -802,6 +804,8 @@ export default function DashboardPage() {
               direction: m.direction as 'outgoing' | 'incoming',
               timestamp: m.timestamp as string,
               isAIDraft: m.isAIDraft as boolean | undefined,
+              attachmentUrl: m.attachmentUrl as string | undefined,
+              attachmentType: m.attachmentType as string | undefined,
             })),
           };
         });
@@ -956,12 +960,14 @@ export default function DashboardPage() {
           const m = payload.new;
           const phone = String(m.contact_phone || '');
           const dir = (String(m.direction || '')).toLowerCase();
-          const newMsg = {
+          const newMsg: Message = {
             id: String(m.id || `rt-${Date.now()}`),
             text: String(m.message || ''),
             direction: (dir === 'outbound' ? 'outgoing' : 'incoming') as 'outgoing' | 'incoming',
             timestamp: String(m.sent_at || m.created_at || ''),
             isAIDraft: String(m.source_system || '') === 'vernacular-ai' && String(m.status || '') === 'Draft',
+            attachmentUrl: m.attachment_url ? String(m.attachment_url) : undefined,
+            attachmentType: m.attachment_type ? String(m.attachment_type) : undefined,
           };
 
           // Find which conversation this belongs to by matching phone
@@ -4046,7 +4052,31 @@ button:active { transform: scale(0.98); }`}</style>
                           fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
                         }}>AI DRAFT</div>
                       )}
-                      {msg.text}
+                      {msg.attachmentUrl && (msg.attachmentType === 'image' || msg.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp|heic)$/i)) ? (
+                        <div style={{ marginBottom: msg.text && !msg.text.startsWith('[IMAGE') ? 6 : 0 }}>
+                          <img
+                            src={msg.attachmentUrl}
+                            alt="attachment"
+                            style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 10, display: 'block', cursor: 'pointer' }}
+                            onClick={() => window.open(msg.attachmentUrl, '_blank')}
+                          />
+                        </div>
+                      ) : msg.attachmentUrl && msg.attachmentType === 'video' ? (
+                        <div style={{ marginBottom: msg.text && !msg.text.startsWith('[VIDEO') ? 6 : 0 }}>
+                          <video
+                            src={msg.attachmentUrl}
+                            controls
+                            style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 10, display: 'block' }}
+                          />
+                        </div>
+                      ) : msg.attachmentUrl ? (
+                        <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.06)', marginBottom: 6, textDecoration: 'none', color: 'inherit', fontSize: 12 }}>
+                          <span>📎</span>
+                          <span style={{ fontWeight: 500 }}>{msg.text?.replace(/^\[.*?\]\s*/, '') || 'Attachment'}</span>
+                        </a>
+                      ) : null}
+                      {(!msg.attachmentUrl || (msg.text && !msg.text.startsWith('[IMAGE') && !msg.text.startsWith('[VIDEO') && !msg.text.startsWith('[PDF') && !msg.text.startsWith('[FILE') && !msg.text.startsWith('[AUDIO'))) && msg.text}
                     </div>
                     {/* AI Draft action buttons */}
                     {msg.isAIDraft && (
@@ -4235,6 +4265,78 @@ button:active { transform: scale(0.98); }`}</style>
                       minHeight: 36, maxHeight: 200,
                     }}
                   />
+                  {/* Image upload button */}
+                  <label
+                    title="Send image"
+                    style={{
+                      width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                      background: '#fff', color: '#8e8e93', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}
+                  >
+                    <input type="file" accept="image/*,video/*,.pdf" style={{ display: 'none' }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const contactPhone = col.contact?.phone;
+                        const contactName = col.contact?.name;
+                        const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                        if (!contactPhone) return;
+
+                        // Show optimistic preview
+                        const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+                        const previewMsg: Message = {
+                          id: `upload-${Date.now()}`,
+                          text: `[Uploading ${file.name}...]`,
+                          direction: 'outgoing',
+                          timestamp: new Date().toISOString(),
+                          attachmentUrl: previewUrl,
+                          attachmentType: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'file',
+                        };
+                        setColumns(prev => prev.map(c => c.id === col.id ? { ...c, messages: [...c.messages, previewMsg] } : c));
+
+                        // Upload to Supabase Storage via API
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('phoneNumber', contactPhone);
+                        formData.append('contactName', contactName || '');
+                        formData.append('organizationId', orgId);
+                        formData.append('message', inputValues[col.id]?.trim() || '');
+
+                        try {
+                          const res = await fetch('/api/messages/send-attachment', { method: 'POST', body: formData });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c,
+                              messages: c.messages.map(m => m.id === previewMsg.id ? {
+                                ...m,
+                                id: data.messageId || `sent-${Date.now()}`,
+                                text: data.text || `[${file.name}]`,
+                                attachmentUrl: data.attachmentUrl || previewUrl,
+                              } : m),
+                            } : c));
+                            setInputValues(prev => ({ ...prev, [col.id]: '' }));
+                            playSound('send');
+                          } else {
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c,
+                              messages: c.messages.map(m => m.id === previewMsg.id ? { ...m, text: `[Upload failed: ${data.error}]` } : m),
+                            } : c));
+                          }
+                        } catch {
+                          setColumns(prev => prev.map(c => c.id === col.id ? {
+                            ...c,
+                            messages: c.messages.map(m => m.id === previewMsg.id ? { ...m, text: '[Upload failed]' } : m),
+                          } : c));
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+                    </svg>
+                  </label>
                   {/* Schedule button */}
                   <button
                     onClick={() => setConversationViewMode('schedule')}

@@ -45,6 +45,7 @@ export async function GET(request: Request) {
         message: m.message,
         aiGenerated: m.ai_generated,
         sourceSystem: m.source_system,
+        attachment_url: m.attachment_url || '',
       })),
     });
   } catch (err) {
