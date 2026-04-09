@@ -1316,6 +1316,10 @@ button:active { transform: scale(0.98); }`}</style>
       });
       const data = await res.json();
       if (res.ok) {
+        // Mark conversation as read when you reply
+        if (data.conversationId) {
+          supabase.from('conversations').update({ unread_count: 0 }).eq('id', data.conversationId);
+        }
         console.log(`[Vernacular] ✅ Message queued successfully`, data);
         console.log(`[Vernacular]   → Notion Queued: ${data.notionQueued ? 'Yes' : 'No'}`);
         console.log(`[Vernacular]   → Station: ${data.station?.name || 'N/A'} (${data.station?.phone || 'N/A'})`);
@@ -3501,13 +3505,21 @@ button:active { transform: scale(0.98); }`}</style>
           }}>
             {showReadStreams ? 'Hide Read' : 'Show All'}
           </button>
-          <button onClick={() => {
-            // Mark all visible conversations as read
+          <button onClick={async () => {
+            // Mark all visible conversations as read (local + DB)
             setReadConversations(prev => {
               const next = new Set(prev);
               columns.forEach(c => { if (c.contact) next.add(c.id); });
               return next;
             });
+            // Reset unread_count in DB for all conversations
+            const convIds = columns.filter(c => c.conversationId).map(c => c.conversationId!);
+            if (convIds.length > 0) {
+              await supabase.from('conversations').update({ unread_count: 0 }).in('id', convIds);
+              setUnreadCount(0);
+            }
+            // Update column tags
+            setColumns(prev => prev.map(c => c.contact ? { ...c, contact: { ...c.contact, tag: 'ACTIVE', tagColor: '#22C55E', tagBg: 'rgba(34,197,94,0.1)' } } : c));
           }} style={{
             padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 600,
             background: 'rgba(0,0,0,0.04)', color: '#8e8e93', cursor: 'pointer',
@@ -9031,7 +9043,7 @@ button:active { transform: scale(0.98); }`}</style>
                     fontSize: 14, fontWeight: isActive ? 600 : 500,
                     fontFamily: "'Inter', sans-serif",
                     letterSpacing: '-0.01em',
-                    color: isActive ? '#1a3a5c' : ((item as Record<string, unknown>).color as string) || 'rgba(26,58,92,0.8)',
+                    color: isActive ? '#000' : ((item as Record<string, unknown>).color as string) || '#1a1a1a',
                     background: isActive
                       ? ((item as Record<string, unknown>).color ? 'rgba(217,119,6,0.15)' : 'rgba(255,255,255,0.5)')
                       : isHovered ? 'rgba(255,255,255,0.3)' : 'transparent',
