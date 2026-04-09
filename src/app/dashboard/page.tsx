@@ -3563,22 +3563,37 @@ button:active { transform: scale(0.98); }`}</style>
                     }} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: 'rgba(0,0,0,0.04)', color: '#378ADD', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
                       {isPhoneNumber(col.contact?.name || '') ? 'ADD NAME' : 'EDIT'}
                     </button>
-                    {/* Initiative dropdown */}
+                    {/* Initiative dropdown — adds contact to initiative group */}
                     <select
                       defaultValue=""
                       onChange={async e => {
+                        const val = e.target.value;
+                        if (!val) return;
                         const convId = col.conversationId || col.id.replace('real-', '');
-                        if (convId && e.target.value) {
-                          await supabase.from('conversations').update({ goal: e.target.value }).eq('id', convId);
-                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, goal: e.target.value } : c));
+                        // Update conversation goal
+                        if (convId) {
+                          const initTitle = dbInitiatives.find(i => i.id === val)?.title || val;
+                          await supabase.from('conversations').update({ goal: initTitle }).eq('id', convId);
+                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, goal: initTitle } : c));
                         }
+                        // Add contact to initiative_contacts
+                        if (/^[0-9a-f-]{36}$/.test(val) && col.contact?.phone) {
+                          const digits = col.contact.phone.replace(/\D/g, '').slice(-10);
+                          const formatted = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+                          const { data: found } = await supabase.from('contacts').select('id').or(`phone.eq.${formatted},phone.ilike.%${digits.slice(-4)}%`).limit(1);
+                          if (found && found.length > 0) {
+                            await supabase.from('initiative_contacts').insert({ initiative_id: val, contact_id: found[0].id }).select();
+                            // Update count
+                            setInitiativeContactCounts(prev => ({ ...prev, [val]: (prev[val] || 0) + 1 }));
+                          }
+                        }
+                        e.target.value = '';
                       }}
-                      style={{ padding: '1px 4px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: 'rgba(124,58,237,0.06)', color: '#7C3AED', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", maxWidth: 80 }}>
-                      <option value="">INITIATIVE</option>
-                      <option value="Customer Support Tickets">💬 Support</option>
-                      <option value="Sales Outreach">📱 Sales</option>
-                      <option value="Tester Recruitment">🧪 Testing</option>
-                      <option value="VIP Re-engagement">🎰 VIP</option>
+                      style={{ padding: '1px 4px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: col.goal ? 'rgba(124,58,237,0.12)' : 'rgba(124,58,237,0.06)', color: '#7C3AED', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", maxWidth: 100 }}>
+                      <option value="">{col.goal ? `✓ ${col.goal.substring(0, 12)}` : 'INITIATIVE'}</option>
+                      {dbInitiatives.map(init => (
+                        <option key={init.id} value={init.id}>{init.title}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
