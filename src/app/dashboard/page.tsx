@@ -10212,12 +10212,14 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         setConversationViewMode('streams');
                         setActiveTab('conversations');
 
-                        // Tell user in Craig's chat
-                        const sendCount = [...reply.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)].length;
+                        // Scroll to the first conversation with drafts after render
+                        setTimeout(() => {
+                          if (streamsScrollRef.current) streamsScrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+                        }, 500);
+
+                        // Count sends and strip tags
                         reply = reply.replace(/\[SEND:[^\]]+\]/g, '').trim();
-                        if (sendCount > 0) {
-                          reply = (reply ? reply + '\n\n' : '') + `📨 drafted ${sendCount} message${sendCount > 1 ? 's' : ''} — check Streams to approve`;
-                        }
+                        reply = (reply ? reply + '\n\n' : '') + `📨 drafted ${sendMatches.length} message${sendMatches.length > 1 ? 's' : ''} — check Streams to approve`;
                       }
 
                       // Check for bulk send commands [BULK_SEND:initiative:msg1|||msg2]
