@@ -10132,13 +10132,37 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         for (const sendMatch of sendMatches) {
                           const sendPhone = sendMatch[1].trim();
                           const sendText = sendMatch[2].trim();
-                          // Find contact by name or phone
-                          const contact = contacts.find(c =>
+                          // Find contact by name or phone — check contacts array + initiative contacts
+                          let contact = contacts.find(c =>
+                            (c.full_name || '').toLowerCase() === sendPhone.toLowerCase() ||
                             (c.full_name || '').toLowerCase().includes(sendPhone.toLowerCase()) ||
                             (c.phone || '').includes(sendPhone)
                           );
-                          const phone = contact?.phone || sendPhone;
+                          // Also check initiativeContacts if not found
+                          if (!contact) {
+                            const initContact = initiativeContacts.find(c =>
+                              (c.full_name || '').toLowerCase() === sendPhone.toLowerCase() ||
+                              (c.full_name || '').toLowerCase().includes(sendPhone.toLowerCase()) ||
+                              (c.phone || '').includes(sendPhone)
+                            );
+                            if (initContact) contact = { ...initContact, id: initContact.id } as unknown as typeof contacts[0];
+                          }
+                          // If still no phone, try fetching from DB
+                          let phone = contact?.phone || sendPhone;
                           const name = contact?.full_name || sendPhone;
+                          // If phone doesn't look like a number, it's a name — skip this send
+                          if (!/\d{7}/.test(phone.replace(/\D/g, ''))) {
+                            // Try DB lookup
+                            try {
+                              const lookupRes = await fetch('/api/ai/search-history', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'search_contacts', query: sendPhone, orgId: getOrgId() }),
+                              });
+                              const lookupData = await lookupRes.json();
+                              const phoneMatch = (lookupData.result || '').match(/\((\d{3})\) (\d{3})-(\d{4})/);
+                              if (phoneMatch) phone = `(${phoneMatch[1]}) ${phoneMatch[2]}-${phoneMatch[3]}`;
+                            } catch { /* silent */ }
+                          }
 
                           // Add approval card to chat
                           setAiCopilotMessages(prev => [...prev, {
