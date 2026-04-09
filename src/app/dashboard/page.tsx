@@ -3868,6 +3868,10 @@ button:active { transform: scale(0.98); }`}</style>
             const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
             if (aPinned !== bPinned) return bPinned - aPinned;
+            // Pending AI drafts sort to the left (after pinned)
+            const aHasDraft = a.messages.some(m => m.isAIDraft) ? 1 : 0;
+            const bHasDraft = b.messages.some(m => m.isAIDraft) ? 1 : 0;
+            if (aHasDraft !== bHasDraft) return bHasDraft - aHasDraft;
             if (streamSortMode === 'unread') {
               const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
               const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
@@ -10173,14 +10177,47 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                             } catch { /* silent */ }
                           }
 
-                          // Add approval card to chat
-                          setAiCopilotMessages(prev => [...prev, {
-                            role: 'assistant',
-                            text: `📨 **Send to ${name}** (${phone}):\n"${sendText}"\n\n[APPROVE_SEND:${phone}:${name}:${sendText}]`,
-                          }]);
+                          // Create AI draft in the conversation stream (not Craig's chat)
+                          const draftMsg: Message = {
+                            id: `ai-draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            text: sendText,
+                            direction: 'outgoing',
+                            timestamp: new Date().toISOString(),
+                            isAIDraft: true,
+                          };
+
+                          // Find or create the conversation column
+                          const phoneDigits = phone.replace(/\D/g, '').slice(-10);
+                          const existingCol = columns.find(c => c.contact?.phone?.replace(/\D/g, '').slice(-10) === phoneDigits);
+
+                          if (existingCol) {
+                            // Add draft to existing conversation
+                            setColumns(prev => prev.map(c => c.id === existingCol.id ? { ...c, messages: [...c.messages, draftMsg] } : c));
+                          } else {
+                            // Create new conversation column with the draft
+                            const newCol: ConversationColumn = {
+                              id: `draft-col-${phoneDigits}`,
+                              contact: { id: `c-${phoneDigits}`, name, initials: name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2), tag: 'UNREAD', tagColor: '#F59E0B', tagBg: 'rgba(245,158,11,0.1)', phone },
+                              messages: [draftMsg],
+                              aiMode: 'off', goal: '', channel: 'imessage',
+                            };
+                            setColumns(prev => [newCol, ...prev]);
+                          }
+
+                          // Store phone for the draft so Approve can use it
+                          draftMsg.id = `ai-draft-${phoneDigits}-${Date.now()}`;
                         }
-                        // Strip [SEND:] tags from the displayed reply
+
+                        // Switch to Streams view to show the drafts
+                        setConversationViewMode('streams');
+                        setActiveTab('conversations');
+
+                        // Tell user in Craig's chat
+                        const sendCount = [...reply.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)].length;
                         reply = reply.replace(/\[SEND:[^\]]+\]/g, '').trim();
+                        if (sendCount > 0) {
+                          reply = (reply ? reply + '\n\n' : '') + `📨 drafted ${sendCount} message${sendCount > 1 ? 's' : ''} — check Streams to approve`;
+                        }
                       }
 
                       // Check for bulk send commands [BULK_SEND:initiative:msg1|||msg2]
