@@ -3590,8 +3590,25 @@ button:active { transform: scale(0.98); }`}</style>
             }}>
               {col.contact ? (
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  {/* Row 1: Name + phone + pin + close */}
+                  {/* Row 1: Avatar + Name + phone + pin + close */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Fruit avatar */}
+                    {(() => {
+                      const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
+                      const bgColors = ['#FEE2E2', '#FCE7F3', '#FFEDD5', '#FEE2E2', '#EDE9FE', '#D1FAE5', '#FEF3C7', '#FEF9C3', '#FECDD3', '#FDE68A'];
+                      const idx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
+                      const fi = Math.max(0, idx) % fruits.length;
+                      return (
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 14, flexShrink: 0,
+                          background: bgColors[fi],
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 14, lineHeight: 1,
+                        }}>
+                          {fruits[fi]}
+                        </div>
+                      );
+                    })()}
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#1c1c1e', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {col.contact.name}
                     </span>
@@ -3605,8 +3622,21 @@ button:active { transform: scale(0.98); }`}</style>
                     )}
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
                       <button onClick={() => { setPinnedConversations(prev => { const next = new Set(prev); if (next.has(col.id)) next.delete(col.id); else next.add(col.id); localStorage.setItem('vernacular-pinned', JSON.stringify([...next])); return next; }); }}
-                        title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin'} style={{ width: 22, height: 22, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: pinnedConversations.has(col.id) ? '#378ADD' : '#c4c4c6' }}>
-                        📌
+                        title={pinnedConversations.has(col.id) ? 'Unpin' : 'Pin'} style={{
+                          width: 28, height: 28, borderRadius: 6, border: 'none',
+                          background: pinnedConversations.has(col.id) ? 'rgba(55,138,221,0.1)' : 'transparent',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.15s',
+                        }}>
+                        {pinnedConversations.has(col.id) ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="#378ADD" stroke="#378ADD" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2l2.09 6.26L21 9.27l-5 4.87L17.18 21 12 17.27 6.82 21 8 14.14l-5-4.87 6.91-1.01L12 2z" />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4c4c6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2l2.09 6.26L21 9.27l-5 4.87L17.18 21 12 17.27 6.82 21 8 14.14l-5-4.87 6.91-1.01L12 2z" />
+                          </svg>
+                        )}
                       </button>
                       <button onClick={() => removeColumn(col.id)} style={{ width: 22, height: 22, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c4c4c6' }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
