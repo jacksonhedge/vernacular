@@ -10006,7 +10006,9 @@ When the user asks about a specific contact's history or you need more context, 
 
 ACTIONS YOU CAN TAKE:
 
-1. NAVIGATE: Say "Navigating to [tab name]..." and the dashboard will switch. Tabs: dashboard, conversations, contacts, team, phone lines, ai responder, integrations, profile, settings.
+1. NAVIGATE: Say "Navigating to [tab name]..." and the dashboard will switch.
+   Main tabs: dashboard, conversations, contacts, team, phone lines, initiatives, calendar, integrations, profile, settings.
+   Conversation sub-views: streams, matrix, messages, summary, schedule — these are INSIDE the conversations tab. Say "Navigating to streams..." to go there directly.
 
 2. SEND MESSAGE: If sendMessages permission is ON, include [SEND:contact_name_or_phone:message text] in your response. Example: [SEND:Brady Walsh:Hey! Just following up on our conversation.] — This will actually send the iMessage through the station.
 
@@ -10110,12 +10112,15 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                         'dashboard': 'dashboard', 'conversations': 'conversations', 'contacts': 'contacts',
                         'team': 'team', 'phone lines': 'stations', 'stations': 'stations',
                         'ai responder': 'ai-drafts', 'initiatives': 'ai-drafts', 'initiative': 'ai-drafts', 'calendar': 'calendar', 'integrations': 'integrations',
+                        'streams': 'conversations', 'matrix': 'conversations', 'messages': 'conversations', 'summary': 'conversations', 'schedule': 'conversations',
                         'profile': 'profile', 'settings': 'settings',
                       };
                       const lowerReply = reply.toLowerCase();
                       for (const [keyword, tab] of Object.entries(navMap)) {
                         if ((lowerReply.includes('navigat') || lowerReply.includes('going to') || lowerReply.includes('switching to') || lowerReply.includes('taking you')) && lowerReply.includes(keyword)) {
                           setCraigNavigating(true);
+                          const subViewMap: Record<string, ConversationViewMode> = { 'streams': 'streams', 'matrix': 'matrix', 'messages': 'messages', 'summary': 'summary', 'schedule': 'schedule' };
+                          if (subViewMap[keyword]) setConversationViewMode(subViewMap[keyword]);
                           setTimeout(() => { setActiveTab(tab); setCraigNavigating(false); }, 800);
                           break;
                         }
