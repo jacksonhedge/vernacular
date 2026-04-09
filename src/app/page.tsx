@@ -271,39 +271,159 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" style={{
-        maxWidth: 900, margin: '0 auto', padding: '80px 48px', position: 'relative', zIndex: 10,
+        maxWidth: 1100, margin: '0 auto', padding: '80px 48px', position: 'relative', zIndex: 10,
       }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <h2 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 12 }}>Simple pricing</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)' }}>Monthly minimum. Usage included. Overage billed above.</p>
+          <h2 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 12 }}>Simple, transparent pricing</h2>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', marginBottom: 24 }}>Monthly minimum with usage included. Overage billed per action.</p>
         </div>
 
+        {/* Tier Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 48 }}>
+          {[
+            {
+              name: 'Support',
+              icon: '💬',
+              price: '$1,000',
+              period: 'setup',
+              subtitle: 'No monthly minimum',
+              highlight: false,
+              color: '#60A5FA',
+              features: [
+                { text: 'Dedicated iMessage line', included: true },
+                { text: '$1.25 per resolved ticket', included: true },
+                { text: 'AI-powered FAQ matching', included: true },
+                { text: 'Embeddable chat widget', included: true },
+                { text: 'Intercom integration', included: true },
+                { text: 'Contact import ($0.07/ea)', included: true },
+                { text: 'AI auto-responses', included: false },
+                { text: 'Bulk messaging', included: false },
+              ],
+            },
+            {
+              name: 'Growth',
+              icon: '📱',
+              price: '$1,500',
+              period: '/mo per line',
+              subtitle: 'Most popular',
+              highlight: true,
+              color: '#378ADD',
+              features: [
+                { text: 'Everything in Support', included: true },
+                { text: 'AI draft + auto-send ($0.17)', included: true },
+                { text: 'Bulk blast ($0.05/recipient)', included: true },
+                { text: 'Initiative management', included: true },
+                { text: 'Contact enrichment ($0.25)', included: true },
+                { text: 'Tone analysis ($0.50)', included: true },
+                { text: 'Calendar + scheduling', included: true },
+                { text: 'Multi-channel (coming soon)', included: true },
+              ],
+            },
+            {
+              name: 'Enterprise',
+              icon: '🏢',
+              price: 'Custom',
+              period: '',
+              subtitle: '5+ lines, volume pricing',
+              highlight: false,
+              color: '#A78BFA',
+              features: [
+                { text: 'Everything in Growth', included: true },
+                { text: 'Dedicated account manager', included: true },
+                { text: 'Custom AI training', included: true },
+                { text: 'API access + webhooks', included: true },
+                { text: 'SLA + priority support', included: true },
+                { text: 'SSO + team management', included: true },
+                { text: 'Custom integrations', included: true },
+                { text: 'On-premise station option', included: true },
+              ],
+            },
+          ].map(tier => (
+            <div key={tier.name} style={{
+              borderRadius: 16, overflow: 'hidden',
+              background: tier.highlight ? 'rgba(55,138,221,0.1)' : 'rgba(255,255,255,0.04)',
+              border: tier.highlight ? '2px solid rgba(55,138,221,0.4)' : '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', flexDirection: 'column',
+            }}>
+              {tier.highlight && (
+                <div style={{ background: '#378ADD', padding: '6px 0', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Most Popular
+                </div>
+              )}
+              <div style={{ padding: '28px 24px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span style={{ fontSize: 24 }}>{tier.icon}</span>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: '#fff' }}>{tier.name}</span>
+                </div>
+                <div style={{ marginBottom: 4 }}>
+                  <span style={{ fontSize: 36, fontWeight: 800, color: '#fff' }}>{tier.price}</span>
+                  {tier.period && <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>{tier.period}</span>}
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>{tier.subtitle}</div>
+                <a href="/signup" style={{
+                  display: 'block', textAlign: 'center', padding: '12px 0', borderRadius: 10,
+                  background: tier.highlight ? '#378ADD' : 'rgba(255,255,255,0.08)',
+                  color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 700,
+                  border: tier.highlight ? 'none' : '1px solid rgba(255,255,255,0.12)',
+                  transition: 'all 0.15s',
+                }}>
+                  {tier.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
+                </a>
+              </div>
+              <div style={{ padding: '0 24px 24px', flex: 1 }}>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
+                  {tier.features.map(f => (
+                    <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', fontSize: 13 }}>
+                      {f.included ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={tier.color} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
+                      <span style={{ color: f.included ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)' }}>{f.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Usage costs breakdown */}
         <div style={{
-          padding: '28px', borderRadius: 20,
-          background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          padding: '28px', borderRadius: 16,
+          background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.08)',
         }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px', marginBottom: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 16, textAlign: 'center' }}>Pay-per-action usage costs</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px 32px' }}>
             {[
               ['New conversation', '$0.99'],
               ['Text sent', '$0.001'],
               ['Text received', 'Free'],
-              ['AI draft', '$0.0031'],
-              ['AI approved & sent', '$0.25'],
+              ['AI draft generated', '$0.003'],
+              ['AI approved & sent', '$0.17'],
+              ['AI auto-response', '$0.25'],
               ['Ticket resolved', '$1.25'],
+              ['Contact import', '$0.07'],
               ['Widget handoff', '$0.50'],
-              ['Contact import', '$0.05'],
+              ['Bulk blast (per recipient)', '$0.05'],
+              ['Tone analysis', '$0.50'],
+              ['Contact enrichment', '$0.25'],
             ].map(([action, cost]) => (
-              <div key={action} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 14 }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>{action}</span>
-                <span style={{ color: cost === 'Free' ? '#6EE7B7' : '#fff', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>{cost}</span>
+              <div key={action} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                <span style={{ color: 'rgba(255,255,255,0.45)' }}>{action}</span>
+                <span style={{ color: cost === 'Free' ? '#6EE7B7' : '#fff', fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{cost}</span>
               </div>
             ))}
           </div>
-
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-            Add-ons: Slack, Notion, Email ($25/mo each) · Salesforce ($50/mo) · Webhook ($15/mo)
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: 16 }}>
+            Usage is included in your monthly minimum. Overage billed per action above the minimum.
           </div>
+        </div>
+
+        {/* Setup fee note */}
+        <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+          Setup: $1,000/line (number provisioning, Apple ID, dedicated Mac, onboarding) · +$1,000 for AI messaging
         </div>
       </section>
 
