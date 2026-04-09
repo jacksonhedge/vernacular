@@ -2771,11 +2771,11 @@ button:active { transform: scale(0.98); }`}</style>
                     </span>
                     {/* Center: big name or initials */}
                     <span style={{
-                      fontSize: tile.name.split(' ')[0].length > 6 ? 13 : 16,
+                      fontSize: tile.name.split(' ')[0].length > 6 ? 22 : 27,
                       fontWeight: 900, textAlign: 'center', lineHeight: 1,
-                      letterSpacing: '-0.03em', textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                      letterSpacing: '-0.04em', textShadow: '0 2px 4px rgba(0,0,0,0.5)',
                     }}>
-                      {tile.name.split(' ')[0].length > 8 ? tile.initials : tile.name.split(' ')[0]}
+                      {tile.name.split(' ')[0].length > 6 ? tile.initials : tile.name.split(' ')[0]}
                     </span>
                   </button>
                 );
