@@ -913,13 +913,16 @@ export default function DashboardPage() {
                   const fresh = freshMap.get(existing.id);
                   if (fresh) {
                     freshMap.delete(existing.id);
-                    // Append only truly new messages (by id)
+                    // Append only truly new messages (by id), and replace optimistic m- messages with real ones
                     const existingIds = new Set(existing.messages.map(m => m.id));
                     const newMsgs = fresh.messages.filter(m => !existingIds.has(m.id));
+                    // Remove optimistic messages that now have a real DB version (same text+direction)
+                    const realTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
+                    const deduped = existing.messages.filter(m => !m.id.startsWith('m-') || !realTexts.has(`${m.direction}::${m.text}`));
                     return {
                       ...existing,
                       contact: fresh.contact, // update tag/unread status
-                      messages: [...existing.messages, ...newMsgs],
+                      messages: [...deduped, ...newMsgs],
                     };
                   }
                   return existing;
@@ -978,8 +981,9 @@ export default function DashboardPage() {
             if (!col.contact?.phone) return col;
             const colDigits = col.contact.phone.replace(/\D/g, '').slice(-10);
             if (colDigits === phoneDigits) {
-              // Skip if message already exists
+              // Skip if message already exists (by ID or by same text+direction within 60s)
               if (col.messages.some(msg => msg.id === newMsg.id)) return col;
+              if (col.messages.some(msg => msg.text === newMsg.text && msg.direction === newMsg.direction && msg.id.startsWith('m-'))) return col;
               return { ...col, messages: [...col.messages, newMsg] };
             }
             return col;
@@ -991,6 +995,7 @@ export default function DashboardPage() {
             const colDigits = col.contact.phone.replace(/\D/g, '').slice(-10);
             if (colDigits === phoneDigits) {
               if (col.messages.some(msg => msg.id === newMsg.id)) return col;
+              if (col.messages.some(msg => msg.text === newMsg.text && msg.direction === newMsg.direction && msg.id.startsWith('m-'))) return col;
               return { ...col, messages: [...col.messages, newMsg] };
             }
             return col;
