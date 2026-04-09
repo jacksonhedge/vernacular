@@ -12,58 +12,42 @@
 STATION_NAME="${STATION_NAME:?ERROR: STATION_NAME is required}"
 VERNACULAR_URL="${VERNACULAR_URL:-https://vernacular.chat}"
 POLL_INTERVAL="${POLL_INTERVAL:-5}"
-MSG_DIR="/tmp/vernacular_outbound_msgs"
-mkdir -p "$MSG_DIR"
 
 echo "[$(date '+%H:%M:%S')] Starting outbound sender for ${STATION_NAME} (every ${POLL_INTERVAL}s)"
 
 while true; do
-    # Poll for queued messages
+    # Poll for queued messages — Python handles ALL parsing and writes individual files
     RESPONSE=$(curl -s "${VERNACULAR_URL}/api/engine/poll-outbound?station=${STATION_NAME}")
 
-    # Parse messages into individual JSON files (avoids IFS/pipe parsing bugs)
-    MSG_COUNT=$(echo "$RESPONSE" | python3 -c "
+    # Python writes msg_id, phone, text, att_url to separate line-based files
+    echo "$RESPONSE" | python3 -c "
 import sys, json, os
 try:
     data = json.load(sys.stdin)
     msgs = data.get('messages', [])
-    # Clean old message files
-    msg_dir = '$MSG_DIR'
-    for f in os.listdir(msg_dir):
-        if f.startswith('msg_'):
-            os.remove(os.path.join(msg_dir, f))
-    count = 0
     for i, m in enumerate(msgs):
         phone = m.get('phone', '') or m.get('contact_phone', '')
-        text = m.get('message', '')
+        text = m.get('message', '') or ''
         msg_id = m.get('id', '')
         att_url = m.get('attachment_url', '') or ''
         if phone and (text or att_url):
-            with open(os.path.join(msg_dir, f'msg_{i}.json'), 'w') as f:
-                json.dump({'id': msg_id, 'phone': phone, 'text': text, 'att_url': att_url}, f)
-            count += 1
-    print(count)
-except:
-    print(0)
-" 2>/dev/null)
-
-    if [ "$MSG_COUNT" -gt 0 ] 2>/dev/null; then
-        for MSG_FILE in "$MSG_DIR"/msg_*.json; do
-            [ -f "$MSG_FILE" ] || continue
-
-            # Read fields from JSON using Python (safe, no IFS issues)
-            eval $(python3 -c "
-import json
-with open('$MSG_FILE') as f:
-    m = json.load(f)
-# Shell-safe escaping
-def esc(s):
-    return s.replace(\"'\", \"'\\\\''\" )
-print(f\"MSG_ID='{esc(m['id'])}'\")
-print(f\"PHONE='{esc(m['phone'])}'\")
-print(f\"TEXT='{esc(m['text'])}'\")
-print(f\"ATT_URL='{esc(m['att_url'])}'\")
-" 2>/dev/null)
+            # Write each field to its own file — avoids ALL parsing issues
+            base = f'/tmp/vern_msg_{i}'
+            open(f'{base}_id', 'w').write(msg_id)
+            open(f'{base}_phone', 'w').write(phone)
+            open(f'{base}_text', 'w').write(text)
+            open(f'{base}_att', 'w').write(att_url)
+            print(f'READY:{i}')
+except Exception as e:
+    print(f'ERROR:{e}', file=sys.stderr)
+" 2>/dev/null | while read -r LINE; do
+        # Each READY:N line means a message is ready to send
+        if [[ "$LINE" == READY:* ]]; then
+            IDX="${LINE#READY:}"
+            MSG_ID=$(cat "/tmp/vern_msg_${IDX}_id" 2>/dev/null)
+            PHONE=$(cat "/tmp/vern_msg_${IDX}_phone" 2>/dev/null)
+            TEXT=$(cat "/tmp/vern_msg_${IDX}_text" 2>/dev/null)
+            ATT_URL=$(cat "/tmp/vern_msg_${IDX}_att" 2>/dev/null)
 
             echo "[$(date '+%H:%M:%S')] Sending to ${PHONE}: ${TEXT:0:60}..."
 
@@ -71,7 +55,7 @@ print(f\"ATT_URL='{esc(m['att_url'])}'\")
 
             # If there's an attachment URL, download and send as file
             if [ -n "$ATT_URL" ]; then
-                echo "[$(date '+%H:%M:%S')] Downloading attachment: ${ATT_URL:0:80}..."
+                echo "[$(date '+%H:%M:%S')] Downloading attachment..."
                 ATT_FILENAME=$(basename "$ATT_URL" | sed 's/?.*//')
                 ATT_PATH="/tmp/vernacular_att_${ATT_FILENAME}"
                 curl -s -o "$ATT_PATH" "$ATT_URL"
@@ -79,35 +63,29 @@ print(f\"ATT_URL='{esc(m['att_url'])}'\")
                 if [ -f "$ATT_PATH" ] && [ -s "$ATT_PATH" ]; then
                     # Send text first if it's not just the placeholder
                     if [ -n "$TEXT" ] && ! echo "$TEXT" | grep -qE '^\[IMAGE|^\[VIDEO|^\[PDF|^\[FILE|^\[AUDIO'; then
-                        osascript -e "
-                            tell application \"Messages\"
-                                set targetService to 1st account whose service type = iMessage
-                                set targetBuddy to participant \"${PHONE}\" of targetService
-                                send \"${TEXT}\" to targetBuddy
-                            end tell
-                        " 2>/dev/null
+                        osascript -e "tell application \"Messages\"
+                            set targetService to 1st account whose service type = iMessage
+                            set targetBuddy to participant \"${PHONE}\" of targetService
+                            send \"${TEXT}\" to targetBuddy
+                        end tell" 2>/dev/null
                         sleep 1
                     fi
 
                     # Send the file
-                    osascript -e "
-                        tell application \"Messages\"
-                            set targetService to 1st account whose service type = iMessage
-                            set targetBuddy to participant \"${PHONE}\" of targetService
-                            send POSIX file \"${ATT_PATH}\" to targetBuddy
-                        end tell
-                    " 2>/dev/null
+                    osascript -e "tell application \"Messages\"
+                        set targetService to 1st account whose service type = iMessage
+                        set targetBuddy to participant \"${PHONE}\" of targetService
+                        send POSIX file \"${ATT_PATH}\" to targetBuddy
+                    end tell" 2>/dev/null
                     SEND_STATUS=$?
                     rm -f "$ATT_PATH"
                 else
                     echo "[$(date '+%H:%M:%S')] Download failed, sending text only"
-                    osascript -e "
-                        tell application \"Messages\"
-                            set targetService to 1st account whose service type = iMessage
-                            set targetBuddy to participant \"${PHONE}\" of targetService
-                            send \"${TEXT}\" to targetBuddy
-                        end tell
-                    " 2>/dev/null
+                    osascript -e "tell application \"Messages\"
+                        set targetService to 1st account whose service type = iMessage
+                        set targetBuddy to participant \"${PHONE}\" of targetService
+                        send \"${TEXT}\" to targetBuddy
+                    end tell" 2>/dev/null
                     SEND_STATUS=$?
                 fi
             # Check if message contains a URL — split into text + link
@@ -116,33 +94,27 @@ print(f\"ATT_URL='{esc(m['att_url'])}'\")
                 TEXT_ONLY=$(echo "$TEXT" | sed "s|$URL||g" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 
                 if [ -n "$TEXT_ONLY" ]; then
-                    osascript -e "
-                        tell application \"Messages\"
-                            set targetService to 1st account whose service type = iMessage
-                            set targetBuddy to participant \"${PHONE}\" of targetService
-                            send \"${TEXT_ONLY}\" to targetBuddy
-                        end tell
-                    " 2>/dev/null
+                    osascript -e "tell application \"Messages\"
+                        set targetService to 1st account whose service type = iMessage
+                        set targetBuddy to participant \"${PHONE}\" of targetService
+                        send \"${TEXT_ONLY}\" to targetBuddy
+                    end tell" 2>/dev/null
                     sleep 1
                 fi
 
-                osascript -e "
-                    tell application \"Messages\"
-                        set targetService to 1st account whose service type = iMessage
-                        set targetBuddy to participant \"${PHONE}\" of targetService
-                        send \"${URL}\" to targetBuddy
-                    end tell
-                " 2>/dev/null
+                osascript -e "tell application \"Messages\"
+                    set targetService to 1st account whose service type = iMessage
+                    set targetBuddy to participant \"${PHONE}\" of targetService
+                    send \"${URL}\" to targetBuddy
+                end tell" 2>/dev/null
                 SEND_STATUS=$?
             else
                 # No URL, no attachment — send as single message
-                osascript -e "
-                    tell application \"Messages\"
-                        set targetService to 1st account whose service type = iMessage
-                        set targetBuddy to participant \"${PHONE}\" of targetService
-                        send \"${TEXT}\" to targetBuddy
-                    end tell
-                " 2>/dev/null
+                osascript -e "tell application \"Messages\"
+                    set targetService to 1st account whose service type = iMessage
+                    set targetBuddy to participant \"${PHONE}\" of targetService
+                    send \"${TEXT}\" to targetBuddy
+                end tell" 2>/dev/null
                 SEND_STATUS=$?
             fi
 
@@ -160,9 +132,10 @@ print(f\"ATT_URL='{esc(m['att_url'])}'\")
                     > /dev/null
             fi
 
-            rm -f "$MSG_FILE"
-        done
-    fi
+            # Clean up temp files
+            rm -f "/tmp/vern_msg_${IDX}_id" "/tmp/vern_msg_${IDX}_phone" "/tmp/vern_msg_${IDX}_text" "/tmp/vern_msg_${IDX}_att"
+        fi
+    done
 
     sleep "$POLL_INTERVAL"
 done
