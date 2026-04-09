@@ -614,6 +614,7 @@ export default function DashboardPage() {
   const [expandedMatrixId, setExpandedMatrixId] = useState<string | null>(null);
   const [stagedContacts, setStagedContacts] = useState<Array<{ name: string; phone: string; firstName: string; initials: string; state?: string }>>([]);
   const [stagedMessages, setStagedMessages] = useState<string[]>([]);
+  const [stagedInitiativeId, setStagedInitiativeId] = useState<string | null>(null);
   const [lastReloadTime, setLastReloadTime] = useState<Date | null>(null);
   const conversationsAutoLoaded = useRef(false);
   const [aiModeEnabled, setAiModeEnabled] = useState(false);
@@ -2784,9 +2785,11 @@ button:active { transform: scale(0.98); }`}</style>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Initiative toggle buttons */}
                 {dbInitiatives.filter(i => !i.parent_id).map(init => {
-                  const isActive = stagedContacts.length > 0 && stagedContacts[0]?.name; // basic check
+                  const isActive = stagedInitiativeId === init.id;
                   return (
                     <button key={init.id} onClick={async () => {
+                      // Toggle off if already active
+                      if (isActive) { setStagedContacts([]); setStagedMessages([]); setStagedInitiativeId(null); return; }
                       const res = await fetch('/api/ai/search-history', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ action: 'initiative_details', query: init.title, orgId: getOrgId() }),
@@ -2806,11 +2809,15 @@ button:active { transform: scale(0.98); }`}</style>
                       }).filter(Boolean) as typeof stagedContacts;
                       setStagedContacts(parsed);
                       setStagedMessages([]);
+                      setStagedInitiativeId(init.id);
                     }} style={{
-                      padding: '8px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                      background: isActive ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)',
-                      color: '#fff', fontSize: 13, fontWeight: 700,
-                      transition: 'all 0.15s',
+                      padding: '10px 22px', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 700,
+                      background: isActive ? '#378ADD' : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      border: isActive ? '2px solid #60A5FA' : '2px solid transparent',
+                      boxShadow: isActive ? '0 0 16px rgba(55,138,221,0.4), inset 0 0 20px rgba(55,138,221,0.1)' : 'none',
+                      transition: 'all 0.2s',
+                      transform: isActive ? 'scale(1.05)' : 'scale(1)',
                     }}>
                       {init.title}
                     </button>
@@ -2851,11 +2858,12 @@ button:active { transform: scale(0.98); }`}</style>
                         alert(`Launched! ${stagedContacts.length * stagedMessages.length} messages queued.`);
                         setStagedContacts([]);
                         setStagedMessages([]);
+                        setStagedInitiativeId(null);
                       }} style={{ padding: '8px 20px', borderRadius: 10, border: 'none', background: '#EF4444', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', animation: 'nasaPulse 2s ease-in-out infinite', letterSpacing: '0.05em' }}>
                         🚀 LAUNCH
                       </button>
                     )}
-                    <button onClick={() => { setStagedContacts([]); setStagedMessages([]); }} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => { setStagedContacts([]); setStagedMessages([]); setStagedInitiativeId(null); }} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                       Clear
                     </button>
                   </>
