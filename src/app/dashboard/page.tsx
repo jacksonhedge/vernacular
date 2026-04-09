@@ -1351,9 +1351,21 @@ button:active { transform: scale(0.98); }`}</style>
   // to avoid temporal dead zone and hook ordering issues
 
   // Format time
+  const parseTimestamp = (ts: string): Date => {
+    // Supabase returns "2026-04-08 23:31:44.798384+00" — normalize for Date()
+    const normalized = ts.replace(' ', 'T').replace(/\+(\d{2})$/, '+$1:00');
+    return new Date(normalized);
+  };
+
+  const fmtMsgTime = (ts: string): string => {
+    if (!ts) return '';
+    const d = parseTimestamp(ts);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseTimestamp(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -2968,8 +2980,8 @@ button:active { transform: scale(0.98); }`}</style>
                     };
                     const pDiff = getPriority(a) - getPriority(b);
                     if (pDiff !== 0) return pDiff;
-                    const aTime = a.messages.length > 0 ? new Date(a.messages[a.messages.length - 1].timestamp || 0).getTime() : 0;
-                    const bTime = b.messages.length > 0 ? new Date(b.messages[b.messages.length - 1].timestamp || 0).getTime() : 0;
+                    const aTime = a.messages.length > 0 ? parseTimestamp(a.messages[a.messages.length - 1].timestamp || '0').getTime() : 0;
+                    const bTime = b.messages.length > 0 ? parseTimestamp(b.messages[b.messages.length - 1].timestamp || '0').getTime() : 0;
                     return bTime - aTime;
                   });
                 const MAX_SLOTS = 12;
@@ -3219,10 +3231,7 @@ button:active { transform: scale(0.98); }`}</style>
                         fontSize: 11, color: '#8e8e93', fontFamily: "'Inter', sans-serif",
                         whiteSpace: 'nowrap',
                       }}>
-                        {lastMsg?.timestamp ? (() => {
-                          const d = new Date(lastMsg.timestamp);
-                          return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                        })() : ''}
+                        {fmtMsgTime(lastMsg?.timestamp || '')}
                       </span>
                       {hasUnread && !readConversations.has(col.id) && (
                         <div style={{
@@ -3401,7 +3410,7 @@ button:active { transform: scale(0.98); }`}</style>
         {(() => {
           // Sort: pinned always first, then by selected mode
           const getLastMsgTime = (col: ConversationColumn) =>
-            col.messages.length > 0 ? new Date(col.messages[col.messages.length - 1].timestamp || 0).getTime() : 0;
+            col.messages.length > 0 ? parseTimestamp(col.messages[col.messages.length - 1].timestamp || '0').getTime() : 0;
           const sorted = [...columns].sort((a, b) => {
             const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
@@ -3761,7 +3770,7 @@ button:active { transform: scale(0.98); }`}</style>
                 const visibleMsgs = col.messages.filter(m => !(m.isAIDraft && col.aiMode === 'off') && (showHiddenMessages || !hiddenMessages.has(m.id)));
                 // Helper: format date separator like iMessage
                 const formatDateSep = (dateStr: string) => {
-                  const d = new Date(dateStr);
+                  const d = parseTimestamp(dateStr);
                   if (isNaN(d.getTime())) return null;
                   const now = new Date();
                   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -3786,7 +3795,7 @@ button:active { transform: scale(0.98); }`}</style>
                 const showTime = (() => {
                   if (!msg.timestamp) return false;
                   if (!prevMsg?.timestamp) return true;
-                  const gap = Math.abs(new Date(msg.timestamp).getTime() - new Date(prevMsg.timestamp).getTime());
+                  const gap = Math.abs(parseTimestamp(msg.timestamp).getTime() - parseTimestamp(prevMsg.timestamp).getTime());
                   return gap > 10 * 60 * 1000; // 10 minutes
                 })();
 
@@ -3823,7 +3832,7 @@ button:active { transform: scale(0.98); }`}</style>
                       </div>
                       {showTimestamps && msg.timestamp && (
                         <span style={{ fontSize: 10, color: '#c4c4c6', marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
-                          {(() => { const d = new Date(msg.timestamp); return isNaN(d.getTime()) ? msg.timestamp : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); })()}
+                          {fmtMsgTime(msg.timestamp)}
                         </span>
                       )}
                     </div>
@@ -3843,7 +3852,7 @@ button:active { transform: scale(0.98); }`}</style>
                     {showTime && msg.timestamp && (
                       <div style={{ textAlign: 'center', padding: '4px 0 2px' }}>
                         <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
-                          {(() => { const d = new Date(msg.timestamp); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); })()}
+                          {fmtMsgTime(msg.timestamp)}
                         </span>
                       </div>
                     )}
@@ -8648,7 +8657,7 @@ ${contacts.length > 30 ? `... and ${contacts.length - 30} more` : ''}
 OPEN CONVERSATIONS (real data — you CAN see all of this):
 ${allConversations.filter(c => c.messages.length > 0).slice(0, 15).map(c => {
   const lastMsg = c.messages[c.messages.length - 1];
-  const ts = lastMsg?.timestamp ? new Date(lastMsg.timestamp) : null;
+  const ts = lastMsg?.timestamp ? parseTimestamp(lastMsg.timestamp) : null;
   const timeStr = ts && !isNaN(ts.getTime()) ? ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : 'recently';
   return `- ${c.contact?.name || 'Unknown'} (${c.contact?.phone || '?'}) — ${c.messages.length} msgs | AI: ${c.aiMode || 'off'} | Goal: ${c.goal || 'none'} | Last: "${lastMsg?.text?.substring(0, 40) || ''}" (${lastMsg?.direction || '?'}, ${timeStr} ET)`;
 }).join('\n')}
