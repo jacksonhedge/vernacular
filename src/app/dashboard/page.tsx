@@ -189,7 +189,7 @@ const NAV_ITEMS: { label: string; tab: NavTab; icon: React.ReactNode; color?: st
     ),
   },
   {
-    label: 'AI Responder',
+    label: 'Initiatives',
     tab: 'ai-drafts',
     color: '#D97706',
     icon: (
@@ -9547,7 +9547,7 @@ PLATFORM KNOWLEDGE (from craig/*.md files):
 ${craigKnowledge || 'No global knowledge loaded.'}
 
 CLIENT-SPECIFIC KNOWLEDGE (for ${(org?.name as string) || 'this org'} only):
-${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → Initiatives → Knowledge Base.'}`,
+${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Initiatives → Knowledge Base.'}`,
                         }),
                       });
                       const data = await res.json();
@@ -9705,7 +9705,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via AI Responder → In
                               content: `Type: ${type.trim()}\nDescription: ${desc.trim()}\nInstructions: ${instructions.trim()}\nGoal: ${goal?.trim() || ''}${app ? `\nApp: ${app.trim()}` : ''}${link ? `\nLink: ${link.trim()}` : ''}${states ? `\nStates: ${states.trim()}` : ''}`,
                               category: 'initiative',
                             });
-                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${name.trim()}" created! View it in AI Responder.` }]);
+                            setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: `✅ Initiative "${name.trim()}" created! View it in Initiatives.` }]);
                           }
                         }
                       }
