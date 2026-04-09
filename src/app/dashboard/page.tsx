@@ -4066,8 +4066,8 @@ button:active { transform: scale(0.98); }`}</style>
                       boxShadow: (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
                       position: 'relative',
                     }}>
-                      {/* AI tag on AI-sent outgoing messages */}
-                      {msg.direction === 'outgoing' && !msg.isAIDraft && msg.id.startsWith('sent-') && (
+                      {/* AI tag on AI-sent outgoing messages — only if source_system is vernacular-ai */}
+                      {msg.direction === 'outgoing' && !msg.isAIDraft && msg.id.startsWith('ai-sent-') && (
                         <span style={{
                           position: 'absolute', top: -6, right: 6,
                           fontSize: 8, fontWeight: 800, color: '#fff',
@@ -4123,7 +4123,7 @@ button:active { transform: scale(0.98); }`}</style>
                             });
                             // Replace draft with sent message
                             setColumns(prev => prev.map(c => c.id === col.id ? {
-                              ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, isAIDraft: false, id: `sent-${Date.now()}` } : m),
+                              ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, isAIDraft: false, id: `ai-sent-${Date.now()}` } : m),
                             } : c));
                           }
                         }} style={{
