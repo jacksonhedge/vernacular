@@ -1418,7 +1418,10 @@ button:active { transform: scale(0.98); }`}</style>
   // Format time
   const parseTimestamp = (ts: string): Date => {
     // Supabase returns "2026-04-08 23:31:44.798384+00" — normalize for Date()
-    const normalized = ts.replace(' ', 'T').replace(/\+(\d{2})$/, '+$1:00');
+    const normalized = ts
+      .replace(' ', 'T')                      // space → T
+      .replace(/(\.\d{3})\d+/, '$1')          // truncate microseconds to ms
+      .replace(/\+(\d{2})$/, '+$1:00');       // +00 → +00:00
     return new Date(normalized);
   };
 
@@ -4075,7 +4078,7 @@ button:active { transform: scale(0.98); }`}</style>
                       paddingRight: msg.direction === 'outgoing' ? 4 : 0,
                     }}>
                       {showTimestamps && msg.timestamp && (
-                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{msg.timestamp}</span>
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{fmtMsgTime(msg.timestamp)}</span>
                       )}
                       {isLastOutgoing && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isRecent ? '#7C3AED' : '#8e8e93' }}>
