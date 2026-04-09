@@ -10190,23 +10190,24 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                             isAIDraft: true,
                           };
 
-                          // Find or create the conversation column
+                          // Find or create the conversation column (use callback for fresh state)
                           const phoneDigits = phone.replace(/\D/g, '').slice(-10);
-                          const existingCol = columns.find(c => c.contact?.phone?.replace(/\D/g, '').slice(-10) === phoneDigits);
-
-                          if (existingCol) {
-                            // Add draft to existing conversation
-                            setColumns(prev => prev.map(c => c.id === existingCol.id ? { ...c, messages: [...c.messages, draftMsg] } : c));
-                          } else {
-                            // Create new conversation column with the draft
-                            const newCol: ConversationColumn = {
-                              id: `draft-col-${phoneDigits}`,
-                              contact: { id: `c-${phoneDigits}`, name, initials: name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2), tag: 'UNREAD', tagColor: '#F59E0B', tagBg: 'rgba(245,158,11,0.1)', phone },
-                              messages: [draftMsg],
-                              aiMode: 'off', goal: '', channel: 'imessage',
-                            };
-                            setColumns(prev => [newCol, ...prev]);
-                          }
+                          setColumns(prev => {
+                            const existingIdx = prev.findIndex(c => c.contact?.phone?.replace(/\D/g, '').slice(-10) === phoneDigits);
+                            if (existingIdx >= 0) {
+                              // Add draft to existing conversation
+                              return prev.map((c, idx) => idx === existingIdx ? { ...c, messages: [...c.messages, draftMsg] } : c);
+                            } else {
+                              // Create new conversation column with the draft
+                              const newCol: ConversationColumn = {
+                                id: `draft-col-${phoneDigits}`,
+                                contact: { id: `c-${phoneDigits}`, name, initials: name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2), tag: 'UNREAD', tagColor: '#F59E0B', tagBg: 'rgba(245,158,11,0.1)', phone },
+                                messages: [draftMsg],
+                                aiMode: 'off', goal: '', channel: 'imessage',
+                              };
+                              return [newCol, ...prev];
+                            }
+                          });
 
                           // Store phone for the draft so Approve can use it
                           draftMsg.id = `ai-draft-${phoneDigits}-${Date.now()}`;
