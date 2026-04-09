@@ -464,15 +464,19 @@ export default function DashboardPage() {
   }, [user, activeTab]);
 
   // Load contacts for selected initiative (via service-role API to bypass RLS on contacts)
+  const [loadingInitContacts, setLoadingInitContacts] = useState(false);
   useEffect(() => {
     if (!selectedInitiative || selectedInitiative === 'new') { setInitiativeContacts([]); return; }
     if (!/^[0-9a-f-]{36}$/.test(selectedInitiative)) { setInitiativeContacts([]); return; }
+    setLoadingInitContacts(true);
     fetch(`/api/contacts/by-initiative?initiativeId=${selectedInitiative}`)
       .then(r => r.json())
       .then(data => {
+        console.log('[initiative contacts]', selectedInitiative, data.count, 'contacts loaded');
         if (data.contacts) setInitiativeContacts(data.contacts);
+        setLoadingInitContacts(false);
       })
-      .catch(() => {});
+      .catch(err => { console.error('[initiative contacts] fetch failed:', err); setLoadingInitContacts(false); });
   }, [selectedInitiative]);
 
   // Load Craig's knowledge: global .md files + org-specific from DB
@@ -8133,7 +8137,11 @@ button:active { transform: scale(0.98); }`}</style>
                       }} style={{ padding: '5px 12px', borderRadius: 6, background: '#378ADD', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>+ Add Contact</button>
                     </div>
                   </div>
-                  {initiativeContacts.length === 0 ? (
+                  {loadingInitContacts ? (
+                    <div style={{ padding: 30, textAlign: 'center', color: '#8e8e93', background: '#f8f9fa', borderRadius: 10, fontSize: 13 }}>
+                      Loading contacts...
+                    </div>
+                  ) : initiativeContacts.length === 0 ? (
                     <div style={{ padding: 30, textAlign: 'center', color: '#8e8e93', background: '#f8f9fa', borderRadius: 10, fontSize: 13 }}>
                       No contacts linked to this initiative yet.
                     </div>
