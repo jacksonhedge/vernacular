@@ -429,7 +429,7 @@ export default function DashboardPage() {
   const [aiCopilotInput, setAiCopilotInput] = useState('');
   const [aiCopilotLoading, setAiCopilotLoading] = useState(false);
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
-  const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('haiku');
+  const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('sonnet');
   const [craigNavigating, setCraigNavigating] = useState(false);
   const [selectedInitiative, setSelectedInitiative] = useState<string | null>(null);
   const [initiativeContacts, setInitiativeContacts] = useState<Array<{ id: string; full_name: string; phone: string; email: string; state: string; greek_org: string; apps_used: string; device_types: string; ambassador_interest: string }>>([]);
