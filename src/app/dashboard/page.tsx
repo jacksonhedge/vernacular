@@ -4470,8 +4470,10 @@ button:active { transform: scale(0.98); }`}</style>
                           boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
                           transition: 'all 0.1s',
                         }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(34,197,94,0.5)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.3)'; }}
                         onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
-                        onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        onMouseUp={e => { e.currentTarget.style.transform = 'scale(1.08)'; }}
                         >✓ Send</button>
                         <button onClick={() => {
                           // Use but Edit — put text in input for editing
