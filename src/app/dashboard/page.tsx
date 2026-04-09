@@ -839,7 +839,7 @@ export default function DashboardPage() {
               phone: (contact.phone as string) || '',
             },
             conversationId: conv.conversationId as string,
-            aiMode: (conv.aiMode as string) || 'off',
+            aiMode: (conv.aiMode as string) || 'draft',
             goal: (conv.goal as string) || '',
             messages: (messages || []).map((m: Record<string, unknown>) => ({
               id: m.id as string,
@@ -928,7 +928,7 @@ export default function DashboardPage() {
                 return {
                   id: `real-${conv.conversationId}`,
                   conversationId: conv.conversationId as string,
-                  aiMode: (conv.aiMode as string) || 'off',
+                  aiMode: (conv.aiMode as string) || 'draft',
                   goal: (conv.goal as string) || '',
                   contact: {
                     id: (contact.id as string) || '',
@@ -4444,10 +4444,14 @@ button:active { transform: scale(0.98); }`}</style>
                     </div>
                     {/* AI Draft action buttons */}
                     {msg.isAIDraft && (
-                      <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
-                        <button onClick={async () => {
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={async (e) => {
+                          const btn = e.currentTarget;
+                          btn.textContent = '⏳ Sending...';
+                          btn.style.background = '#D97706';
+                          btn.style.pointerEvents = 'none';
+                          btn.style.transform = 'scale(0.95)';
                           playSound('send');
-                          // Approve — send as-is
                           const phone = col.contact?.phone;
                           const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
                           if (phone) {
@@ -4455,16 +4459,20 @@ button:active { transform: scale(0.98); }`}</style>
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
                             });
-                            // Replace draft with sent message
                             setColumns(prev => prev.map(c => c.id === col.id ? {
                               ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, isAIDraft: false, id: `ai-sent-${Date.now()}` } : m),
                             } : c));
                           }
                         }} style={{
-                          padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                          background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700,
+                          padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                          background: '#22C55E', color: '#fff', fontSize: 13, fontWeight: 800,
                           fontFamily: "'Inter', sans-serif",
-                        }}>Approve</button>
+                          boxShadow: '0 2px 8px rgba(34,197,94,0.3)',
+                          transition: 'all 0.1s',
+                        }}
+                        onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.93)'; }}
+                        onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        >✓ Send</button>
                         <button onClick={() => {
                           // Use but Edit — put text in input for editing
                           setInputValues(prev => ({ ...prev, [col.id]: msg.text }));

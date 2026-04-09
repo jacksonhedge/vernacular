@@ -172,7 +172,8 @@ export async function GET() {
           .eq('id', convId)
           .single();
 
-        if (conv && (conv.ai_mode === 'draft' || conv.ai_mode === 'auto')) {
+        // AI auto-respond is PAUSED — only trigger if explicitly set to 'auto' (not draft)
+        if (conv && conv.ai_mode === 'auto') {
           const { data: history } = await supabase
             .from('messages')
             .select('direction, message')
