@@ -4053,7 +4053,7 @@ button:active { transform: scale(0.98); }`}</style>
                       fontSize: 13, lineHeight: 1.5, fontWeight: 400,
                       border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.id.startsWith('failed-') ? '2px solid rgba(220,38,38,0.4)' : (isLastOutgoing && isRecent) ? '2px solid rgba(124,58,237,0.5)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
                       boxShadow: msg.id.startsWith('failed-') ? '0 0 8px rgba(220,38,38,0.2)' : (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
-                      opacity: msg.id.startsWith('m-') ? 0.7 : msg.id.startsWith('failed-') ? 0.8 : 1,
+                      opacity: msg.id.startsWith('failed-') ? 0.8 : 1,
                       position: 'relative',
                     }}>
                       {/* AI tag on AI-sent outgoing messages — only if source_system is vernacular-ai */}
@@ -4202,31 +4202,7 @@ button:active { transform: scale(0.98); }`}</style>
                             Not Delivered
                           </span>
                         );
-                        if (s === 'queued' || msg.id.startsWith('m-')) return (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#D97706' }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            Queued
-                          </span>
-                        );
-                        if (s === 'sending') return (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#2563EB' }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                            Sending
-                          </span>
-                        );
-                        if (s === 'sent') return (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#8e8e93' }}>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            Sent
-                          </span>
-                        );
-                        if (s === 'delivered') return (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#22C55E' }}>
-                            <svg width="12" height="10" viewBox="0 0 28 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round"><polyline points="14 6 7 17 2 12"/><polyline points="24 6 13 17 10 14"/></svg>
-                            Delivered
-                          </span>
-                        );
-                        // Default — show delivered for older messages
+                        // Default — show Delivered for everything else
                         return (
                           <span style={{ fontSize: 10, color: '#8e8e93' }}>Delivered</span>
                         );
