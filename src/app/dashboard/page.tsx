@@ -463,24 +463,17 @@ export default function DashboardPage() {
       });
   }, [user, activeTab]);
 
-  // Load contacts for selected initiative
+  // Load contacts for selected initiative (via service-role API to bypass RLS on contacts)
   useEffect(() => {
     if (!selectedInitiative || selectedInitiative === 'new') { setInitiativeContacts([]); return; }
-    // Check if this is a DB initiative (UUID format) or a hardcoded default
     if (!/^[0-9a-f-]{36}$/.test(selectedInitiative)) { setInitiativeContacts([]); return; }
-    supabase.from('initiative_contacts')
-      .select('contact_id, contacts(id, full_name, phone, email, state, greek_org, apps_used, device_types, ambassador_interest)')
-      .eq('initiative_id', selectedInitiative)
-      .limit(500)
-      .then(({ data }) => {
-        if (data) {
-          const mapped = data
-            .map((row: Record<string, unknown>) => row.contacts as typeof initiativeContacts[0])
-            .filter(Boolean);
-          setInitiativeContacts(mapped);
-        }
-      });
-  }, [selectedInitiative]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetch(`/api/contacts/by-initiative?initiativeId=${selectedInitiative}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.contacts) setInitiativeContacts(data.contacts);
+      })
+      .catch(() => {});
+  }, [selectedInitiative]);
 
   // Load Craig's knowledge: global .md files + org-specific from DB
   useEffect(() => {
