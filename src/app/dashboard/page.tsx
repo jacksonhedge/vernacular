@@ -2654,6 +2654,8 @@ button:active { transform: scale(0.98); }`}</style>
           const fullName = (contactRecord as unknown as Record<string, string>)?.full_name || col.contact!.name;
           const state = (contactRecord as unknown as Record<string, string>)?.state || '';
           const greekOrg = (contactRecord as unknown as Record<string, string>)?.greek_org || '';
+          const dob = (contactRecord as unknown as Record<string, string>)?.dob || '';
+          const age = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86400000)) : null;
           const isPhone = fullName.startsWith('+') || fullName.startsWith('(') || fullName.match(/^\d/);
           const initials = isPhone
             ? fullName.replace(/\D/g, '').slice(-4)
@@ -2666,7 +2668,7 @@ button:active { transform: scale(0.98); }`}</style>
           return {
             id: col.id, text: lastMsg?.text || '', name: fullName, initials,
             phone: col.contact!.phone || '', direction: lastMsg?.direction || 'outgoing',
-            status: tileStatus, colId: col.id, aiMode: col.aiMode || 'off',
+            status: tileStatus, colId: col.id, aiMode: col.aiMode || 'off', age,
             timestamp: lastMsg?.timestamp || '', state, greekOrg, msgCount: col.messages.length,
           };
         });
@@ -2901,7 +2903,7 @@ button:active { transform: scale(0.98); }`}</style>
                       {tile.direction === 'incoming' ? '↙' : '↗'}
                     </span>
                     {/* Top-right: greek org logo or state */}
-                    <span style={{ position: 'absolute', top: 3, right: 4, fontSize: tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' ? 8 : 9, fontWeight: 800, opacity: 0.85, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em', background: 'rgba(0,0,0,0.2)', padding: '1px 4px', borderRadius: 3 }}>
+                    <span style={{ position: 'absolute', top: 3, right: 4, fontSize: 12, fontWeight: 900, opacity: 0.95, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.02em', background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 4, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                       {tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' && tile.greekOrg !== 'n/a'
                         ? (tile.greekOrg.toLowerCase().includes('sigma chi') ? 'ΣΧ' :
                            tile.greekOrg.toLowerCase().includes('chi phi') ? 'ΧΦ' :
@@ -2918,10 +2920,12 @@ button:active { transform: scale(0.98); }`}</style>
                     <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 10, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
                       {tile.msgCount}
                     </span>
-                    {/* Bottom-right: greek org or AI */}
-                    <span style={{ position: 'absolute', bottom: 3, right: 5, fontSize: 9, fontWeight: 800, opacity: 0.8 }}>
-                      {tile.status === 'draft' ? 'AI' : tile.greekOrg && tile.greekOrg !== 'None' && tile.greekOrg !== 'NA' ? tile.greekOrg.slice(0, 4) : ''}
-                    </span>
+                    {/* Bottom-right: age */}
+                    {tile.age && tile.age > 0 && tile.age < 100 && (
+                      <span style={{ position: 'absolute', bottom: 3, right: 5, fontSize: 11, fontWeight: 800, opacity: 0.8, fontFamily: "'JetBrains Mono', monospace" }}>
+                        {tile.age}
+                      </span>
+                    )}
                     {/* Center: big name or initials */}
                     <span style={{
                       fontSize: tile.name.split(' ')[0].length > 6 ? 22 : 27,
