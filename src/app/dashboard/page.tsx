@@ -2637,311 +2637,158 @@ button:active { transform: scale(0.98); }`}</style>
 
       {/* Matrix View — Icon Rail + Dot Grid + Collapsible Threads */}
       {conversationViewMode === 'matrix' && (() => {
-        // Build conversation items from columns + notion
-        const matrixItems = [
-          ...columns.filter(col => col.contact).map(col => {
-            const lastMsg = col.messages[col.messages.length - 1] || null;
-            const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
-            const hasAiDraft = lastMsg?.isAIDraft;
-            const msgCount = col.messages.length;
-            return {
-              id: col.id,
-              name: col.contact!.name,
-              initials: col.contact!.initials,
-              phone: col.contact!.phone || '',
-              messages: col.messages,
-              hasUnread,
-              hasAiDraft: !!hasAiDraft,
-              msgCount,
-              lastMsg,
-              status: hasUnread ? 'unread' as const : hasAiDraft ? 'draft' as const : 'read' as const,
-            };
-          }),
-          ...notionConversations.filter(nc => !columns.some(col => col.contact?.name === nc.name)).map(nc => ({
-            id: `notion-${nc.pageId}`,
-            name: nc.name,
-            initials: nc.initials,
-            phone: nc.phone || '',
-            messages: [] as Message[],
-            hasUnread: false,
-            hasAiDraft: false,
-            msgCount: nc.messageCount || 0,
-            lastMsg: null as Message | null,
-            lastMessageText: nc.lastMessage || `${nc.messageCount || 0} messages`,
-            status: ((nc.status || '').toLowerCase() === 'onboarded' ? 'read' : 'unread') as 'unread' | 'draft' | 'read',
-          })),
-        ];
+        // Build all message tiles from all conversations
+        const allTiles: Array<{ id: string; text: string; name: string; phone: string; direction: string; status: string; colId: string; timestamp: string }> = [];
+        columns.filter(col => col.contact).forEach(col => {
+          col.messages.forEach(msg => {
+            allTiles.push({
+              id: msg.id, text: msg.text, name: col.contact!.name, phone: col.contact!.phone || '',
+              direction: msg.direction, status: (msg.status || (msg.direction === 'incoming' ? 'received' : 'sent')).toLowerCase(),
+              colId: col.id, timestamp: msg.timestamp,
+            });
+          });
+        });
+        // Sort by timestamp descending (newest first)
+        allTiles.sort((a, b) => {
+          const aT = a.timestamp ? parseTimestamp(a.timestamp).getTime() : 0;
+          const bT = b.timestamp ? parseTimestamp(b.timestamp).getTime() : 0;
+          return bT - aT;
+        });
 
-        const getStatusColor = (status: string) => {
-          switch (status) {
-            case 'unread': return '#22C55E';
-            case 'draft': return '#F59E0B';
-            default: return 'rgba(255,255,255,0.15)';
-          }
+        const tileColor = (status: string, direction: string) => {
+          if (status === 'failed') return { bg: '#DC2626', glow: '0 0 12px rgba(220,38,38,0.6)', text: '#fff' };
+          if (status === 'queued') return { bg: '#F59E0B', glow: '0 0 12px rgba(245,158,11,0.6)', text: '#fff' };
+          if (status === 'sending') return { bg: '#3B82F6', glow: '0 0 12px rgba(59,130,246,0.6)', text: '#fff' };
+          if (status === 'draft') return { bg: '#F59E0B', glow: '0 0 10px rgba(245,158,11,0.5)', text: '#92400E' };
+          if (direction === 'incoming') return { bg: '#22C55E', glow: '0 0 10px rgba(34,197,94,0.5)', text: '#fff' };
+          return { bg: '#7C3AED', glow: '0 0 8px rgba(124,58,237,0.4)', text: '#fff' }; // sent/delivered
         };
 
-        const getStatusBorder = (status: string) => {
-          switch (status) {
-            case 'unread': return '2px solid #22C55E';
-            case 'draft': return '2px solid #F59E0B';
-            default: return '2px solid rgba(255,255,255,0.08)';
-          }
-        };
-
-        // Build dot grid data — 7 columns, fill rows
-        const DOT_COLS = 7;
-        const dotRows = Math.max(Math.ceil(matrixItems.length / DOT_COLS), 8);
+        const COLS = Math.min(12, Math.ceil(Math.sqrt(allTiles.length)));
 
         return (
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-            {/* Icon Rail */}
+          <div style={{
+            flex: 1, overflow: 'auto', background: '#0a0a1a', position: 'relative',
+          }}>
+            {/* Disco background effect */}
+            <style>{`
+              @keyframes discoShift { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+              @keyframes tileGlow { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+              .disco-tile:hover { transform: scale(1.15) !important; z-index: 10 !important; }
+            `}</style>
+
+            {/* Header */}
+            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+                  Message Matrix
+                </h2>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
+                  {allTiles.length} messages across {columns.filter(c => c.contact).length} conversations
+                </span>
+              </div>
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 16 }}>
+                {[
+                  { label: 'Inbound', color: '#22C55E' },
+                  { label: 'Sent', color: '#7C3AED' },
+                  { label: 'Queued', color: '#F59E0B' },
+                  { label: 'Sending', color: '#3B82F6' },
+                  { label: 'Failed', color: '#DC2626' },
+                ].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color, boxShadow: `0 0 8px ${l.color}60` }} />
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Disco Floor Grid */}
             <div style={{
-              width: 72, minWidth: 72, background: '#1a1a2e', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', padding: '12px 0', overflowY: 'auto', gap: 6,
-              borderRight: '1px solid rgba(255,255,255,0.06)',
+              display: 'grid',
+              gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+              gap: 3,
+              padding: '0 24px 24px',
+              position: 'relative',
             }}>
-              {(() => {
-                const fruits = ['🍒', '🍓', '🍊', '🍎', '🍇', '🍈', '🔔', '🍋', '🍑', '🍍'];
-                return matrixItems.map((item, idx) => (
-                <button key={item.id} onClick={() => setExpandedMatrixId(expandedMatrixId === item.id ? null : item.id)} style={{
-                  width: 48, height: 48, borderRadius: 12, border: getStatusBorder(item.status),
-                  background: expandedMatrixId === item.id ? 'rgba(55,138,221,0.25)' : 'rgba(255,255,255,0.05)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  position: 'relative', transition: 'all 0.2s', flexShrink: 0,
-                  color: '#fff', fontSize: 20, fontWeight: 700,
-                }} title={`${item.name} — ${item.phone}`}>
-                  {fruits[idx % fruits.length]}
-                  {item.hasUnread && (
-                    <div style={{
-                      position: 'absolute', top: -2, right: -2,
-                      width: 10, height: 10, borderRadius: 5,
-                      background: '#EF4444', border: '2px solid #1a1a2e',
-                    }} />
-                  )}
-                </button>
-              ));
-              })()}
-              {/* Add new */}
-              <button onClick={addColumn} style={{
-                width: 48, height: 48, borderRadius: 12, border: '2px dashed rgba(255,255,255,0.15)',
-                background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: 'rgba(255,255,255,0.3)', fontSize: 20, flexShrink: 0,
-              }}>+</button>
-            </div>
-
-            {/* Main Content Area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8f9fa' }}>
-              {/* Dot Grid Header */}
+              {/* Center logo overlay */}
               <div style={{
-                background: '#16162a', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                zIndex: 5, pointerEvents: 'none', opacity: 0.08,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Conversation Matrix
-                  </span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
-                    {matrixItems.length} conversations
-                  </span>
-                  {/* Legend */}
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 14 }}>
-                    {[
-                      { label: 'Needs Reply', color: '#22C55E' },
-                      { label: 'AI Draft', color: '#F59E0B' },
-                      { label: 'Quiet', color: 'rgba(255,255,255,0.2)' },
-                    ].map(l => (
-                      <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 4, background: l.color, boxShadow: `0 0 6px ${l.color}40` }} />
-                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>{l.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Dot Grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${DOT_COLS}, 1fr)`,
-                  gap: '10px 16px',
-                  maxWidth: 300,
-                }}>
-                  {Array.from({ length: dotRows * DOT_COLS }).map((_, idx) => {
-                    const item = matrixItems[idx];
-                    const dotColor = item ? getStatusColor(item.status) : 'rgba(255,255,255,0.06)';
-                    const dotSize = item
-                      ? item.status === 'unread' ? 10 : item.status === 'draft' ? 8 : 5
-                      : 3;
-                    const isExpanded = item && expandedMatrixId === item.id;
-                    return (
-                      <button key={idx} onClick={() => {
-                        if (item) setExpandedMatrixId(expandedMatrixId === item.id ? null : item.id);
-                      }} style={{
-                        width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'none', border: 'none', cursor: item ? 'pointer' : 'default', padding: 0,
-                      }}
-                        title={item ? `${item.name} — ${item.msgCount} msgs` : ''}
-                      >
-                        <div style={{
-                          width: dotSize, height: dotSize, borderRadius: dotSize / 2,
-                          background: dotColor,
-                          boxShadow: item && item.status !== 'read' ? `0 0 ${dotSize}px ${dotColor}60` : 'none',
-                          transition: 'all 0.2s',
-                          outline: isExpanded ? `2px solid ${dotColor}` : 'none',
-                          outlineOffset: 3,
-                        }} />
-                      </button>
-                    );
-                  })}
-                </div>
+                <img src="/logo.png" alt="" style={{ width: 120, height: 120, borderRadius: 24 }} />
               </div>
 
-              {/* Thread Area — Collapsible Conversation List */}
-              <div style={{ flex: 1, overflow: 'auto', padding: '0' }}>
-                {matrixItems.map(item => {
-                  const isExpanded = expandedMatrixId === item.id;
-                  const borderColor = getStatusColor(item.status);
-                  return (
-                    <div key={item.id}>
-                      {/* Conversation Row Header */}
-                      <button onClick={() => setExpandedMatrixId(isExpanded ? null : item.id)} style={{
-                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '12px 24px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                        background: isExpanded ? 'rgba(55,138,221,0.04)' : '#fff',
-                        borderBottom: '1px solid rgba(0,0,0,0.04)',
-                        borderLeft: `3px solid ${borderColor}`,
-                        transition: 'all 0.15s',
-                      }}>
-                        <div style={{
-                          width: 36, height: 36, borderRadius: 10,
-                          background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {(() => { const f = ['🍒','🍓','🍊','🍎','🍇','🍈','🔔','🍋','🍑','🍍']; return f[Math.max(0, matrixItems.findIndex(m => m.id === item.id)) % f.length]; })()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#1c1c1e', fontFamily: "'Inter', sans-serif" }}>
-                            {item.name}
-                          </div>
-                          <div style={{
-                            fontSize: 12, color: '#8e8e93', overflow: 'hidden', textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap', fontFamily: "'Inter', sans-serif", marginTop: 1,
-                          }}>
-                            {item.lastMsg?.text || (item.messages.length > 0 ? item.messages[item.messages.length - 1]?.text : 'No messages')}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                          {item.phone && (
-                            <span style={{ fontSize: 11, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace" }}>
-                              {item.phone}
-                            </span>
-                          )}
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, color: '#8e8e93',
-                            background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: 4,
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}>
-                            {item.msgCount}
-                          </span>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2.5" strokeLinecap="round"
-                            style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
-                        </div>
-                      </button>
-
-                      {/* Expanded Thread */}
-                      {isExpanded && (
-                        <div style={{
-                          background: '#f8f9fa', borderBottom: '2px solid rgba(55,138,221,0.15)',
-                          borderLeft: `3px solid ${borderColor}`,
-                        }}>
-                          <div style={{ padding: '16px 24px 8px', maxHeight: 400, overflow: 'auto' }}>
-                            {item.messages.map((msg, msgIdx) => (
-                              <div key={msg.id || msgIdx} style={{
-                                display: 'flex', gap: 10, marginBottom: 10,
-                                flexDirection: msg.direction === 'outgoing' ? 'row-reverse' : 'row',
-                              }}>
-                                {/* Avatar */}
-                                <div style={{
-                                  width: 28, height: 28, borderRadius: 14, flexShrink: 0,
-                                  background: msg.direction === 'outgoing'
-                                    ? 'linear-gradient(135deg, #378ADD, #2B6CB0)'
-                                    : 'linear-gradient(135deg, #e5e7eb, #d1d5db)',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  color: msg.direction === 'outgoing' ? '#fff' : '#666',
-                                  fontSize: 10, fontWeight: 700,
-                                }}>
-                                  {msg.direction === 'outgoing' ? 'You' : (() => { const f = ['🍒','🍓','🍊','🍎','🍇','🍈','🔔','🍋','🍑','🍍']; return f[Math.max(0, matrixItems.findIndex(m => m.id === item.id)) % f.length]; })()}
-                                </div>
-                                {/* Bubble */}
-                                <div style={{
-                                  maxWidth: '70%',
-                                  padding: '8px 14px',
-                                  borderRadius: msg.direction === 'outgoing' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                  background: msg.isAIDraft
-                                    ? 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.06))'
-                                    : msg.direction === 'outgoing' ? '#378ADD' : '#fff',
-                                  color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
-                                  fontSize: 13, lineHeight: 1.5,
-                                  border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                                }}>
-                                  {msg.isAIDraft && (
-                                    <div style={{
-                                      fontSize: 9, fontWeight: 700, color: '#F59E0B', marginBottom: 4,
-                                      fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.06em',
-                                    }}>AI DRAFT</div>
-                                  )}
-                                  {msg.text}
-                                </div>
-                              </div>
-                            ))}
-                            {item.messages.length === 0 && (
-                              <div style={{ textAlign: 'center', color: '#8e8e93', fontSize: 13, padding: '20px 0' }}>
-                                No messages yet
-                              </div>
-                            )}
-                          </div>
-                          {/* Inline Quick Reply */}
-                          <div style={{
-                            padding: '8px 24px 12px', display: 'flex', gap: 8, alignItems: 'center',
-                            borderTop: '1px solid rgba(0,0,0,0.04)',
-                          }}>
-                            <input
-                              value={inputValues[item.id] || ''}
-                              onChange={e => setInputValues(prev => ({ ...prev, [item.id]: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') sendMessage(item.id); }}
-                              placeholder={`Reply to ${item.name}...`}
-                              style={{
-                                flex: 1, padding: '9px 14px', borderRadius: 20,
-                                border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
-                                fontFamily: "'Inter', sans-serif", outline: 'none', background: '#fff',
-                              }}
-                            />
-                            <button
-                              onClick={() => sendMessage(item.id)}
-                              style={{
-                                width: 34, height: 34, borderRadius: 17, border: 'none',
-                                background: '#378ADD', color: '#fff', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                              }}
-                            >
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {matrixItems.length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#8e8e93', fontSize: 14, padding: '60px 0' }}>
-                    No conversations yet. Add a column in Streams view to start messaging.
-                  </div>
-                )}
-              </div>
+              {allTiles.slice(0, 144).map((tile, idx) => {
+                const colors = tileColor(tile.status, tile.direction);
+                return (
+                  <button
+                    key={tile.id || idx}
+                    className="disco-tile"
+                    onClick={() => setExpandedMatrixId(expandedMatrixId === tile.id ? null : tile.id)}
+                    title={`${tile.name}: "${tile.text.substring(0, 60)}" — ${tile.status}`}
+                    style={{
+                      aspectRatio: '1', borderRadius: 4, border: 'none', cursor: 'pointer',
+                      background: colors.bg, color: colors.text,
+                      boxShadow: colors.glow,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      padding: 3, overflow: 'hidden', position: 'relative',
+                      transition: 'all 0.2s ease',
+                      animation: tile.status === 'queued' || tile.status === 'sending' ? 'tileGlow 2s ease-in-out infinite' : 'none',
+                      opacity: expandedMatrixId === tile.id ? 1 : 0.85,
+                      outline: expandedMatrixId === tile.id ? '2px solid #fff' : 'none',
+                      outlineOffset: 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 7, fontWeight: 700, opacity: 0.9, textAlign: 'center', lineHeight: 1.2, overflow: 'hidden', maxHeight: '100%' }}>
+                      {tile.name.split(' ')[0]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Expanded tile detail */}
+            {expandedMatrixId && (() => {
+              const tile = allTiles.find(t => t.id === expandedMatrixId);
+              if (!tile) return null;
+              const colors = tileColor(tile.status, tile.direction);
+              return (
+                <div style={{
+                  position: 'sticky', bottom: 0, left: 0, right: 0,
+                  background: '#1a1a2e', borderTop: `3px solid ${colors.bg}`,
+                  padding: '16px 24px', display: 'flex', gap: 16, alignItems: 'flex-start',
+                  boxShadow: `0 -4px 24px rgba(0,0,0,0.4), 0 0 20px ${colors.bg}30`,
+                }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, background: colors.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700, color: colors.text, flexShrink: 0,
+                    boxShadow: colors.glow,
+                  }}>
+                    {tile.direction === 'incoming' ? '📥' : '📤'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{tile.name}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>{tile.phone}</span>
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                        background: colors.bg, color: colors.text, textTransform: 'uppercase',
+                      }}>{tile.status}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{fmtMsgTime(tile.timestamp)}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                      {tile.text}
+                    </div>
+                  </div>
+                  <button onClick={() => setExpandedMatrixId(null)} style={{
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 18, flexShrink: 0,
+                  }}>×</button>
+                </div>
+              );
+            })()}
           </div>
         );
       })()}
