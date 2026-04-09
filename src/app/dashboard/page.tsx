@@ -9929,6 +9929,51 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                     <option disabled style={{ color: '#c4c4c6' }}>GPT-5.4 — Coming Soon</option>
                     <option disabled style={{ color: '#c4c4c6' }}>Gemini 3.1 Pro — Coming Soon</option>
                   </select>
+                  {/* CSV Upload for Initiative Creation */}
+                  <label title="Upload CSV to create initiative" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(55,138,221,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#378ADD' }}>
+                    <input type="file" accept=".csv" style={{ display: 'none' }} onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const csvText = await file.text();
+                      const lines = csvText.split('\n').filter(l => l.trim());
+                      if (lines.length < 2) { setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: '❌ CSV is empty or has no data rows.' }]); return; }
+
+                      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+                      const rows = lines.slice(1);
+
+                      // Ask for initiative name
+                      const initName = prompt(`CSV has ${rows.length} contacts. Initiative name:`, file.name.replace('.csv', ''));
+                      if (!initName) { e.target.value = ''; return; }
+
+                      setAiCopilotMessages(prev => [...prev,
+                        { role: 'user', text: `Create initiative "${initName}" from ${file.name} (${rows.length} contacts)` },
+                        { role: 'assistant', text: `⏳ Processing ${rows.length} contacts from CSV...` },
+                      ]);
+
+                      try {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        formData.append('initiativeName', initName);
+                        formData.append('organizationId', (user?.organizations as Record<string, unknown>)?.id as string || '');
+
+                        const res = await fetch('/api/contacts/import-initiative', { method: 'POST', body: formData });
+                        const data = await res.json();
+
+                        if (res.ok) {
+                          setAiCopilotMessages(prev => [...prev.slice(0, -1), {
+                            role: 'assistant',
+                            text: `✅ Initiative "${initName}" created!\n\n• ${data.imported} contacts imported\n• ${data.linked} linked to initiative\n• ${data.skipped || 0} skipped (duplicates)\n\nView it in the Initiatives tab.`,
+                          }]);
+                        } else {
+                          setAiCopilotMessages(prev => [...prev.slice(0, -1), { role: 'assistant', text: `❌ Error: ${data.error}` }]);
+                        }
+                      } catch (err) {
+                        setAiCopilotMessages(prev => [...prev.slice(0, -1), { role: 'assistant', text: `❌ Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}` }]);
+                      }
+                      e.target.value = '';
+                    }} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="12"/><line x1="15" y1="15" x2="12" y2="12"/></svg>
+                  </label>
                   <button title="Voice input — Coming Soon" style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: 'rgba(124,58,237,0.06)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C4B5FD' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
                   </button>
