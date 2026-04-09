@@ -9632,6 +9632,15 @@ IMPORTANT RULES:
 - If you can detect a name from messages, save it as "(Maybe) [Name]". Example: outbound says "Hey Kyle whats up" → [UPDATE:(669) 215-9518:name:(Maybe) Kyle]
 - After updating a contact, the conversations tab will show the updated name on next refresh.
 
+DATA LOOKUPS — Use these to get more info BEFORE responding. Include the tag and the system will fetch the data for you automatically:
+
+[LOOKUP:history:contact name or phone] — Get FULL message history + contact details for someone
+[LOOKUP:search:search term] — Search contacts by name, state, school, greek org
+[LOOKUP:initiative:initiative name] — Get initiative details + all linked contacts
+[LOOKUP:activity:7] — Get recent messages across all conversations (number = days back)
+
+When the user asks about a specific contact's history or you need more context, USE THESE. Don't say "i can only see the last 3 messages" — look it up!
+
 ACTIONS YOU CAN TAKE:
 
 1. NAVIGATE: Say "Navigating to [tab name]..." and the dashboard will switch. Tabs: dashboard, conversations, contacts, team, phone lines, ai responder, integrations, profile, settings.
@@ -9683,8 +9692,50 @@ CLIENT-SPECIFIC KNOWLEDGE (for ${(org?.name as string) || 'this org'} only):
 ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Initiatives → Knowledge Base.'}`,
                         }),
                       });
-                      const data = await res.json();
+                      let data = await res.json();
                       let reply = data.content || 'Sorry, I couldn\'t process that.';
+
+                      // Check for [LOOKUP:] tags — fetch data and re-prompt Craig
+                      const lookupMatch = reply.match(/\[LOOKUP:(\w+):([^\]]+)\]/);
+                      if (lookupMatch) {
+                        const lookupType = lookupMatch[1];
+                        const lookupQuery = lookupMatch[2];
+                        const actionMap: Record<string, string> = { history: 'conversation_history', search: 'search_contacts', initiative: 'initiative_details', activity: 'recent_activity' };
+
+                        setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: '🔍 looking that up...' }]);
+
+                        try {
+                          const lookupRes = await fetch('/api/ai/search-history', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ action: actionMap[lookupType] || lookupType, query: lookupQuery, orgId: getOrgId() }),
+                          });
+                          const lookupData = await lookupRes.json();
+
+                          // Re-prompt Craig with the fetched data
+                          const followUp = await fetch('/api/ai/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              message: `Here is the data you requested:\n\n${lookupData.result}\n\nNow answer the user's original question using this data. Be concise.`,
+                              conversationHistory: [...aiCopilotMessages.slice(-6).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text || '' })), { role: 'assistant', content: reply.replace(/\[LOOKUP:[^\]]+\]/g, '') }],
+                              model: aiCopilotModel,
+                              systemPrompt: 'You are Craig. You just looked up data from the database. Use it to answer the user concisely. Keep your tone casual and short. NEVER include [LOOKUP:] tags in this response.',
+                            }),
+                          });
+                          const followUpData = await followUp.json();
+                          reply = followUpData.content || lookupData.result;
+                          // Remove the "looking that up" message
+                          setAiCopilotMessages(prev => prev.filter(m => m.text !== '🔍 looking that up...'));
+                        } catch {
+                          reply = reply.replace(/\[LOOKUP:[^\]]+\]/g, '').trim() || 'couldn\'t look that up, try again';
+                          setAiCopilotMessages(prev => prev.filter(m => m.text !== '🔍 looking that up...'));
+                        }
+                      }
+
+                      // Strip any remaining lookup tags
+                      reply = reply.replace(/\[LOOKUP:[^\]]+\]/g, '').trim();
+
                       // Human-like typing delay (300-800ms)
                       await new Promise(r => setTimeout(r, 300 + Math.random() * 500));
                       setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply }]);
