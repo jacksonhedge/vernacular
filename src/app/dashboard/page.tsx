@@ -2637,40 +2637,45 @@ button:active { transform: scale(0.98); }`}</style>
 
       {/* Matrix View — Icon Rail + Dot Grid + Collapsible Threads */}
       {conversationViewMode === 'matrix' && (() => {
-        // Build all message tiles from all conversations
-        const allTiles: Array<{ id: string; text: string; name: string; initials: string; phone: string; direction: string; status: string; colId: string; timestamp: string; state?: string; greekOrg?: string; msgCount: number }> = [];
-        columns.filter(col => col.contact).forEach(col => {
-          // Look up contact details
+        // Build one tile per conversation (not per message)
+        const allTiles = columns.filter(col => col.contact).map(col => {
           const contactRecord = contacts.find(c => c.phone === col.contact!.phone);
           const state = (contactRecord as unknown as Record<string, string>)?.state || '';
           const greekOrg = (contactRecord as unknown as Record<string, string>)?.greek_org || '';
           const initials = col.contact!.name.startsWith('+') || col.contact!.name.match(/^\d/)
             ? '##' : col.contact!.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-          col.messages.forEach(msg => {
-            allTiles.push({
-              id: msg.id, text: msg.text, name: col.contact!.name, initials, phone: col.contact!.phone || '',
-              direction: msg.direction, status: (msg.status || (msg.direction === 'incoming' ? 'received' : 'sent')).toLowerCase(),
-              colId: col.id, timestamp: msg.timestamp, state, greekOrg, msgCount: col.messages.length,
-            });
-          });
+          const lastMsg = col.messages[col.messages.length - 1];
+          const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
+          const hasAiDraft = col.messages.some(m => m.isAIDraft);
+          const lastStatus = (lastMsg?.status || (lastMsg?.direction === 'incoming' ? 'received' : 'sent')).toLowerCase();
+          const tileStatus = hasAiDraft ? 'draft' : hasUnread ? 'received' : lastStatus;
+          return {
+            id: col.id, text: lastMsg?.text || '', name: col.contact!.name, initials,
+            phone: col.contact!.phone || '', direction: lastMsg?.direction || 'outgoing',
+            status: tileStatus, colId: col.id,
+            timestamp: lastMsg?.timestamp || '', state, greekOrg, msgCount: col.messages.length,
+          };
         });
-        // Sort by timestamp descending (newest first)
+        // Sort: unread/draft first, then by timestamp
         allTiles.sort((a, b) => {
+          const priority = (s: string) => s === 'draft' ? 0 : s === 'received' ? 1 : s === 'queued' ? 2 : 3;
+          const pDiff = priority(a.status) - priority(b.status);
+          if (pDiff !== 0) return pDiff;
           const aT = a.timestamp ? parseTimestamp(a.timestamp).getTime() : 0;
           const bT = b.timestamp ? parseTimestamp(b.timestamp).getTime() : 0;
           return bT - aT;
         });
 
-        const tileColor = (status: string, direction: string) => {
+        const tileColor = (status: string) => {
           if (status === 'failed') return { bg: '#DC2626', glow: '0 0 12px rgba(220,38,38,0.6)', text: '#fff' };
-          if (status === 'queued') return { bg: '#F59E0B', glow: '0 0 12px rgba(245,158,11,0.6)', text: '#fff' };
+          if (status === 'queued') return { bg: '#3B82F6', glow: '0 0 12px rgba(59,130,246,0.6)', text: '#fff' };
           if (status === 'sending') return { bg: '#3B82F6', glow: '0 0 12px rgba(59,130,246,0.6)', text: '#fff' };
-          if (status === 'draft') return { bg: '#F59E0B', glow: '0 0 10px rgba(245,158,11,0.5)', text: '#92400E' };
-          if (direction === 'incoming') return { bg: '#22C55E', glow: '0 0 10px rgba(34,197,94,0.5)', text: '#fff' };
-          return { bg: '#7C3AED', glow: '0 0 8px rgba(124,58,237,0.4)', text: '#fff' }; // sent/delivered
+          if (status === 'draft') return { bg: '#F59E0B', glow: '0 0 10px rgba(245,158,11,0.5)', text: '#fff' };
+          if (status === 'received') return { bg: '#22C55E', glow: '0 0 10px rgba(34,197,94,0.5)', text: '#fff' };
+          return { bg: '#7C3AED', glow: '0 0 8px rgba(124,58,237,0.4)', text: '#fff' }; // active/sent
         };
 
-        const COLS = Math.min(12, Math.ceil(Math.sqrt(allTiles.length)));
+        const COLS = Math.min(8, Math.max(4, Math.ceil(Math.sqrt(allTiles.length))));
 
         return (
           <div style={{
@@ -2689,19 +2694,19 @@ button:active { transform: scale(0.98); }`}</style>
             <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
-                  Message Matrix
+                  Contact Matrix
                 </h2>
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {allTiles.length} messages across {columns.filter(c => c.contact).length} conversations
+                  {allTiles.length} conversations
                 </span>
               </div>
               {/* Legend */}
               <div style={{ display: 'flex', gap: 16 }}>
                 {[
-                  { label: 'Inbound', color: '#22C55E' },
-                  { label: 'Sent', color: '#7C3AED' },
-                  { label: 'Queued', color: '#F59E0B' },
-                  { label: 'Sending', color: '#3B82F6' },
+                  { label: 'Needs Reply', color: '#22C55E' },
+                  { label: 'AI Draft', color: '#F59E0B' },
+                  { label: 'Active', color: '#7C3AED' },
+                  { label: 'Queued', color: '#3B82F6' },
                   { label: 'Failed', color: '#DC2626' },
                 ].map(l => (
                   <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -2729,7 +2734,7 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
 
               {allTiles.slice(0, 144).map((tile, idx) => {
-                const colors = tileColor(tile.status, tile.direction);
+                const colors = tileColor(tile.status);
                 return (
                   <button
                     key={tile.id || idx}
@@ -2786,7 +2791,7 @@ button:active { transform: scale(0.98); }`}</style>
             {expandedMatrixId && (() => {
               const tile = allTiles.find(t => t.id === expandedMatrixId);
               if (!tile) return null;
-              const colors = tileColor(tile.status, tile.direction);
+              const colors = tileColor(tile.status);
               // Get all messages from the same conversation
               const convTiles = allTiles.filter(t => t.colId === tile.colId).sort((a, b) => {
                 const aT = a.timestamp ? parseTimestamp(a.timestamp).getTime() : 0;
@@ -4414,46 +4419,114 @@ button:active { transform: scale(0.98); }`}</style>
             background: '#fff', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', minWidth: 180,
           }}>
-            {[
-              { label: 'Resend', icon: '🔄', action: async () => {
-                const col = columns.find(c => c.id === msgContextMenu.colId);
-                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
-                if (!msg || !col?.contact?.phone) { setMsgContextMenu(null); return; }
-                const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
-                await fetch('/api/messages/send', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ phoneNumber: col.contact.phone, message: msg.text, contactName: col.contact.name || '', organizationId: orgId }),
+            {(() => {
+              const col = columns.find(c => c.id === msgContextMenu.colId);
+              const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+              const msgStatus = (msg?.status || '').toLowerCase();
+              const isQueued = msgStatus === 'queued' || msg?.id.startsWith('m-');
+              const isFailed = msgStatus === 'failed' || msg?.id.startsWith('failed-');
+              const isSending = msgStatus === 'sending';
+
+              const items: Array<{ label: string; icon: string; action: () => void; color?: string; divider?: boolean }> = [];
+
+              // Status info for queued/sending/failed messages
+              if (isQueued || isSending || isFailed) {
+                items.push({
+                  label: isQueued ? 'Status: Queued — waiting for station pickup' :
+                    isSending ? 'Status: Sending — station is processing' :
+                    'Status: Failed — delivery unsuccessful',
+                  icon: isQueued ? '⏳' : isSending ? '📡' : '❌',
+                  action: () => {},
+                  color: isQueued ? '#D97706' : isSending ? '#2563EB' : '#DC2626',
                 });
-                setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
-                  ...c, messages: c.messages.map(m => m.id === msgContextMenu.msgId ? { ...m, status: 'Queued' } : m),
-                } : c));
-                setMsgContextMenu(null);
-              }},
-              { label: 'Hide Message', icon: '👁', action: () => {
+              }
+
+              // Send Now for queued messages
+              if (isQueued) {
+                items.push({
+                  label: 'Send Now',
+                  icon: '⚡',
+                  action: async () => {
+                    if (!msg || !col?.contact?.phone) { setMsgContextMenu(null); return; }
+                    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                    await fetch('/api/messages/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ phoneNumber: col.contact.phone, message: msg.text, contactName: col.contact.name || '', organizationId: orgId }),
+                    });
+                    setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
+                      ...c, messages: c.messages.map(m => m.id === msgContextMenu.msgId ? { ...m, status: 'Queued' } : m),
+                    } : c));
+                    setMsgContextMenu(null);
+                  },
+                  color: '#22C55E',
+                });
+              }
+
+              // Resend for failed messages
+              if (isFailed) {
+                items.push({
+                  label: 'Retry Send',
+                  icon: '🔄',
+                  action: async () => {
+                    if (!msg || !col?.contact?.phone) { setMsgContextMenu(null); return; }
+                    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                    await fetch('/api/messages/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ phoneNumber: col.contact.phone, message: msg.text, contactName: col.contact.name || '', organizationId: orgId }),
+                    });
+                    setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
+                      ...c, messages: c.messages.map(m => m.id === msgContextMenu.msgId ? { ...m, status: 'Queued', id: `m-${Date.now()}` } : m),
+                    } : c));
+                    setMsgContextMenu(null);
+                  },
+                  color: '#D97706',
+                });
+              }
+
+              // Resend for any outgoing
+              if (msg?.direction === 'outgoing' && !isQueued && !isFailed) {
+                items.push({
+                  label: 'Resend',
+                  icon: '🔄',
+                  action: async () => {
+                    if (!msg || !col?.contact?.phone) { setMsgContextMenu(null); return; }
+                    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                    await fetch('/api/messages/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ phoneNumber: col.contact.phone, message: msg.text, contactName: col.contact.name || '', organizationId: orgId }),
+                    });
+                    setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
+                      ...c, messages: c.messages.map(m => m.id === msgContextMenu.msgId ? { ...m, status: 'Queued' } : m),
+                    } : c));
+                    setMsgContextMenu(null);
+                  },
+                });
+              }
+
+              // Standard actions for all messages
+              items.push({ label: 'Hide Message', icon: '👁', action: () => {
                 setHiddenMessages(prev => {
                   const next = new Set(prev).add(msgContextMenu.msgId);
                   localStorage.setItem('vernacular-hidden-msgs', JSON.stringify([...next]));
                   return next;
                 });
                 setMsgContextMenu(null);
-              }},
-              { label: 'Delete Message', icon: '🗑', action: async () => {
+              }});
+              items.push({ label: 'Delete Message', icon: '🗑', color: '#DC2626', action: async () => {
                 const realId = msgContextMenu.msgId.replace('rt-', '');
                 await supabase.from('messages').delete().eq('id', realId);
                 setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
                 setAllConversations(prev => prev.map(c => c.id === msgContextMenu.colId ? { ...c, messages: c.messages.filter(m => m.id !== msgContextMenu.msgId) } : c));
                 setMsgContextMenu(null);
-              }},
-              { label: 'Copy Text', icon: '📋', action: () => {
-                const col = columns.find(c => c.id === msgContextMenu.colId);
-                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+              }});
+              items.push({ label: 'Copy Text', icon: '📋', action: () => {
                 if (msg) navigator.clipboard.writeText(msg.text);
                 setMsgContextMenu(null);
-              }},
-              { label: 'Create Calendar Event', icon: '📅', action: () => {
-                const col = columns.find(c => c.id === msgContextMenu.colId);
-                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+              }});
+              items.push({ label: 'Create Calendar Event', icon: '📅', action: () => {
                 const contactName = col?.contact?.name || '';
                 const contactPhone = col?.contact?.phone || '';
                 const contactId = col?.contact ? ((contacts.find(c => c.phone === contactPhone) as unknown as Record<string, unknown>)?.id as string || null) : null;
@@ -4463,15 +4536,22 @@ button:active { transform: scale(0.98); }`}</style>
                 setCalendarPopupDuration(20);
                 setCalendarPopup({ contactName, contactPhone, msgText: msg?.text || '', contactId });
                 setMsgContextMenu(null);
-              }},
-            ].map(item => (
+              }});
+
+              return items;
+            })().map(item => (
               <button key={item.label} onClick={item.action} style={{
                 display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                padding: '10px 14px', border: 'none', background: 'transparent',
-                cursor: 'pointer', fontSize: 13, fontWeight: 500, color: item.label === 'Delete Message' ? '#DC2626' : '#1c1c1e',
+                padding: item.label.startsWith('Status:') ? '8px 14px' : '10px 14px',
+                border: 'none', background: 'transparent',
+                cursor: item.label.startsWith('Status:') ? 'default' : 'pointer',
+                fontSize: item.label.startsWith('Status:') ? 11 : 13,
+                fontWeight: item.label.startsWith('Status:') ? 600 : 500,
+                color: item.color || (item.label === 'Delete Message' ? '#DC2626' : '#1c1c1e'),
                 textAlign: 'left', fontFamily: "'Inter', sans-serif",
+                borderBottom: item.label.startsWith('Status:') ? '1px solid rgba(0,0,0,0.06)' : 'none',
               }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
+              onMouseEnter={e => { if (!item.label.startsWith('Status:')) (e.target as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
               onMouseLeave={e => { (e.target as HTMLElement).style.background = 'transparent'; }}
               >
                 <span style={{ fontSize: 14 }}>{item.icon}</span>
