@@ -15,6 +15,7 @@ interface Message {
   isAIDraft?: boolean;
   attachmentUrl?: string;
   attachmentType?: string;
+  status?: string; // Queued, Sending, Sent, Delivered, Draft, failed
 }
 
 interface Contact {
@@ -806,6 +807,7 @@ export default function DashboardPage() {
               isAIDraft: m.isAIDraft as boolean | undefined,
               attachmentUrl: m.attachmentUrl as string | undefined,
               attachmentType: m.attachmentType as string | undefined,
+              status: m.status as string | undefined,
             })),
           };
         });
@@ -971,6 +973,7 @@ export default function DashboardPage() {
             isAIDraft: String(m.source_system || '') === 'vernacular-ai' && String(m.status || '') === 'Draft',
             attachmentUrl: m.attachment_url ? String(m.attachment_url) : undefined,
             attachmentType: m.attachment_type ? String(m.attachment_type) : undefined,
+            status: String(m.status || 'Sent'),
           };
 
           // Find which conversation this belongs to by matching phone
@@ -1281,7 +1284,7 @@ button:active { transform: scale(0.98); }`}</style>
     if (!text) return;
     const now = new Date();
     const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    const msg: Message = { id: `m-${Date.now()}`, text, direction: 'outgoing', timestamp: time };
+    const msg: Message = { id: `m-${Date.now()}`, text, direction: 'outgoing', timestamp: time, status: 'Queued' };
 
     // Optimistic update — show message immediately
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, msg] } : c));
@@ -1369,14 +1372,14 @@ button:active { transform: scale(0.98); }`}</style>
         // Mark as failed — update message to show error
         setColumns(prev => prev.map(c => c.id === colId ? {
           ...c,
-          messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}` } : m),
+          messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}`, status: 'failed' } : m),
         } : c));
       }
     } catch (err) {
       console.error(`[Vernacular] ❌ Network error sending message:`, err);
       setColumns(prev => prev.map(c => c.id === colId ? {
         ...c,
-        messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}` } : m),
+        messages: c.messages.map(m => m.id === msg.id ? { ...m, id: `failed-${Date.now()}`, status: 'failed' } : m),
       } : c));
     }
   };
@@ -4079,8 +4082,9 @@ button:active { transform: scale(0.98); }`}</style>
                         : msg.direction === 'outgoing' ? '#378ADD' : '#fff',
                       color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#1c1c1e',
                       fontSize: 13, lineHeight: 1.5, fontWeight: 400,
-                      border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : (isLastOutgoing && isRecent) ? '2px solid rgba(124,58,237,0.5)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                      boxShadow: (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
+                      border: msg.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : msg.id.startsWith('failed-') ? '2px solid rgba(220,38,38,0.4)' : (isLastOutgoing && isRecent) ? '2px solid rgba(124,58,237,0.5)' : msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                      boxShadow: msg.id.startsWith('failed-') ? '0 0 8px rgba(220,38,38,0.2)' : (isLastOutgoing && isRecent) ? '0 0 12px rgba(124,58,237,0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
+                      opacity: msg.id.startsWith('m-') ? 0.7 : msg.id.startsWith('failed-') ? 0.8 : 1,
                       position: 'relative',
                     }}>
                       {/* AI tag on AI-sent outgoing messages — only if source_system is vernacular-ai */}
@@ -4214,24 +4218,50 @@ button:active { transform: scale(0.98); }`}</style>
                     {/* Timestamp + delivery status (below bubble) */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6, marginTop: 2,
+                      justifyContent: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
                       paddingLeft: msg.direction === 'incoming' ? 4 : 0,
                       paddingRight: msg.direction === 'outgoing' ? 4 : 0,
                     }}>
                       {showTimestamps && msg.timestamp && (
                         <span style={{ fontSize: 10, color: '#8e8e93' }}>{fmtMsgTime(msg.timestamp)}</span>
                       )}
-                      {isLastOutgoing && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: isRecent ? '#7C3AED' : '#8e8e93' }}>
-                          {isRecent && (
-                            <svg width="14" height="14" viewBox="0 0 14 16" style={{ animation: 'ghostBlink 0.6s ease-in-out infinite alternate' }}>
-                              <path d="M1 14V7a6 6 0 0 1 12 0v7l-2-2-2 2-2-2-2 2-2-2z" fill="#7C3AED" />
-                              <circle cx="5" cy="7" r="1.2" fill="#fff" /><circle cx="9" cy="7" r="1.2" fill="#fff" />
-                              <circle cx="5.4" cy="7" r="0.6" fill="#1a1a2e" /><circle cx="9.4" cy="7" r="0.6" fill="#1a1a2e" />
-                            </svg>
-                          )}
-                          {isRecent ? 'Delivering...' : 'Delivered'}
-                        </span>
-                      )}
+                      {msg.direction === 'outgoing' && !msg.isAIDraft && (() => {
+                        const s = (msg.status || '').toLowerCase();
+                        if (s === 'failed' || msg.id.startsWith('failed-')) return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#DC2626', fontWeight: 600 }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            Not Delivered
+                          </span>
+                        );
+                        if (s === 'queued' || msg.id.startsWith('m-')) return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#D97706' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Queued
+                          </span>
+                        );
+                        if (s === 'sending') return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#2563EB' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round"><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            Sending
+                          </span>
+                        );
+                        if (s === 'sent') return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#8e8e93' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            Sent
+                          </span>
+                        );
+                        if (s === 'delivered') return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#22C55E' }}>
+                            <svg width="12" height="10" viewBox="0 0 28 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round"><polyline points="14 6 7 17 2 12"/><polyline points="24 6 13 17 10 14"/></svg>
+                            Delivered
+                          </span>
+                        );
+                        // Default — show delivered for older messages
+                        return (
+                          <span style={{ fontSize: 10, color: '#8e8e93' }}>Delivered</span>
+                        );
+                      })()}
                     </div>
                   </div>
                   </div>{/* end hover wrapper */}
