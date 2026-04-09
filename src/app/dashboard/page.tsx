@@ -2679,9 +2679,9 @@ button:active { transform: scale(0.98); }`}</style>
             {/* Disco background effect */}
             <style>{`
               @keyframes discoShift { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-              @keyframes tileGlow { 0%,100% { opacity: 0.7; box-shadow: 0 0 8px currentColor; } 50% { opacity: 1; box-shadow: 0 0 20px currentColor; } }
-              @keyframes nasaPulse { 0%,100% { opacity: 0.6; transform: scale(1); box-shadow: 0 0 6px currentColor; } 50% { opacity: 1; transform: scale(1.05); box-shadow: 0 0 24px currentColor, 0 0 48px currentColor; } }
-              @keyframes nasaUrgent { 0%,100% { opacity: 0.5; box-shadow: 0 0 8px #EF4444; } 25% { opacity: 1; box-shadow: 0 0 30px #F59E0B, 0 0 60px #F59E0B; } 50% { opacity: 0.8; box-shadow: 0 0 20px #EF4444; } 75% { opacity: 1; box-shadow: 0 0 30px #F59E0B, 0 0 60px #F59E0B; } }
+              @keyframes tileGlow { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+              @keyframes nasaPulse { 0%,100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.02); box-shadow: 0 0 12px currentColor; } }
+              @keyframes nasaUrgent { 0%,100% { opacity: 0.75; } 50% { opacity: 1; box-shadow: 0 0 14px rgba(245,158,11,0.4); } }
               .disco-tile:hover { transform: scale(1.2) !important; z-index: 10 !important; box-shadow: 0 0 24px currentColor !important; }
             `}</style>
 
@@ -2794,71 +2794,100 @@ button:active { transform: scale(0.98); }`}</style>
                 return aT - bT;
               });
               return (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}
                   onClick={() => setExpandedMatrixId(null)}>
                   <div onClick={e => e.stopPropagation()} style={{
-                    background: '#1a1a2e', borderRadius: 20, width: 480, maxHeight: '80vh',
-                    boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 40px ${colors.bg}30`,
-                    border: `2px solid ${colors.bg}40`, overflow: 'hidden',
-                    display: 'flex', flexDirection: 'column',
+                    background: '#fff', borderRadius: 20, width: 420, maxHeight: '75vh',
+                    boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column',
                   }}>
-                    {/* Header */}
-                    <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* Header — like iMessage top bar */}
+                    <div style={{
+                      padding: '18px 20px', background: '#f8f9fa',
+                      borderBottom: '1px solid rgba(0,0,0,0.06)',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
                       <div style={{
-                        width: 44, height: 44, borderRadius: 12, background: `linear-gradient(135deg, ${colors.bg}, ${colors.bg}88)`,
+                        width: 42, height: 42, borderRadius: 21,
+                        background: 'linear-gradient(135deg, #378ADD, #5B9FE8)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 20, boxShadow: colors.glow, flexShrink: 0,
+                        color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0,
                       }}>
-                        {tile.direction === 'incoming' ? '📥' : '📤'}
+                        {tile.initials}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{tile.name}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: "'JetBrains Mono', monospace", display: 'flex', gap: 8, alignItems: 'center', marginTop: 2 }}>
-                          <span>{tile.phone}</span>
-                          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: colors.bg, color: colors.text, textTransform: 'uppercase' }}>{tile.status}</span>
-                          <span>{fmtMsgTime(tile.timestamp)}</span>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#1c1c1e' }}>{tile.name}</div>
+                        <div style={{ fontSize: 12, color: '#8e8e93', fontFamily: "'JetBrains Mono', monospace", marginTop: 1 }}>
+                          {tile.phone}
                         </div>
                       </div>
-                      <button onClick={() => setExpandedMatrixId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 22 }}>×</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {tile.state && (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: '#f0f0f5', color: '#6b7280' }}>
+                            {tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{convTiles.length} msgs</span>
+                      </div>
+                      <button onClick={() => setExpandedMatrixId(null)} style={{
+                        width: 28, height: 28, borderRadius: 14, background: 'rgba(0,0,0,0.06)',
+                        border: 'none', cursor: 'pointer', color: '#8e8e93', fontSize: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>×</button>
                     </div>
-                    {/* Message thread */}
-                    <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
+                    {/* Message thread — iMessage style */}
+                    <div style={{ flex: 1, overflow: 'auto', padding: '16px 16px', background: '#fff' }}>
                       {convTiles.map(ct => {
-                        const c = tileColor(ct.status, ct.direction);
+                        const isOutgoing = ct.direction === 'outgoing';
                         const isSelected = ct.id === tile.id;
                         return (
                           <div key={ct.id} style={{
-                            display: 'flex', flexDirection: ct.direction === 'outgoing' ? 'row-reverse' : 'row',
-                            gap: 8, marginBottom: 10,
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: isOutgoing ? 'flex-end' : 'flex-start',
+                            marginBottom: 6,
                           }}>
                             <div style={{
-                              maxWidth: '80%', padding: '10px 14px',
-                              borderRadius: ct.direction === 'outgoing' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                              background: ct.direction === 'outgoing' ? c.bg : 'rgba(255,255,255,0.08)',
-                              color: ct.direction === 'outgoing' ? c.text : 'rgba(255,255,255,0.85)',
-                              fontSize: 13, lineHeight: 1.5,
-                              border: isSelected ? '2px solid #fff' : '1px solid rgba(255,255,255,0.06)',
-                              boxShadow: isSelected ? `0 0 16px ${c.bg}60` : 'none',
+                              maxWidth: '78%', padding: '10px 14px',
+                              borderRadius: isOutgoing ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                              background: isOutgoing ? '#378ADD' : '#f0f0f5',
+                              color: isOutgoing ? '#fff' : '#1c1c1e',
+                              fontSize: 14, lineHeight: 1.5, fontFamily: "'Inter', sans-serif",
+                              border: isSelected ? '2px solid #F59E0B' : 'none',
+                              boxShadow: isSelected ? '0 0 12px rgba(245,158,11,0.3)' : '0 1px 2px rgba(0,0,0,0.04)',
+                              wordBreak: 'break-word' as const,
                             }}>
                               {ct.text}
-                              <div style={{ fontSize: 9, opacity: 0.5, marginTop: 4, textAlign: 'right' }}>{fmtMsgTime(ct.timestamp)}</div>
                             </div>
+                            <span style={{
+                              fontSize: 10, color: '#c4c4c6', marginTop: 2,
+                              paddingLeft: isOutgoing ? 0 : 4, paddingRight: isOutgoing ? 4 : 0,
+                            }}>
+                              {fmtMsgTime(ct.timestamp)}
+                            </span>
                           </div>
                         );
                       })}
                     </div>
-                    {/* Quick reply */}
-                    <div style={{ padding: '12px 24px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 8 }}>
+                    {/* Quick reply — clean white */}
+                    <div style={{
+                      padding: '10px 16px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
+                      background: '#f8f9fa', display: 'flex', gap: 8, alignItems: 'center',
+                    }}>
                       <input
                         value={inputValues[tile.colId] || ''}
                         onChange={e => setInputValues(prev => ({ ...prev, [tile.colId]: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter') { sendMessage(tile.colId); setExpandedMatrixId(null); } }}
-                        placeholder={`Reply to ${tile.name}...`}
-                        style={{ flex: 1, padding: '10px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, background: 'rgba(255,255,255,0.06)', color: '#fff', outline: 'none' }}
+                        placeholder={`Message ${tile.name.split(' ')[0]}...`}
+                        style={{
+                          flex: 1, padding: '10px 16px', borderRadius: 20,
+                          border: '1px solid rgba(0,0,0,0.1)', fontSize: 14,
+                          fontFamily: "'Inter', sans-serif", outline: 'none', background: '#fff',
+                        }}
                       />
                       <button onClick={() => { sendMessage(tile.colId); setExpandedMatrixId(null); }} style={{
-                        width: 38, height: 38, borderRadius: 10, border: 'none', background: colors.bg, color: '#fff', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: colors.glow,
+                        width: 36, height: 36, borderRadius: 18, border: 'none',
+                        background: '#378ADD', color: '#fff', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
                       </button>
