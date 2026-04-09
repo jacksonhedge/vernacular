@@ -7789,7 +7789,7 @@ button:active { transform: scale(0.98); }`}</style>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>AI Initiatives</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#1c1c1e', margin: 0, letterSpacing: '-0.02em' }}>Initiatives</h2>
               <p style={{ fontSize: 13, color: '#8e8e93', margin: '4px 0 0' }}>Each initiative is an AI-powered project with its own memory, tone, and knowledge.</p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
