@@ -2638,13 +2638,19 @@ button:active { transform: scale(0.98); }`}</style>
       {/* Matrix View — Icon Rail + Dot Grid + Collapsible Threads */}
       {conversationViewMode === 'matrix' && (() => {
         // Build all message tiles from all conversations
-        const allTiles: Array<{ id: string; text: string; name: string; phone: string; direction: string; status: string; colId: string; timestamp: string }> = [];
+        const allTiles: Array<{ id: string; text: string; name: string; initials: string; phone: string; direction: string; status: string; colId: string; timestamp: string; state?: string; greekOrg?: string; msgCount: number }> = [];
         columns.filter(col => col.contact).forEach(col => {
+          // Look up contact details
+          const contactRecord = contacts.find(c => c.phone === col.contact!.phone);
+          const state = (contactRecord as unknown as Record<string, string>)?.state || '';
+          const greekOrg = (contactRecord as unknown as Record<string, string>)?.greek_org || '';
+          const initials = col.contact!.name.startsWith('+') || col.contact!.name.match(/^\d/)
+            ? '##' : col.contact!.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
           col.messages.forEach(msg => {
             allTiles.push({
-              id: msg.id, text: msg.text, name: col.contact!.name, phone: col.contact!.phone || '',
+              id: msg.id, text: msg.text, name: col.contact!.name, initials, phone: col.contact!.phone || '',
               direction: msg.direction, status: (msg.status || (msg.direction === 'incoming' ? 'received' : 'sent')).toLowerCase(),
-              colId: col.id, timestamp: msg.timestamp,
+              colId: col.id, timestamp: msg.timestamp, state, greekOrg, msgCount: col.messages.length,
             });
           });
         });
@@ -2731,11 +2737,11 @@ button:active { transform: scale(0.98); }`}</style>
                     onClick={() => setExpandedMatrixId(expandedMatrixId === tile.id ? null : tile.id)}
                     title={`${tile.name}: "${tile.text.substring(0, 60)}" — ${tile.status}`}
                     style={{
-                      aspectRatio: '1', borderRadius: 4, border: 'none', cursor: 'pointer',
+                      aspectRatio: '1', borderRadius: 6, border: 'none', cursor: 'pointer',
                       background: colors.bg, color: colors.text,
                       boxShadow: colors.glow,
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      padding: 3, overflow: 'hidden', position: 'relative',
+                      padding: 2, overflow: 'hidden', position: 'relative',
                       transition: 'all 0.2s ease',
                       animation: tile.status === 'draft' ? 'nasaUrgent 1.5s ease-in-out infinite' :
                         tile.status === 'queued' ? 'nasaPulse 2s ease-in-out infinite' :
@@ -2745,10 +2751,32 @@ button:active { transform: scale(0.98); }`}</style>
                       outlineOffset: 1,
                     }}
                   >
-                    <span style={{ fontSize: 9, fontWeight: 800, opacity: 1, textAlign: 'center', lineHeight: 1.1, overflow: 'hidden', maxHeight: '100%', letterSpacing: '-0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
-                      {tile.name.split(' ')[0]}
+                    {/* Top-left: direction arrow */}
+                    <span style={{ position: 'absolute', top: 2, left: 3, fontSize: 7, opacity: 0.6 }}>
+                      {tile.direction === 'incoming' ? '↙' : '↗'}
                     </span>
-                    {tile.status === 'draft' && <span style={{ fontSize: 6, fontWeight: 700, opacity: 0.9, marginTop: 1 }}>AI</span>}
+                    {/* Top-right: state abbreviation */}
+                    {tile.state && (
+                      <span style={{ position: 'absolute', top: 2, right: 3, fontSize: 6, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
+                        {tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()}
+                      </span>
+                    )}
+                    {/* Bottom-left: message count */}
+                    <span style={{ position: 'absolute', bottom: 2, left: 3, fontSize: 6, fontWeight: 600, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace" }}>
+                      {tile.msgCount}
+                    </span>
+                    {/* Bottom-right: greek org or AI */}
+                    <span style={{ position: 'absolute', bottom: 2, right: 3, fontSize: 6, fontWeight: 700, opacity: 0.7 }}>
+                      {tile.status === 'draft' ? 'AI' : tile.greekOrg ? tile.greekOrg.slice(0, 3) : ''}
+                    </span>
+                    {/* Center: big name or initials */}
+                    <span style={{
+                      fontSize: tile.name.split(' ')[0].length > 6 ? 13 : 16,
+                      fontWeight: 900, textAlign: 'center', lineHeight: 1,
+                      letterSpacing: '-0.03em', textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                    }}>
+                      {tile.name.split(' ')[0].length > 8 ? tile.initials : tile.name.split(' ')[0]}
+                    </span>
                   </button>
                 );
               })}
