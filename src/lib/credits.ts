@@ -1,22 +1,24 @@
 /**
- * Vernacular Billing — Usage-based pricing with monthly minimums.
+ * Vernacular Billing — Platform fee + usage-based AI/action credits.
  *
- * Pricing Model:
- * - VIP Manager:     $1,500/mo minimum per line, overage billed per action
- * - Sales/Outreach:  $1,500/mo minimum per seat, overage billed per action
- * - App Testing:     $1,222/mo minimum per seat, overage billed per action
- * - Customer Support: $1,000 setup fee (+$1,000 AI), then $1.25 per resolved ticket (no monthly minimum)
+ * Platform Pricing:
+ * - First seat:              $899/mo
+ * - Additional seats:        $333/mo each
+ * - Setup (first line):      $899 (does NOT count as month 1)
+ * - Setup (additional lines): $301 each
+ * - Annual billing:          12% discount
+ * - Customer Support:        No monthly minimum (per-ticket only)
  *
- * Usage costs (included in monthly minimum, overage charged above):
+ * AI & Action Credits (billed separately on top of platform fee):
  * - New conversation opened:        $0.99
- * - Text sent (human):              $0.03
- * - Text received:                  $0.00 (free)
- * - AI draft generated:             $0.10
+ * - Text sent (human):              $0.001
+ * - Text received:                  Free
  * - AI draft approved & sent:       $0.17
  * - AI auto-send:                   $0.25
  * - Support ticket resolved:        $1.25
  * - Contact import:                 $0.07
  * - Widget handoff to iMessage:     $0.50
+ * - AI chat (Craig):                $0.10
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';

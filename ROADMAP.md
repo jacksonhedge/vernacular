@@ -24,7 +24,7 @@
 | Inbound message polling (Notion → Supabase) | ✅ Live |
 | Heartbeat via /api/engine/ping | ✅ Live |
 | Change password | ✅ Live |
-| Credit-based pricing ($333/seat, 50K credits) | ✅ Live |
+| Platform pricing ($899/mo + usage-based AI credits) | ✅ Live |
 
 ---
 
@@ -152,10 +152,12 @@ POST /api/verify/check
 
 | Tier | Price | Includes |
 |------|-------|----------|
-| Team | $333/seat/month | Minimum 3 seats, 50K credits/seat, dedicated phone line, AI drafts |
-| Growth | $299/seat/month | 5+ seats, 75K credits/seat, all integrations, campaigns |
-| Enterprise | $249/seat/month | 10+ seats, 150K credits/seat, all AI tools included |
-| Credit Packs | 100K/$79, 500K/$349, 1M/$599 | Top-up credits beyond plan allocation |
+| First Seat | $899/mo | Dedicated phone line, AI drafts, all features |
+| Additional Seats | $333/mo each | Same features, shared station |
+| Setup (first line) | $899 one-time | Number provisioning, Apple ID, Mac station, onboarding |
+| Setup (additional) | $301 one-time | Per additional line |
+| Annual Billing | 12% discount | $899 × 12 × 0.88 = $9,494/yr |
+| Customer Support | Per-ticket ($1.25) | No monthly minimum |
 | Widget White-label | $500/mo | Remove "Powered by Vernacular" |
 | 2FA API | $0.02-0.05/verification | Volume pricing available |
 

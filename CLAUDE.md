@@ -125,7 +125,7 @@ The pipe-delimited `IFS='|' read` approach breaks when `ATT_URL` is empty. Use s
 | Widget handoff | $0.50 |
 | Bulk blast per recipient | $0.05 |
 
-Monthly minimums: VIP Manager $1,500, Sales/Outreach $1,500, App Testing $1,222, Support $0 (per-ticket only). Setup: $1,000/line + $1,000 AI addon.
+Platform: $899/mo first seat, $333/mo additional seats. Setup: $899 first line (doesn't count as month 1), $301 additional lines. Annual: 12% discount. AI usage billed separately.
 
 ---
 
