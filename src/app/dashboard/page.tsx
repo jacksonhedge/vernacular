@@ -1055,7 +1055,14 @@ export default function DashboardPage() {
                 let currentDismissed: Set<string>;
                 try { currentDismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { currentDismissed = new Set(); }
                 const brandNew = Array.from(freshMap.values()).filter(c => !currentDismissed.has(c.id));
-                return [...brandNew, ...merged];
+                // Remove draft-col-* columns that now have a real conversation from the API
+                const brandNewPhones = new Set(brandNew.map(c => c.contact?.phone?.replace(/\D/g, '').slice(-10)).filter(Boolean));
+                const cleaned = merged.filter(c => {
+                  if (!c.id.startsWith('draft-col-')) return true;
+                  const draftPhone = c.contact?.phone?.replace(/\D/g, '').slice(-10);
+                  return !brandNewPhones.has(draftPhone || '');
+                });
+                return [...brandNew, ...cleaned];
               });
               // Always update allConversations with full data (for contact list)
               setAllConversations(freshColumns);
