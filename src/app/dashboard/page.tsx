@@ -3060,18 +3060,17 @@ button:active { transform: scale(0.98); }`}</style>
                            tile.greekOrg.slice(0, 3).toUpperCase())
                         : tile.state ? (tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()) : ''}
                     </span>
-                    {/* Bottom-left: time of last action */}
-                    <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 8, fontWeight: 600, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace",
-                      color: tile.direction === 'incoming' ? '#4ADE80' : '#fff',
+                    {/* Bottom: full-width timestamp bar */}
+                    <span style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0,
+                      textAlign: 'center', fontSize: 9, fontWeight: 700, padding: '3px 0',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      background: tile.direction === 'incoming' ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.2)',
+                      color: tile.direction === 'incoming' ? '#4ADE80' : 'rgba(255,255,255,0.7)',
+                      borderRadius: '0 0 6px 6px',
                     }}>
-                      {tile.timestamp ? fmtMsgTime(tile.timestamp) : ''}
+                      {tile.timestamp ? fmtMsgTime(tile.timestamp) : '—'}
                     </span>
-                    {/* Bottom-right: age */}
-                    {tile.age && tile.age > 0 && tile.age < 100 && (
-                      <span style={{ position: 'absolute', bottom: 3, right: 5, fontSize: 11, fontWeight: 800, opacity: 0.8, fontFamily: "'JetBrains Mono', monospace" }}>
-                        {tile.age}
-                      </span>
-                    )}
                     {/* Center: big name or initials */}
                     <span style={{
                       fontSize: tile.name.split(' ')[0].length > 6 ? 22 : 27,
