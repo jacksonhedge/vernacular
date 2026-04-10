@@ -454,9 +454,10 @@ export default function LandingPage() {
       }}>
         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Vernacular by Hedge, Inc.</span>
         <div style={{ display: 'flex', gap: 20 }}>
-          {['Privacy', 'Terms', 'Contact'].map(l => (
-            <a key={l} href="#" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 12 }}>{l}</a>
-          ))}
+          <a href="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 12 }}>Privacy</a>
+          <a href="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 12 }}>Terms</a>
+          <a href="/acceptable-use" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 12 }}>Acceptable Use</a>
+          <a href="mailto:jackson@hedgepayments.co" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 12 }}>Contact</a>
         </div>
       </footer>
     </div>
