@@ -45,21 +45,30 @@ export const ACTION_COSTS_CENTS = {
   ai_contact_update: 1,        // $0.01 — AI-initiated contact update
 } as const;
 
+// Pricing structure:
+// - $699/mo minimum (first seat/line)
+// - $301/mo per additional seat/line
+// - $300 setup fee per line
+// - AI usage and credits billed separately (see ACTION_COSTS_CENTS above)
+
 // Monthly minimums in cents by account type
 export const MONTHLY_MINIMUMS_CENTS: Record<string, number> = {
-  vip_manager: 150000,        // $1,500
-  sales_outreach: 150000,     // $1,500
-  app_testing: 122200,        // $1,222
+  vip_manager: 69900,         // $699 first seat
+  sales_outreach: 69900,      // $699 first seat
+  app_testing: 69900,         // $699 first seat
   customer_support: 0,        // No monthly minimum (per-ticket only)
   general: 0,                 // No minimum
 };
 
-// Setup fees in cents
+// Additional seat cost in cents
+export const ADDITIONAL_SEAT_CENTS = 30100; // $301/mo per additional seat
+
+// Setup fees in cents per line
 export const SETUP_FEES_CENTS: Record<string, number> = {
-  vip_manager: 100000,        // $1,000 base setup
-  sales_outreach: 100000,     // $1,000 base setup
-  app_testing: 100000,        // $1,000 base setup
-  customer_support: 100000,   // $1,000 base setup
+  vip_manager: 30000,         // $300 per line
+  sales_outreach: 30000,      // $300 per line
+  app_testing: 30000,         // $300 per line
+  customer_support: 30000,    // $300 per line
   general: 0,
 };
 

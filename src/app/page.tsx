@@ -303,7 +303,7 @@ export default function LandingPage() {
             {
               name: 'Growth',
               icon: '📱',
-              price: '$1,500',
+              price: '$699',
               period: '/mo per line',
               subtitle: 'Most popular',
               highlight: true,
@@ -423,7 +423,7 @@ export default function LandingPage() {
 
         {/* Setup fee note */}
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-          Setup: $1,000/line (number provisioning, Apple ID, dedicated Mac, onboarding) · +$1,000 for AI messaging
+          Setup: $300/line · Additional seats: $301/mo · AI usage billed separately
         </div>
       </section>
 
