@@ -4459,9 +4459,18 @@ button:active { transform: scale(0.98); }`}</style>
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
                             });
-                            setColumns(prev => prev.map(c => c.id === col.id ? {
-                              ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, isAIDraft: false, id: `ai-sent-${Date.now()}` } : m),
-                            } : c));
+                            // Mark as sent — keep other drafts untouched
+                            const sentId = `ai-sent-${Date.now()}`;
+                            setColumns(prev => prev.map(c => {
+                              if (c.id !== col.id) return c;
+                              return {
+                                ...c,
+                                messages: c.messages.map(m => {
+                                  if (m.id !== msg.id) return m; // leave other messages/drafts alone
+                                  return { ...m, isAIDraft: false, id: sentId, status: 'Sent' };
+                                }),
+                              };
+                            }));
                           }
                         }} style={{
                           padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
