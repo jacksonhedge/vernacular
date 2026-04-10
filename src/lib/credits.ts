@@ -46,29 +46,41 @@ export const ACTION_COSTS_CENTS = {
 } as const;
 
 // Pricing structure:
-// - $699/mo minimum (first seat/line)
-// - $301/mo per additional seat/line
-// - $300 setup fee per line
+// - $899/mo per seat (first seat)
+// - $333/mo per additional seat
+// - $899 setup fee for first line (does NOT count as month 1)
+// - $301 setup fee for each additional line
+// - Annual billing: 12% discount
 // - AI usage and credits billed separately (see ACTION_COSTS_CENTS above)
+//
+// Example: New client, 1 line = $899 setup + $899/mo = $1,798 first month
+// Example: Annual = $899 setup + ($899 × 12 × 0.88) = $899 + $9,494 = $10,393/yr
 
-// Monthly minimums in cents by account type
+// Monthly cost in cents per seat
 export const MONTHLY_MINIMUMS_CENTS: Record<string, number> = {
-  vip_manager: 69900,         // $699 first seat
-  sales_outreach: 69900,      // $699 first seat
-  app_testing: 69900,         // $699 first seat
+  vip_manager: 89900,         // $899/mo first seat
+  sales_outreach: 89900,      // $899/mo first seat
+  app_testing: 89900,         // $899/mo first seat
   customer_support: 0,        // No monthly minimum (per-ticket only)
   general: 0,                 // No minimum
 };
 
 // Additional seat cost in cents
-export const ADDITIONAL_SEAT_CENTS = 30100; // $301/mo per additional seat
+export const ADDITIONAL_SEAT_CENTS = 33300; // $333/mo per additional seat
 
-// Setup fees in cents per line
+// Setup fees in cents
+export const SETUP_FEE_FIRST_LINE_CENTS = 89900;  // $899 first line setup (doesn't count as month 1)
+export const SETUP_FEE_ADDITIONAL_CENTS = 30100;   // $301 per additional line setup
+
+// Annual discount
+export const ANNUAL_DISCOUNT = 0.12; // 12% off annual billing
+
+// Setup fees per type (legacy — use SETUP_FEE_FIRST_LINE_CENTS for new clients)
 export const SETUP_FEES_CENTS: Record<string, number> = {
-  vip_manager: 30000,         // $300 per line
-  sales_outreach: 30000,      // $300 per line
-  app_testing: 30000,         // $300 per line
-  customer_support: 30000,    // $300 per line
+  vip_manager: 89900,         // $899 first line
+  sales_outreach: 89900,      // $899 first line
+  app_testing: 89900,         // $899 first line
+  customer_support: 89900,    // $899 first line
   general: 0,
 };
 

@@ -10404,7 +10404,9 @@ PRICING (you know this — quote it if asked):
 - Bulk blast per recipient: $0.05 | AI chat (this conversation): $0.10
 - AI tone analysis: $0.50 | Contact enrichment: $0.25
 - Models: Haiku ~$0.001/msg, Sonnet ~$0.01-0.02/msg, Opus ~$0.05-0.10/msg
-- Platform: $699/mo first seat, $301/mo additional seats, $300 setup/line
+- Platform: $899/mo first seat, $333/mo additional seats
+- Setup: $899 first line (doesn't count as month 1), $301 additional lines
+- Annual billing: 12% discount ($899/mo × 12 × 0.88 = $9,494/yr + setup)
 - AI usage billed separately on top of platform fee
 
 PLATFORM KNOWLEDGE (from craig/*.md files):

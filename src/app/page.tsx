@@ -303,7 +303,7 @@ export default function LandingPage() {
             {
               name: 'Growth',
               icon: '📱',
-              price: '$699',
+              price: '$899',
               period: '/mo per line',
               subtitle: 'Most popular',
               highlight: true,
@@ -423,7 +423,7 @@ export default function LandingPage() {
 
         {/* Setup fee note */}
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
-          Setup: $300/line · Additional seats: $301/mo · AI usage billed separately
+          Setup: $899 first line · $301 additional lines · $333/mo additional seats · 12% off annual · AI usage billed separately
         </div>
       </section>
 
