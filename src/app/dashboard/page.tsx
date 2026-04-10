@@ -4561,16 +4561,12 @@ button:active { transform: scale(0.98); }`}</style>
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
                             });
-                            // Mark as sent — keep other drafts untouched
-                            const sentId = `ai-sent-${Date.now()}`;
+                            // Remove approved draft — real message will appear from API on next poll
                             setColumns(prev => prev.map(c => {
                               if (c.id !== col.id) return c;
                               return {
                                 ...c,
-                                messages: c.messages.map(m => {
-                                  if (m.id !== msg.id) return m; // leave other messages/drafts alone
-                                  return { ...m, isAIDraft: false, id: sentId, status: 'Sent' };
-                                }),
+                                messages: c.messages.filter(m => m.id !== msg.id),
                               };
                             }));
                           }
