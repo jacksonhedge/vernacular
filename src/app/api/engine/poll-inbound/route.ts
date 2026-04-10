@@ -172,40 +172,8 @@ export async function GET() {
           .eq('id', convId)
           .single();
 
-        // AI auto-respond is FULLY DISABLED — no auto-sending for any mode
-        if (false && conv && conv.ai_mode === 'auto') {
-          const { data: history } = await supabase
-            .from('messages')
-            .select('direction, message')
-            .eq('conversation_id', convId)
-            .order('created_at', { ascending: true })
-            .limit(10);
-
-          const conversationHistory = (history || []).map(m => ({
-            role: m.direction === 'Outbound' ? 'outgoing' : 'incoming',
-            content: m.message,
-          }));
-
-          const { data: contact } = await supabase
-            .from('contacts').select('full_name, phone')
-            .eq('id', contactId).single();
-
-          const aiUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vernacular.chat';
-          await fetch(`${aiUrl}/api/ai/respond`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              conversationId: convId,
-              contactName: contact?.full_name || '',
-              contactPhone: contact?.phone || msg.contact_phone,
-              inboundMessage: msg.message,
-              conversationHistory,
-              systemPrompt: conv.ai_system_prompt || undefined,
-              mode: conv.ai_mode,
-              ghostName: conv.ai_ghost_name || 'Blinky',
-            }),
-          });
-        }
+        // AI auto-respond is FULLY DISABLED — uncomment when ready for production
+        // if (conv && conv.ai_mode === 'auto') { ... }
       } catch (aiErr) {
         console.error('[poll-inbound] AI trigger failed:', aiErr instanceof Error ? aiErr.message : aiErr);
       }
