@@ -3248,6 +3248,23 @@ button:active { transform: scale(0.98); }`}</style>
                         );
                       })}
                     </div>
+                    {/* Go to Chat Stream */}
+                    <button onClick={() => {
+                      setExpandedMatrixId(null);
+                      setConversationViewMode('streams');
+                      setTimeout(() => {
+                        const el = document.getElementById(`stream-col-${tile.colId}`);
+                        el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                      }, 150);
+                    }} style={{
+                      width: '100%', padding: '10px 0', border: 'none', borderTop: '1px solid rgba(0,0,0,0.06)',
+                      background: 'rgba(55,138,221,0.04)', fontSize: 13, fontWeight: 600, color: '#378ADD',
+                      cursor: 'pointer', fontFamily: "'Inter', sans-serif",
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                      Go to Chat Stream
+                    </button>
                     {/* Quick reply — clean white */}
                     <div style={{
                       padding: '10px 16px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
@@ -6082,31 +6099,56 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
                 <button onClick={() => {
-                  const c = selectedContact;
-                  const firstName = c.first_name || c.full_name?.split(' ')[0] || '';
-                  const lastName = c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '';
-                  setEditingContact({
-                    colId: '', firstName, lastName,
-                    name: getDisplayName(c), phone: c.phone || '', email: c.email || '',
-                    company: c.company || '', jobTitle: c.job_title || '',
-                    linkedin: c.linkedin_url || '', instagram: c.instagram_handle || '',
-                    twitter: c.twitter_handle || '', school: c.school || '',
-                    greekOrg: c.greek_org || '', state: c.state || '',
-                    city: c.city || '', dob: c.dob || '',
-                    venmo: c.venmo_handle || '', notes: c.notes || '',
+                  const phone = selectedContact.phone?.replace(/\D/g, '').slice(-10);
+                  if (!phone) return;
+                  const matchingCol = [...columns, ...allConversations].find(c => {
+                    const colPhone = c.contact?.phone?.replace(/\D/g, '').slice(-10);
+                    return colPhone === phone;
                   });
+                  setSelectedContact(null);
+                  setConversationViewMode('streams');
+                  if (matchingCol) {
+                    setTimeout(() => {
+                      const el = document.getElementById(`stream-col-${matchingCol.id}`);
+                      el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }, 150);
+                  }
                 }} style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
-                  background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}>Edit</button>
-                <button onClick={() => handleDeleteContact(selectedContact.id)} style={{
-                  flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(220,38,38,0.2)',
-                  background: 'rgba(220,38,38,0.05)', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer',
-                  fontFamily: "'Inter', sans-serif",
-                }}>Delete</button>
+                  width: '100%', padding: '10px 0', borderRadius: 8, border: '1px solid rgba(55,138,221,0.3)',
+                  background: 'rgba(55,138,221,0.06)', fontSize: 13, fontWeight: 600, color: '#378ADD', cursor: 'pointer',
+                  fontFamily: "'Inter', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                  Go to Chat Stream
+                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => {
+                    const c = selectedContact;
+                    const firstName = c.first_name || c.full_name?.split(' ')[0] || '';
+                    const lastName = c.last_name || c.full_name?.split(' ').slice(1).join(' ') || '';
+                    setEditingContact({
+                      colId: '', firstName, lastName,
+                      name: getDisplayName(c), phone: c.phone || '', email: c.email || '',
+                      company: c.company || '', jobTitle: c.job_title || '',
+                      linkedin: c.linkedin_url || '', instagram: c.instagram_handle || '',
+                      twitter: c.twitter_handle || '', school: c.school || '',
+                      greekOrg: c.greek_org || '', state: c.state || '',
+                      city: c.city || '', dob: c.dob || '',
+                      venmo: c.venmo_handle || '', notes: c.notes || '',
+                    });
+                  }} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(0,0,0,0.12)',
+                    background: '#fff', fontSize: 13, fontWeight: 600, color: '#1c1c1e', cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                  }}>Edit</button>
+                  <button onClick={() => handleDeleteContact(selectedContact.id)} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(220,38,38,0.2)',
+                    background: 'rgba(220,38,38,0.05)', fontSize: 13, fontWeight: 600, color: '#DC2626', cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                  }}>Delete</button>
+                </div>
               </div>
             </div>
           </div>
