@@ -2770,9 +2770,12 @@ button:active { transform: scale(0.98); }`}</style>
           const dob = (contactRecord as unknown as Record<string, string>)?.dob || '';
           const age = dob ? Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86400000)) : null;
           const isPhone = fullName.startsWith('+') || fullName.startsWith('(') || fullName.match(/^\d/);
-          const initials = isPhone
-            ? fullName.replace(/\D/g, '').slice(-4)
-            : fullName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+          const trimmedName = fullName.trim();
+          const initials = !trimmedName || trimmedName === 'Unknown'
+            ? (col.contact!.phone?.replace(/\D/g, '').slice(-4) || '??')
+            : isPhone
+              ? trimmedName.replace(/\D/g, '').slice(-4)
+              : trimmedName.split(' ').filter(w => w.length > 0).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '??';
           const lastMsg = col.messages[col.messages.length - 1];
           const hasUnread = lastMsg?.direction === 'incoming' && !lastMsg?.isAIDraft;
           const hasAiDraft = col.messages.some(m => m.isAIDraft);
@@ -3063,21 +3066,25 @@ button:active { transform: scale(0.98); }`}</style>
                     {/* Bottom: full-width timestamp bar */}
                     <span style={{
                       position: 'absolute', bottom: 0, left: 0, right: 0,
-                      textAlign: 'center', fontSize: 9, fontWeight: 700, padding: '3px 0',
+                      textAlign: 'center', fontSize: 11, fontWeight: 700, padding: '4px 0',
                       fontFamily: "'JetBrains Mono', monospace",
-                      background: tile.direction === 'incoming' ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.2)',
-                      color: tile.direction === 'incoming' ? '#4ADE80' : 'rgba(255,255,255,0.7)',
+                      background: tile.direction === 'incoming' ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.25)',
+                      color: tile.direction === 'incoming' ? '#4ADE80' : '#fff',
                       borderRadius: '0 0 6px 6px',
                     }}>
                       {tile.timestamp ? fmtMsgTime(tile.timestamp) : '—'}
                     </span>
                     {/* Center: big name or initials */}
                     <span style={{
-                      fontSize: tile.name.split(' ')[0].length > 6 ? 22 : 27,
+                      fontSize: (tile.name.trim().split(' ')[0] || '').length > 6 ? 22 : 27,
                       fontWeight: 900, textAlign: 'center', lineHeight: 1,
                       letterSpacing: '-0.04em', textShadow: '0 2px 4px rgba(0,0,0,0.5)',
                     }}>
-                      {tile.name.split(' ')[0].length > 6 ? tile.initials : tile.name.split(' ')[0]}
+                      {(() => {
+                        const firstName = tile.name.trim().split(' ')[0] || '';
+                        if (!firstName || firstName === 'Unknown') return tile.initials;
+                        return firstName.length > 6 ? tile.initials : firstName;
+                      })()}
                     </span>
                     {/* Ghost — appears when AI is active on this tile */}
                     {(tile.aiMode === 'draft' || tile.aiMode === 'auto' || tile.status === 'draft') && (() => {
