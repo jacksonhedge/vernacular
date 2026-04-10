@@ -1,199 +1,209 @@
 # Vernacular — Repo Context for Claude
 
 ## What Is Vernacular?
-Vernacular is a closed-loop iMessage operations platform built by Hedge, Inc. Each physical
-Mac station corresponds to one dedicated phone number and Apple ID. A local LLM processes
-inbound messages and generates responses. All activity flows into a central database and
-surfaces through the Vernacular web UI.
+Vernacular is an iMessage-as-a-service CRM platform built by Hedge, Inc. Businesses send/receive real blue bubble iMessages through dedicated Mac relay stations, with AI-powered response drafting and contact management.
 
-**Standalone Hedge product — separate from Bankroll, SideBet, Hedge Connect, FraternityBase.**
+**Standalone Hedge product — separate from Bankroll, SideBet, FraternityBase.**
 
 Owner: Jackson Fitzgerald | Pittsburgh, PA | github.com/jacksonhedge/vernacular
 
 ---
 
-## Current Architecture (Phase 1 — Live)
+## Architecture (Live)
 
 ```
-iMessage on each Mac station
-         ↓
-  [Mac app — not yet built, see Phase 2]
-         ↓
-  Supabase (source of truth)
-         ↓
-  Vernacular Web UI (Next.js 15 / Vercel)
+Dashboard (vernacular.chat) → Supabase → outbound_queue → Wade (Mac) → AppleScript → iMessage
+iMessage → chat.db → sync.py → Supabase → Realtime → Dashboard
 ```
 
-### Web App Stack
-- **Framework**: Next.js 15 (App Router)
-- **UI**: React 19
-- **Database**: Supabase (Postgres + Auth + Realtime)
-- **Integrations**: Notion SDK
-- **Analytics**: Vercel Analytics
+### Stack
+- **Framework**: Next.js 15 (App Router), React 19
+- **Database**: Supabase (Postgres + Auth + Realtime + Storage)
+- **AI**: Claude Sonnet 4.6 (Craig copilot), Claude Haiku 3.5 (fallback)
 - **Deployment**: Vercel (auto-deploy from main)
+- **Supabase Project**: `miuyksnwzkhiyyilchjs`
 
-### Repo Structure
+### Key Files
 ```
-/                          ← Next.js app root
-├── app/                   ← App Router pages & layouts
-├── components/            ← React components
-├── lib/                   ← Supabase client, utilities
-├── vernacular-mcp/        ← Per-station MCP server (TypeScript) — Phase 2
-└── CLAUDE.md              ← This file
+src/app/dashboard/page.tsx    ← Main dashboard (~11,000 lines, monolith)
+src/app/page.tsx              ← Landing page
+src/app/api/                  ← ~35 API routes
+src/lib/supabase.ts           ← Client + service role clients
+src/lib/credits.ts            ← Billing/pricing constants
+src/lib/contacts.ts           ← Contact CRUD helpers
+station/sync.py               ← Mac station: inbound + outbound sync
+station/outbound.sh           ← Mac station: send via AppleScript
+station/heartbeat.sh          ← Mac station: heartbeat ping
+craig/*.md                    ← Craig AI knowledge files
 ```
 
 ---
 
-## Phase 2 — Mac App + iMessage MCP Server (Upcoming)
+## CRITICAL RULES (things that WILL break the system)
 
-When the native Mac app is built, each station will run a local MCP server that exposes
-iMessage as a set of tools Claude can call. The web UI will connect to stations via the
-MCP protocol.
+### Message Deduplication — REPLACE not APPEND
+When merging messages from API poll into local state, ALWAYS replace the message list with fresh API data. NEVER append. The old APPEND pattern caused double messages.
+```
+// CORRECT:
+const localOnly = existing.messages.filter(m => m.id.startsWith('m-') || (m.isAIDraft && m.id.startsWith('ai-draft-')));
+messages: [...fresh.messages, ...localOnly]
 
-### MCP Server (vernacular-mcp/)
-Already scaffolded. Per-station Node.js/TypeScript server that:
-- Reads `~/Library/Messages/chat.db` (SQLite, read-only)
-- Exposes 5 MCP tools over SSE transport
-- Sends replies via AppleScript → Messages.app
-- Runs as a launchd service on each Mac
+// WRONG — causes duplicates:
+messages: [...existing.messages, ...newMsgs]
+```
 
-**Known issues to fix before Phase 2 activates:**
-- `uuid` and `chokidar` missing from `vernacular-mcp/package.json`
-- `startScheduler()` and `startDbWatcher()` not called in `index.ts`
-- `send_message` AppleScript shell escaping breaks on single-quote bodies
+### Outbound Queue — guard_duplicate_send trigger
+The `guard_duplicate_send` trigger on `outbound_queue`:
+- Blocks changing status from 'sending'/'sent' back to 'queued'
+- Blocks re-claiming messages with `send_attempts > 0`
+- Stuck messages at 'sending' are **unrecoverable** — must DELETE and re-INSERT
+- The trigger fires on UPDATE only, not INSERT
 
-### MCP Tools
-| Tool | Description |
+### Confirm-Sent — update BOTH tables
+The `/api/engine/confirm-sent` endpoint must update BOTH `outbound_queue` AND `messages` tables. Wade sends `messageId` (not `queueId`). The `outbound_queue.message_id` FK links them.
+
+### Phone Number Formats — normalize before matching
+- `contacts` table: `(XXX) XXX-XXXX`
+- `messages`/`outbound_queue`: `+1XXXXXXXXXX`
+- NEVER use exact match — always normalize to 10 digits before comparing
+- Last-4-digit matching is dangerous (birthday paradox collision)
+
+### AI Drafts — persist across poll refresh
+AI draft messages (id starts with `ai-draft-`) are local-only (not in DB). The 30-second poll refresh MUST preserve them. Use `setColumns(prev => ...)` callback, never stale closure on `columns`.
+
+### outbound.sh — DO NOT use IFS pipe parsing
+The pipe-delimited `IFS='|' read` approach breaks when `ATT_URL` is empty. Use separate temp files per field or JSON parsing. Wade currently runs the backup outbound.sh (no attachment support). The v3 with temp files is on main but untested on Wade.
+
+### Image Sending via AppleScript
+`send POSIX file "/path"` returns exit code 0 but iMessage silently rejects the delivery. This is a macOS Automation permission issue, not a script bug. Image sending is NOT working.
+
+---
+
+## Craig AI (Vernacular AI Copilot)
+
+### Personality
+- Casual, dry humor, short responses (1-2 sentences max)
+- Never introduces himself, never reveals model
+- Never says "I'll be happy to assist", "Understood", "Let me know if you need anything"
+- Uses lowercase, sounds like a text message
+
+### Actions Craig Can Take
+| Tag | What it does |
+|-----|-------------|
+| `[SEND:name_or_phone:message]` | Creates AI Draft in conversation stream |
+| `[BULK_SEND:initiative:msg1\|\|\|msg2]` | Bulk send to initiative contacts |
+| `[UPDATE:phone:field:value]` | Update contact field |
+| `[LOOKUP:history:name]` | Full message history from DB |
+| `[LOOKUP:search:term]` | Search contacts |
+| `[LOOKUP:initiative:name]` | Initiative details + contacts |
+| `[LOOKUP:activity:days]` | Recent activity across all conversations |
+| `[INITIATIVE:name\|type\|desc\|instructions]` | Create initiative |
+| `[SCHEDULE:contact\|title\|datetime\|status]` | Create calendar event |
+| Navigate: "Navigating to streams..." | Switches dashboard tab/view |
+
+### Important Craig Rules
+- `[SEND:]` creates drafts in conversation Streams (NOT approval cards in Craig's chat)
+- Conversations with pending drafts sort to the LEFT in Streams
+- Craig only sees 30 contacts + last 3 messages per conversation in his prompt
+- For contacts not in the prompt, Craig uses `[LOOKUP:search:name]` to search the DB
+- Chat history persists to `ai_chat_sessions` table in Supabase
+- Answer questions FIRST, don't take action until explicitly told
+
+---
+
+## Pricing (credits.ts)
+
+| Action | Cost |
+|--------|------|
+| New conversation | $0.99 |
+| Text sent | $0.001 |
+| Text received | Free |
+| AI draft approved & sent | $0.17 |
+| AI auto-response | $0.25 |
+| Support ticket resolved | $1.25 |
+| Contact import | $0.07 |
+| Widget handoff | $0.50 |
+| Bulk blast per recipient | $0.05 |
+
+Monthly minimums: VIP Manager $1,500, Sales/Outreach $1,500, App Testing $1,222, Support $0 (per-ticket only). Setup: $1,000/line + $1,000 AI addon.
+
+---
+
+## Dashboard Views (inside Conversations tab)
+
+| View | Description |
 |------|-------------|
-| `send_message` | Send iMessage/SMS, supports scheduling + attachments |
-| `read_conversation` | Message history with a contact |
-| `search_messages` | Full-text search with date filters |
-| `list_conversations` | Recent threads with unread counts |
-| `get_station_health` | iMessage status, blue/green delivery rate |
+| **Matrix** | 10x10 disco grid, one tile per contact, color-coded by status, ghost squad, initiative staging + LAUNCH |
+| **Streams** | Horizontal scroll of iMessage-style conversation columns |
+| **Messages** | Timeline of all messages across conversations |
+| **Summary** | Table view with contact, last message, status, response rate |
+| **Schedule** | Calendar view (not heavily used yet) |
 
-### Station Model
-- **1 station = 1 phone number = 1 Apple ID = 1 MacBook**
-- Local model: Llama 3.3 70B via Ollama (primary), Claude API (fallback)
-- Always-on, lid-closed, ethernet-connected
-- Writes to shared Supabase instance
+All views support **initiative filter** — toggle buttons at the top filter to only contacts in that initiative.
+
+Matrix is the **default view**. View mode, sort mode, and initiative filter persist to localStorage.
 
 ---
 
-## Supabase Schema (Core Tables)
+## Initiatives
 
-```sql
-stations       -- phone_number, apple_id, machine_name, is_active
-contacts       -- phone_number, display_name, tags, metadata
-conversations  -- station_id, contact_id, thread_id, status, last_message_at
-messages       -- conversation_id, direction, body, model_used, imessage_guid, sent_at
-```
+Initiatives = groups of contacts with shared goals, tone, and AI knowledge.
+- Stored in `org_knowledge` table (category = 'initiative')
+- Contacts linked via `initiative_contacts` junction table
+- Each initiative can have memories, instructions, examples, files
+- Craig can create initiatives from CSV uploads (📄 button in copilot)
+- Matrix can stage entire initiatives for bulk texting
 
-`imessage_guid` is the dedup key — sourced from `chat.db`.
-
----
-
-## Pricing
-- **Team**: $333/seat/month (minimum 3 seats, 50K credits/seat)
-- **Growth**: $299/seat/month (5+ seats, 75K credits/seat)
-- **Enterprise**: $249/seat/month (10+ seats, 150K credits/seat)
-- **Credit Packs**: 100K/$79, 500K/$349, 1M/$599
+Current initiatives:
+- Testers in NJ (141 contacts)
+- Prediction Market testing (209 contacts)
+- VIP Re-engagement
+- Form 1 (from CSV imports)
 
 ---
 
-## Development
+## Stations
 
-```bash
-# Web app
-npm install
-npm run dev          # localhost:3000
+| Station | Machine | Phone | Status |
+|---------|---------|-------|--------|
+| Wade | MacBook Air | (412) 512-8437 | Online |
+| Albus | Mac Mini | TBD | Offline |
 
-# MCP server (Phase 2)
-cd vernacular-mcp
-npm install
-npm run dev          # localhost:3000 (separate port TBD)
-```
-
-### Environment Variables
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# Notion
-NOTION_API_KEY=
-
-# MCP server (per station)
-STATION_ID=station-01
-PHONE_NUMBER=+14125550001
-API_KEY=
-RELAY_URL=
-```
+Wade runs: `sync.py` (inbound + outbound, 5s), `heartbeat.sh` (30s), `outbound.sh` (backup version, 5s poll)
 
 ---
 
-## Key Decisions & Constraints
-- **No per-message API cost** — local inference after hardware investment
-- **One number per machine** — clean isolation, easy to debug
-- **Supabase over self-hosted Postgres** — faster v1, Realtime built in
-- **Vercel deployment** — zero-config, auto-deploy from main
-- **MCP over custom protocol** — standard, Claude-native, extensible
+## Security Issues (from audit)
+
+**CRITICAL — most API routes have NO authentication.** Any route using `createServiceClient()` without `getAuthUser()` is completely open. This includes `/api/messages/send`, `/api/ai/chat`, `/api/contacts/*`, `/api/billing`, etc.
+
+**20 Supabase tables have RLS disabled** — anon key can read/write freely.
+
+**No rate limiting** on any endpoint.
+
+**No CORS configuration.**
+
+Priority: Add auth middleware before onboarding any client.
 
 ---
 
-## Roadmap
+## Known Issues / Bugs
 
-### Phase 1 — Web Platform (LIVE)
-- [x] Web UI on Vercel (vernacular.chat/dashboard)
-- [x] Supabase backend (messages, conversations, contacts, stations)
-- [x] Station sync scripts (station/sync.py — inbound + outbound with BLOB extraction)
-- [x] Heartbeat + outbound queue polling
-- [x] AI response drafting (Claude Haiku) with Approve/Edit/Dismiss
-- [x] Credit-based billing system
-- [x] Conversation Goal field per thread
+- Image sending: AppleScript POSIX file returns 0 but iMessage rejects (macOS permission)
+- Multi-line messages: shell escaping breaks in outbound.sh (plan: use temp files + AppleScript `read POSIX file`)
+- outbound.sh v3 (with attachment support) is on main but NOT deployed to Wade — Wade runs backup
+- Dashboard is 11K lines monolith — needs splitting into components
+- `messages_dedup_idx` is too aggressive — blocks sending same text to same person EVER (should include time window)
+- Some "Form 1" initiative duplicates in the header
 
-### Phase 2 — macOS Station Manager App
-Native SwiftUI app that runs on each Mac station, replacing the Python scripts.
+---
 
-**Status Dashboard:**
-- Real-time status for each station (online/offline, last heartbeat, message counts)
-- Overview of all stations from any machine (pull from Supabase stations table)
-- Green/yellow/red health indicators per station
-- Message throughput graphs (sent/received per hour)
+## Legal Pages (live)
+- `/terms` — Terms of Service
+- `/privacy` — Privacy Policy (CCPA/CPRA)
+- `/acceptable-use` — Acceptable Use Policy
 
-**Station Controls:**
-- Start/stop sync, heartbeat, outbound sender from the app
-- View live sync logs in-app
-- Configure station name, phone number, sync interval
-- Toggle outbound auto-sending on/off
+---
 
-**iMessage Integration:**
-- Direct chat.db access (replace Python sqlite3 with Swift SQLite)
-- Native NSAttributedString decoding (no more BLOB extraction hacks)
-- Real-time file watcher on chat.db (instant sync vs 30s polling)
-- AppleScript sending with delivery confirmation
-
-**System Tray / Menu Bar:**
-- Persistent menu bar icon showing station status
-- Quick stats: messages synced today, queue depth, last heartbeat
-- Click to open full dashboard
-- Notifications for failed syncs or station going offline
-
-**Multi-Station View:**
-- See all stations (Wade, Albus, Russell, etc.) in one window
-- Remote health monitoring — any station can see all others
-- Alert when a station goes offline for >5 minutes
-
-**Tech Stack:**
-- SwiftUI + Swift 5.9
-- SQLite.swift for chat.db access
-- Supabase Swift SDK for backend
-- Combine for reactive data flow
-- launchd integration for auto-start on boot
-
-### Phase 3 — Operations Center (25+ stations)
-- [ ] Electrical + networking infrastructure for rack of MacBooks
-- [ ] Centralized monitoring dashboard (web + macOS)
-- [ ] Auto-provisioning: plug in a Mac → auto-configure station
-- [ ] Load balancing: route outbound messages to available stations
-- [ ] Failover: if a station dies, redistribute its conversations
+## Git Tags
+- `v1.0-stable` — Known-good baseline from April 8, 2026. Rollback: `git reset --hard v1.0-stable`
