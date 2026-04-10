@@ -4589,12 +4589,15 @@ button:active { transform: scale(0.98); }`}</style>
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
                             });
-                            // Remove approved draft — real message will appear from API on next poll
+                            // Convert draft to sent — keep it visible so other drafts don't lose position
                             setColumns(prev => prev.map(c => {
                               if (c.id !== col.id) return c;
                               return {
                                 ...c,
-                                messages: c.messages.filter(m => m.id !== msg.id),
+                                messages: c.messages.map(m => {
+                                  if (m.id !== msg.id) return m;
+                                  return { ...m, isAIDraft: false, id: `approved-${Date.now()}`, status: 'Sent' };
+                                }),
                               };
                             }));
                           }
