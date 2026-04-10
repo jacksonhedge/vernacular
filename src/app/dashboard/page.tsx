@@ -4777,8 +4777,12 @@ button:active { transform: scale(0.98); }`}</style>
                   })()}
                   <textarea
                     value={inputValues[col.id] || ''}
-                    onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(col.id); } }}
+                    onChange={e => {
+                      setInputValues(prev => ({ ...prev, [col.id]: e.target.value }));
+                      // Reset height when empty (after send clears the input)
+                      if (!e.target.value) e.target.style.height = '36px';
+                    }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(col.id); e.currentTarget.style.height = '36px'; } }}
                     onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }}
                     placeholder={(() => {
                       const colIdx = columns.filter(c => c.contact).findIndex(c => c.id === col.id);
