@@ -4097,8 +4097,8 @@ button:active { transform: scale(0.98); }`}</style>
                       {col.channel === 'discord' ? '🎮' : col.channel === 'telegram' ? '✈️' : col.channel === 'email' ? '📧' : '💬'} {col.channel || 'iMsg'}
                     </span>
                     <button onClick={async (e) => { e.stopPropagation(); const modes = ['off', 'draft', 'auto'] as const; const currentIdx = modes.indexOf((col.aiMode || 'off') as typeof modes[number]); const nextMode = modes[(currentIdx + 1) % modes.length]; if (nextMode === 'auto') { const confirmed = window.confirm(`Enroll in auto response?`); if (!confirmed) return; } setColumns(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c)); setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, aiMode: nextMode } : c)); const convId = col.conversationId || col.id.replace('real-', ''); if (convId) { await supabase.from('conversations').update({ ai_mode: nextMode }).eq('id', convId); } }}
-                      title={`AI: ${col.aiMode || 'off'}`} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : col.aiMode === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)', color: col.aiMode === 'auto' ? '#22C55E' : col.aiMode === 'draft' ? '#D97706' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase' }}>
-                      AI {(col.aiMode || 'off').toUpperCase()}
+                      title={`AI: ${col.aiMode || 'draft'}`} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: col.aiMode === 'auto' ? 'rgba(34,197,94,0.1)' : (col.aiMode || 'draft') === 'draft' ? 'rgba(217,119,6,0.1)' : 'rgba(0,0,0,0.04)', color: col.aiMode === 'auto' ? '#22C55E' : (col.aiMode || 'draft') === 'draft' ? '#D97706' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase' }}>
+                      AI {(col.aiMode || 'draft').toUpperCase()}
                     </button>
                     <button onClick={() => setShowTimestamps(prev => !prev)} style={{ padding: '1px 5px', borderRadius: 3, border: 'none', fontSize: 9, fontWeight: 700, background: showTimestamps ? 'rgba(55,138,221,0.1)' : 'rgba(0,0,0,0.04)', color: showTimestamps ? '#378ADD' : '#8e8e93', cursor: 'pointer', fontFamily: "'JetBrains Mono', monospace" }}>
                       {showTimestamps ? 'TIMES ON' : 'TIMES'}
@@ -10430,7 +10430,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                                 id: `draft-col-${phoneDigits}`,
                                 contact: { id: `c-${phoneDigits}`, name, initials: name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2), tag: 'UNREAD', tagColor: '#F59E0B', tagBg: 'rgba(245,158,11,0.1)', phone },
                                 messages: [draftMsg],
-                                aiMode: 'off', goal: '', channel: 'imessage',
+                                aiMode: 'draft', goal: '', channel: 'imessage',
                               };
                               return [newCol, ...prev];
                             }
