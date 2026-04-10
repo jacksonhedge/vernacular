@@ -380,6 +380,7 @@ export default function DashboardPage() {
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
+  const [recentlySentCols, setRecentlySentCols] = useState<Set<string>>(new Set());
   const [creditUsage, setCreditUsage] = useState<{ used: number; minimum: number; actions: number } | null>(null);
   const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
@@ -1452,6 +1453,10 @@ button:active { transform: scale(0.98); }`}</style>
     // Optimistic update — show message immediately
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, msg] } : c));
     setInputValues(prev => ({ ...prev, [colId]: '' }));
+
+    // Keep this column in position for 30 seconds after sending
+    setRecentlySentCols(prev => new Set(prev).add(colId));
+    setTimeout(() => { setRecentlySentCols(prev => { const next = new Set(prev); next.delete(colId); return next; }); }, 30000);
 
     // Find the column's contact phone number
     const col = columns.find(c => c.id === colId);
@@ -4039,17 +4044,22 @@ button:active { transform: scale(0.98); }`}</style>
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
             if (aPinned !== bPinned) return bPinned - aPinned;
 
-            // 1. AI Drafts waiting for approval (leftmost after pinned)
+            // 1. Recently sent — keep in position for 30s after sending
+            const aRecentSent = recentlySentCols.has(a.id) ? 1 : 0;
+            const bRecentSent = recentlySentCols.has(b.id) ? 1 : 0;
+            if (aRecentSent !== bRecentSent) return bRecentSent - aRecentSent;
+
+            // 2. AI Drafts waiting for approval
             const aHasDraft = a.messages.some(m => m.isAIDraft) ? 1 : 0;
             const bHasDraft = b.messages.some(m => m.isAIDraft) ? 1 : 0;
             if (aHasDraft !== bHasDraft) return bHasDraft - aHasDraft;
 
-            // 2. Recently received an inbound text (they replied — needs attention)
+            // 3. Recently received an inbound text (they replied — needs attention)
             const aLastInbound = a.messages.length > 0 && a.messages[a.messages.length - 1].direction === 'incoming' ? 1 : 0;
             const bLastInbound = b.messages.length > 0 && b.messages[b.messages.length - 1].direction === 'incoming' ? 1 : 0;
             if (aLastInbound !== bLastInbound) return bLastInbound - aLastInbound;
 
-            // 3. Within each tier, sort by most recent message time
+            // 4. Within each tier, sort by most recent message time
             return getLastMsgTime(b) - getLastMsgTime(a);
           });
           // Filter: if showReadStreams is off, only show pinned + unread
