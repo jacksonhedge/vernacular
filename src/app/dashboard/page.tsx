@@ -3208,17 +3208,14 @@ button:active { transform: scale(0.98); }`}</style>
               const tile = allTiles.find(t => t.id === expandedMatrixId);
               if (!tile) return null;
               const colors = tileColor(tile.status);
-              // Get all messages from the same conversation
-              const convTiles = allTiles.filter(t => t.colId === tile.colId).sort((a, b) => {
-                const aT = a.timestamp ? parseTimestamp(a.timestamp).getTime() : 0;
-                const bT = b.timestamp ? parseTimestamp(b.timestamp).getTime() : 0;
-                return aT - bT;
-              });
+              // Get full message history from the actual conversation column
+              const col = columns.find(c => c.id === tile.colId);
+              const allMessages = col?.messages || [];
               return (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}
                   onClick={() => setExpandedMatrixId(null)}>
                   <div onClick={e => e.stopPropagation()} style={{
-                    background: '#fff', borderRadius: 20, width: 420, maxHeight: '75vh',
+                    background: '#fff', borderRadius: 20, width: 480, maxHeight: '85vh', minHeight: 400,
                     boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
                     overflow: 'hidden', display: 'flex', flexDirection: 'column',
                   }}>
@@ -3248,7 +3245,7 @@ button:active { transform: scale(0.98); }`}</style>
                             {tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state}
                           </span>
                         )}
-                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{convTiles.length} msgs</span>
+                        <span style={{ fontSize: 10, color: '#8e8e93' }}>{allMessages.length} msgs</span>
                       </div>
                       <button onClick={() => setExpandedMatrixId(null)} style={{
                         width: 28, height: 28, borderRadius: 14, background: 'rgba(0,0,0,0.06)',
@@ -3258,7 +3255,7 @@ button:active { transform: scale(0.98); }`}</style>
                     </div>
                     {/* Message thread — iMessage style */}
                     <div style={{ flex: 1, overflow: 'auto', padding: '16px 16px', background: '#fff' }}>
-                      {convTiles.map(ct => {
+                      {allMessages.map((ct, ctIdx) => {
                         const isOutgoing = ct.direction === 'outgoing';
                         const isSelected = ct.id === tile.id;
                         return (
@@ -3273,11 +3270,29 @@ button:active { transform: scale(0.98); }`}</style>
                               background: isOutgoing ? '#378ADD' : '#f0f0f5',
                               color: isOutgoing ? '#fff' : '#1c1c1e',
                               fontSize: 14, lineHeight: 1.5, fontFamily: "'Inter', sans-serif",
-                              border: isSelected ? '2px solid #F59E0B' : 'none',
-                              boxShadow: isSelected ? '0 0 12px rgba(245,158,11,0.3)' : '0 1px 2px rgba(0,0,0,0.04)',
+                              border: ct.isAIDraft ? '1px dashed rgba(245,158,11,0.4)' : 'none',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                               wordBreak: 'break-word' as const,
                             }}>
+                              {ct.isAIDraft && <div style={{ fontSize: 10, fontWeight: 700, color: '#F59E0B', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>AI DRAFT</div>}
                               {ct.text}
+                              {ct.isAIDraft && (
+                                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                  <button onClick={async () => {
+                                    const phone = col?.contact?.phone;
+                                    const orgId = (user?.organizations as Record<string, unknown>)?.id as string;
+                                    if (phone) {
+                                      await fetch('/api/messages/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phoneNumber: phone, message: ct.text, contactName: tile.name, organizationId: orgId }) });
+                                      if (ct.id && !ct.id.startsWith('ai-draft-') && !ct.id.startsWith('m-')) await supabase.from('messages').update({ status: 'Sent' }).eq('id', ct.id);
+                                      setColumns(prev => prev.map(c => c.id === tile.colId ? { ...c, messages: c.messages.map(m => m.id !== ct.id ? m : { ...m, isAIDraft: false, status: 'Sent' }) } : c));
+                                    }
+                                  }} style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✓ Send</button>
+                                  <button onClick={() => {
+                                    setColumns(prev => prev.map(c => c.id === tile.colId ? { ...c, messages: c.messages.filter(m => m.id !== ct.id) } : c));
+                                    if (ct.id && !ct.id.startsWith('ai-draft-') && !ct.id.startsWith('m-')) supabase.from('messages').delete().eq('id', ct.id);
+                                  }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#8e8e93', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
+                                </div>
+                              )}
                             </div>
                             <span style={{
                               fontSize: 10, color: '#c4c4c6', marginTop: 2,
