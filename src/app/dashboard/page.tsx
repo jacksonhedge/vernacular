@@ -1044,9 +1044,10 @@ export default function DashboardPage() {
                     const freshTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
                     // Keep optimistic messages AND AI drafts that aren't in the DB yet
                     const localOnly = existing.messages.filter(m =>
-                      (m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`)) ||
-                      (m.isAIDraft && m.id.startsWith('ai-draft-'))
+                      (m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`))
                     );
+                    // Note: DB-saved drafts come from fresh.messages (status='Draft', source_system='vernacular-ai')
+                    // so they don't need to be preserved in localOnly — they're in the API response
                     return {
                       ...existing,
                       contact: fresh.contact,
@@ -4589,6 +4590,10 @@ button:active { transform: scale(0.98); }`}</style>
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ phoneNumber: phone, message: msg.text, contactName: col.contact?.name, organizationId: orgId }),
                             });
+                            // Update DB draft status to Sent
+                            if (msg.id && !msg.id.startsWith('ai-draft-') && !msg.id.startsWith('m-') && !msg.id.startsWith('approved-')) {
+                              await supabase.from('messages').update({ status: 'Sent' }).eq('id', msg.id);
+                            }
                             // Convert draft to sent — keep it visible so other drafts don't lose position
                             setColumns(prev => prev.map(c => {
                               if (c.id !== col.id) return c;
@@ -4596,7 +4601,7 @@ button:active { transform: scale(0.98); }`}</style>
                                 ...c,
                                 messages: c.messages.map(m => {
                                   if (m.id !== msg.id) return m;
-                                  return { ...m, isAIDraft: false, id: `approved-${Date.now()}`, status: 'Sent' };
+                                  return { ...m, isAIDraft: false, status: 'Sent' };
                                 }),
                               };
                             }));
@@ -10379,13 +10384,43 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                             } catch { /* silent */ }
                           }
 
-                          // Create AI draft in the conversation stream (not Craig's chat)
+                          // Create AI draft in the conversation stream AND save to DB
+                          const draftTs = new Date().toISOString();
+                          const orgId = getOrgId();
+
+                          // Find conversation for this contact to link the draft
+                          const phoneE164 = `+1${phone.replace(/\D/g, '').slice(-10)}`;
+                          const formattedPhone = `(${phone.replace(/\D/g, '').slice(-10, -7)}) ${phone.replace(/\D/g, '').slice(-7, -4)}-${phone.replace(/\D/g, '').slice(-4)}`;
+                          let draftConvId: string | null = null;
+
+                          // Try to find existing conversation
+                          const { data: existingConvs } = await supabase.from('conversations')
+                            .select('id').eq('contact_id',
+                              (await supabase.from('contacts').select('id').or(`phone.eq.${formattedPhone},phone.ilike.%${phone.replace(/\D/g, '').slice(-4)}%`).limit(1)).data?.[0]?.id || ''
+                            ).limit(1);
+                          draftConvId = existingConvs?.[0]?.id || null;
+
+                          // Save draft to messages table so it persists across refresh
+                          const { data: savedDraft } = await supabase.from('messages').insert({
+                            message: sendText,
+                            contact_phone: phoneE164,
+                            direction: 'Outbound',
+                            station: stations[0]?.name || 'Wade',
+                            status: 'Draft',
+                            source_system: 'vernacular-ai',
+                            created_at: draftTs,
+                            conversation_id: draftConvId,
+                          }).select('id').single();
+
+                          const draftId = savedDraft?.id || `ai-draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
                           const draftMsg: Message = {
-                            id: `ai-draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                            id: draftId,
                             text: sendText,
                             direction: 'outgoing',
-                            timestamp: new Date().toISOString(),
+                            timestamp: draftTs,
                             isAIDraft: true,
+                            status: 'Draft',
                           };
 
                           // Find or create the conversation column (use callback for fresh state)
@@ -10407,8 +10442,7 @@ ${orgKnowledge || 'No client-specific knowledge yet. Add via Initiatives → Ini
                             }
                           });
 
-                          // Store phone for the draft so Approve can use it
-                          draftMsg.id = `ai-draft-${phoneDigits}-${Date.now()}`;
+                          // Draft is saved to DB with real UUID — no need to override ID
                         }
 
                         // Switch to Streams view to show the drafts
