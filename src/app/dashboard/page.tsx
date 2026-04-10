@@ -3023,26 +3023,32 @@ button:active { transform: scale(0.98); }`}</style>
                 const staged = stagedIdx >= 0 && stagedIdx < stagedContacts.length ? stagedContacts[stagedIdx] : null;
 
                 if (!tile && staged) {
-                  // Staged contact — red pulsing tile
+                  // Check if this staged contact has already been texted
+                  const stagedDigits = staged.phone.replace(/\D/g, '').slice(-10);
+                  const alreadyContacted = allTiles.some(t => t.phone.replace(/\D/g, '').slice(-10) === stagedDigits);
+
                   return (
                     <div key={`staged-${stagedIdx}`} className="disco-tile" style={{
                       aspectRatio: '1', borderRadius: 6,
-                      background: 'linear-gradient(135deg, #60A5FA, #3B82F6)',
+                      background: alreadyContacted
+                        ? 'linear-gradient(135deg, #6B7280, #4B5563)'
+                        : 'linear-gradient(135deg, #60A5FA, #3B82F6)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      animation: 'tileGlow 3s ease-in-out infinite',
+                      animation: alreadyContacted ? 'none' : 'tileGlow 3s ease-in-out infinite',
                       cursor: 'pointer', position: 'relative', padding: 2, overflow: 'hidden',
-                      boxShadow: '0 0 10px rgba(59,130,246,0.3)',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                    }} title={`STAGED: ${staged.name} (${staged.phone})`}
+                      boxShadow: alreadyContacted ? '0 0 4px rgba(0,0,0,0.2)' : '0 0 10px rgba(59,130,246,0.3)',
+                      border: alreadyContacted ? '2px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.15)',
+                      opacity: alreadyContacted ? 0.6 : 1,
+                    }} title={`${alreadyContacted ? '⚠️ ALREADY TEXTED — ' : 'STAGED: '}${staged.name} (${staged.phone})`}
                       onClick={() => setExpandedMatrixId(`staged-${stagedIdx}`)}>
                       {/* Top-right: state — big and bright */}
                       {staged.state && <span style={{ position: 'absolute', top: 4, right: 5, fontSize: 12, fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.4)', letterSpacing: '0.03em' }}>{staged.state.length > 3 ? staged.state.slice(0, 2).toUpperCase() : staged.state.toUpperCase()}</span>}
-                      {/* Top-left: direction arrow placeholder */}
-                      <span style={{ position: 'absolute', top: 4, left: 5, fontSize: 11, opacity: 0.6 }}>⏳</span>
-                      <span style={{ fontSize: staged.firstName.length > 6 ? 18 : 24, fontWeight: 900, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)', textAlign: 'center', lineHeight: 1 }}>
+                      {/* Top-left: status icon */}
+                      <span style={{ position: 'absolute', top: 4, left: 5, fontSize: 11, opacity: 0.7 }}>{alreadyContacted ? '✓' : '⏳'}</span>
+                      <span style={{ fontSize: staged.firstName.length > 6 ? 18 : 24, fontWeight: 900, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)', textAlign: 'center', lineHeight: 1, textDecoration: alreadyContacted ? 'line-through' : 'none' }}>
                         {staged.firstName.length > 8 ? staged.initials : staged.firstName}
                       </span>
-                      <span style={{ fontSize: 7, opacity: 0.6, marginTop: 2, fontWeight: 600, letterSpacing: '0.05em' }}>STAGED</span>
+                      <span style={{ fontSize: 7, opacity: 0.7, marginTop: 2, fontWeight: 600, letterSpacing: '0.05em' }}>{alreadyContacted ? 'CONTACTED' : 'STAGED'}</span>
                     </div>
                   );
                 }
