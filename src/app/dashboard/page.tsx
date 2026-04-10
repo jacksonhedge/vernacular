@@ -1071,6 +1071,12 @@ export default function DashboardPage() {
               });
               // Always update allConversations with full data (for contact list)
               setAllConversations(freshColumns);
+              // Scroll all visible stream message areas to bottom
+              setTimeout(() => {
+                document.querySelectorAll('[id^="stream-msgs-"]').forEach(el => {
+                  (el as HTMLElement).scrollTop = (el as HTMLElement).scrollHeight;
+                });
+              }, 100);
             }
           }
         } catch { /* silent */ }
@@ -4388,13 +4394,23 @@ button:active { transform: scale(0.98); }`}</style>
             )}
 
             {/* Messages */}
-            <div ref={el => {
-              if (el && !el.dataset.msgCount) { el.scrollTop = el.scrollHeight; el.dataset.msgCount = String(col.messages.length); }
-              else if (el && el.dataset.msgCount !== String(col.messages.length)) { el.scrollTop = el.scrollHeight; el.dataset.msgCount = String(col.messages.length); }
-            }} style={{
-              flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4,
-              background: '#f8f9fa',
-            }}>
+            <div
+              id={`stream-msgs-${col.id}`}
+              ref={el => {
+                if (el) {
+                  // Always scroll to bottom when message count changes
+                  const currentCount = String(col.messages.length);
+                  if (el.dataset.msgCount !== currentCount) {
+                    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+                    el.dataset.msgCount = currentCount;
+                  }
+                }
+              }}
+              style={{
+                flex: 1, overflow: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4,
+                background: '#f8f9fa',
+              }}
+            >
               {(() => {
                 const visibleMsgs = col.messages.filter(m => (showHiddenMessages || !hiddenMessages.has(m.id)));
                 // Helper: format date separator like iMessage
