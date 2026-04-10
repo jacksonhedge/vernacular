@@ -32,6 +32,7 @@ function Bubble({ children, align = 'left', delay = 0 }: { children: React.React
 export default function LandingPage() {
   const [wordIdx, setWordIdx] = useState(0);
   const [fade, setFade] = useState(true);
+  const [billingAnnual, setBillingAnnual] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -275,7 +276,22 @@ export default function LandingPage() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <h2 style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 12 }}>Simple, transparent pricing</h2>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', marginBottom: 24 }}>Monthly minimum with usage included. Overage billed per action.</p>
+          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', marginBottom: 20 }}>Platform fee + usage-based AI credits. No hidden costs.</p>
+          {/* Monthly / Annual toggle */}
+          <div style={{ display: 'inline-flex', borderRadius: 12, background: 'rgba(255,255,255,0.08)', padding: 3 }}>
+            <button onClick={() => setBillingAnnual(false)} style={{
+              padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: !billingAnnual ? '#378ADD' : 'transparent',
+              color: !billingAnnual ? '#fff' : 'rgba(255,255,255,0.5)',
+              fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
+            }}>Monthly</button>
+            <button onClick={() => setBillingAnnual(true)} style={{
+              padding: '8px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: billingAnnual ? '#378ADD' : 'transparent',
+              color: billingAnnual ? '#fff' : 'rgba(255,255,255,0.5)',
+              fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
+            }}>Annual <span style={{ fontSize: 11, color: billingAnnual ? '#86EFAC' : 'rgba(255,255,255,0.3)' }}>Save 12%</span></button>
+          </div>
         </div>
 
         {/* Tier Cards */}
@@ -303,9 +319,9 @@ export default function LandingPage() {
             {
               name: 'Growth',
               icon: '📱',
-              price: '$899',
-              period: '/mo per line',
-              subtitle: 'Most popular',
+              price: billingAnnual ? '$791' : '$899',
+              period: billingAnnual ? '/mo per line (billed annually)' : '/mo per line',
+              subtitle: billingAnnual ? '$9,494/year — save $1,294' : 'Most popular',
               highlight: true,
               color: '#378ADD',
               features: [
