@@ -10297,6 +10297,7 @@ button:active { transform: scale(0.98); }`}</style>
                             role: m.role, content: 'text' in m ? m.text : (m as Record<string, string>).content,
                           })),
                           model: aiCopilotModel,
+                          organizationId: getOrgId(),
                           systemPrompt: `You are Craig (Vernacular AI), the copilot for the Vernacular dashboard. You are powered by Claude ${aiCopilotModel === 'opus' ? 'Opus 4.6' : aiCopilotModel === 'sonnet' ? 'Sonnet 4.6' : 'Haiku 3.5'} from Anthropic. If asked what model you are, say exactly which model: "I'm running on Claude ${aiCopilotModel === 'opus' ? 'Opus 4.6' : aiCopilotModel === 'sonnet' ? 'Sonnet 4.6' : 'Haiku 3.5'}." You know your own model. The user is ${(user?.full_name as string) || 'the admin'} at ${(org?.name as string) || 'their org'}. They manage iMessage conversations through Mac relay stations.
 
 Current tab: ${activeTab}
@@ -10394,6 +10395,15 @@ PAST CONVERSATIONS (your memory — you had these chats before):
 ${aiPastSessions.slice(0, 5).map(s => `- ${new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: "${s.preview}" (${s.message_count} msgs)`).join('\n') || 'No past sessions yet'}
 
 If the user references something from a previous conversation, you can use [LOOKUP:activity:7] to search recent history. You remember what you've discussed — use that context.
+
+PRICING (you know this — quote it if asked):
+- Text sent: $0.001 | Text received: Free
+- AI draft approved: $0.17 | AI auto-response: $0.25
+- New conversation: $0.99 | Contact import: $0.07
+- Support ticket resolved: $1.25 | Widget handoff: $0.50
+- Bulk blast per recipient: $0.05 | AI chat (this conversation): $0.10
+- AI tone analysis: $0.50 | Contact enrichment: $0.25
+- Models: Haiku ~$0.001/msg, Sonnet ~$0.01-0.02/msg, Opus ~$0.05-0.10/msg
 
 PLATFORM KNOWLEDGE (from craig/*.md files):
 ${craigKnowledge || 'No global knowledge loaded.'}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { deductCredits } from '@/lib/credits';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODELS: Record<string, string> = {
@@ -10,7 +11,7 @@ const MODELS: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    const { messages, model, systemPrompt } = await request.json();
+    const { messages, model, systemPrompt, organizationId } = await request.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     const modelKey = model || 'sonnet';
     const tokenCosts: Record<string, number> = { haiku: 0.001, sonnet: 0.006, opus: 0.030 };
 
-    // Track usage
+    // Track usage + deduct credits
     const supabase = createServiceClient();
     await supabase.from('ai_usage').insert({
       model: modelKey,
@@ -63,7 +64,16 @@ export async function POST(request: Request) {
       tokens_total: totalTokens,
       cost_estimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
       action: 'ai_chat',
+      organization_id: organizationId || null,
     });
+
+    // Deduct credits for AI chat usage
+    if (organizationId) {
+      await deductCredits(
+        supabase, organizationId, 'ai_chat',
+        `Craig (${modelKey}, ${totalTokens} tokens)`,
+      );
+    }
 
     return NextResponse.json({
       content,
