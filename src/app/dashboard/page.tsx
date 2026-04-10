@@ -669,6 +669,21 @@ export default function DashboardPage() {
   });
   // Persist settings
   useEffect(() => { localStorage.setItem('vernacular-view-mode', conversationViewMode); }, [conversationViewMode]);
+  // Auto-load messages when switching to Messages view
+  useEffect(() => {
+    if (conversationViewMode === 'messages' && timelineMessages.length === 0) {
+      const filterHours: Record<string, number> = { '24h': 24, '48h': 48, '72h': 72, '1w': 168, '2w': 336 };
+      const hours = filterHours[messageTimeFilter] || 24;
+      const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+      supabase
+        .from('messages')
+        .select('id, message, contact_phone, direction, station, status, source_system, sent_at, created_at')
+        .or(`sent_at.gte.${since},and(sent_at.is.null,created_at.gte.${since})`)
+        .order('sent_at', { ascending: false, nullsFirst: false })
+        .limit(1000)
+        .then(({ data }) => { if (data) setTimelineMessages(data); });
+    }
+  }, [conversationViewMode]);
   useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
   useEffect(() => { if (activeInitiativeFilter) localStorage.setItem('vernacular-initiative-filter', activeInitiativeFilter); else localStorage.removeItem('vernacular-initiative-filter'); }, [activeInitiativeFilter]);
   const [conversationSearch, setConversationSearch] = useState('');
