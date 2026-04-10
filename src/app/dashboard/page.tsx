@@ -380,6 +380,7 @@ export default function DashboardPage() {
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [passwordError, setPasswordError] = useState('');
   const [showStationMenu, setShowStationMenu] = useState(false);
+  const [creditUsage, setCreditUsage] = useState<{ used: number; minimum: number; actions: number } | null>(null);
   const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -516,6 +517,28 @@ export default function DashboardPage() {
       if (d.knowledge) setCraigKnowledge(d.knowledge);
     }).catch(() => {});
   }, []);
+
+  // Load credit usage for this org
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    supabase.from('credit_usage').select('credits_used')
+      .eq('organization_id', orgId)
+      .gte('created_at', monthStart)
+      .then(({ data }) => {
+        const totalCents = (data || []).reduce((s, r) => s + (r.credits_used || 0), 0);
+        const actions = (data || []).length;
+        // Get monthly minimum from subscriptions
+        supabase.from('subscriptions').select('monthly_minimum_cents, quantity')
+          .eq('organization_id', orgId).eq('status', 'active')
+          .then(({ data: subs }) => {
+            const minimum = (subs || []).reduce((s, sub) => s + ((sub.monthly_minimum_cents || 0) * (sub.quantity || 1)), 0);
+            setCreditUsage({ used: totalCents, minimum, actions });
+          });
+      });
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load past Craig chat sessions + restore last session
   useEffect(() => {
@@ -9558,6 +9581,42 @@ button:active { transform: scale(0.98); }`}</style>
             )}
           </div>
         </div>
+
+        {/* Credit Usage */}
+        {!sidebarCollapsed && creditUsage && (
+          <div style={{ padding: '10px 18px', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Usage</span>
+              <span style={{ fontSize: 10, color: '#6b7280', fontFamily: "'JetBrains Mono', monospace" }}>
+                {new Date().toLocaleDateString('en-US', { month: 'short' })}
+              </span>
+            </div>
+            {/* Usage bar */}
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(0,0,0,0.08)', marginBottom: 6, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                width: creditUsage.minimum > 0 ? `${Math.min(100, (creditUsage.used / creditUsage.minimum) * 100)}%` : '0%',
+                background: creditUsage.used > creditUsage.minimum && creditUsage.minimum > 0 ? '#EF4444' : '#22C55E',
+                transition: 'width 0.5s ease',
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#6b7280' }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+                ${(creditUsage.used / 100).toFixed(2)}
+              </span>
+              {creditUsage.minimum > 0 && (
+                <span>/ ${(creditUsage.minimum / 100).toFixed(0)} min</span>
+              )}
+            </div>
+            <div style={{ fontSize: 9, color: '#8e8e93', marginTop: 4 }}>
+              {creditUsage.actions} actions this month
+            </div>
+            <button onClick={() => window.open('mailto:jackson@hedgepayments.co?subject=Request More Credits&body=I would like to request additional credits for my Vernacular account.', '_blank')}
+              style={{ width: '100%', marginTop: 6, padding: '5px 0', borderRadius: 6, border: '1px solid rgba(55,138,221,0.2)', background: 'rgba(55,138,221,0.04)', color: '#378ADD', fontSize: 10, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
+              Request More
+            </button>
+          </div>
+        )}
 
         {/* Phone Line Status */}
         {(() => {
