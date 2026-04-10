@@ -5079,6 +5079,23 @@ button:active { transform: scale(0.98); }`}</style>
                 if (msg) navigator.clipboard.writeText(msg.text);
                 setMsgContextMenu(null);
               }});
+              if (msg?.direction === 'outgoing') {
+                items.push({ label: 'Edit Message', icon: '✏️', action: () => {
+                  if (!msg || !col) { setMsgContextMenu(null); return; }
+                  const newText = prompt('Edit message:', msg.text);
+                  if (newText && newText !== msg.text) {
+                    // Update in local state
+                    setColumns(prev => prev.map(c => c.id === msgContextMenu.colId ? {
+                      ...c, messages: c.messages.map(m => m.id === msg.id ? { ...m, text: newText } : m),
+                    } : c));
+                    // Update in DB if it has a real UUID
+                    if (msg.id && !msg.id.startsWith('m-') && !msg.id.startsWith('approved-')) {
+                      supabase.from('messages').update({ message: newText }).eq('id', msg.id);
+                    }
+                  }
+                  setMsgContextMenu(null);
+                }});
+              }
               items.push({ label: 'Create Calendar Event', icon: '📅', action: () => {
                 const contactName = col?.contact?.name || '';
                 const contactPhone = col?.contact?.phone || '';
