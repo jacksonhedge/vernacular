@@ -4799,13 +4799,13 @@ button:active { transform: scale(0.98); }`}</style>
                       minHeight: 36, maxHeight: 200,
                     }}
                   />
-                  {/* Image upload button */}
+                  {/* Image upload button — DISABLED until AppleScript POSIX file sending works */}
                   <label
                     title="Send image"
                     style={{
                       width: 36, height: 36, borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
                       background: '#fff', color: '#8e8e93', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      display: 'none', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}
                   >
                     <input type="file" accept="image/*,video/*,.pdf" style={{ display: 'none' }}
