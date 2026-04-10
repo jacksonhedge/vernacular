@@ -543,6 +543,11 @@ export default function DashboardPage() {
       });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-scroll Craig panel to bottom on new messages
+  useEffect(() => {
+    setTimeout(() => { const el = document.getElementById('craig-messages'); if (el) el.scrollTop = el.scrollHeight; }, 50);
+  }, [aiCopilotMessages]);
+
   // Auto-save Craig chat session on every message
   useEffect(() => {
     if (!user || aiCopilotMessages.length === 0) return;
@@ -9735,7 +9740,7 @@ button:active { transform: scale(0.98); }`}</style>
             window.addEventListener('mouseup', onUp);
           }}
         >
-          <button onClick={() => { if (!craigDragging) setShowAICopilot(prev => !prev); }} style={{
+          <button onClick={() => { if (!craigDragging) { setShowAICopilot(prev => !prev); setTimeout(() => { const el = document.getElementById('craig-messages'); if (el) el.scrollTop = el.scrollHeight; }, 100); } }} style={{
             height: 36, borderRadius: 18, border: 'none', cursor: craigDragging ? 'grabbing' : 'pointer',
             background: showAICopilot ? '#378ADD' : 'rgba(255,255,255,0.95)',
             display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px 0 10px',
@@ -9792,10 +9797,10 @@ button:active { transform: scale(0.98); }`}</style>
         {showAICopilot && (
           <div style={{
             position: 'absolute', top: 56, left: '50%', transform: 'translateX(-50%)',
-            width: 440, maxHeight: 520, zIndex: 50,
+            width: 480, minWidth: 320, maxWidth: 700, minHeight: 300, maxHeight: '80vh', zIndex: 50,
             background: '#fff', borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.15)',
             border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column',
-            overflow: 'hidden',
+            overflow: 'hidden', resize: 'both',
           }}>
             {/* Context tag + top bar */}
             <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -9956,7 +9961,7 @@ button:active { transform: scale(0.98); }`}</style>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflow: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 300, minHeight: 120 }}>
+            <div id="craig-messages" style={{ flex: 1, overflow: 'auto', padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 120 }}>
               {aiCopilotMessages.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '30px 20px', color: '#8e8e93' }}>
                   <div style={{ fontSize: 13, fontWeight: 500, color: '#c4c4c6', marginBottom: 12 }}>Ask Vernacular AI anything</div>
@@ -10064,10 +10069,9 @@ button:active { transform: scale(0.98); }`}</style>
                         </div>
                       );
                     })() : m.text}
-                  </div>
-                  {/* Like/Dislike on AI responses */}
-                  {m.role === 'assistant' && (
-                    <div style={{ display: 'flex', gap: 2, marginTop: 3 }}>
+                    {/* Like/Dislike — inside the bubble */}
+                    {m.role === 'assistant' && !m.text.includes('✅ Sent') && !m.text.includes('❌ Cancelled') && !m.text.includes('🔍 looking') && (
+                      <div style={{ display: 'flex', gap: 2, marginTop: 6, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 4 }}>
                       <button onClick={() => {
                         // Find the user message that triggered this response
                         const prevUserMsg = aiCopilotMessages.slice(0, i).reverse().find(msg => msg.role === 'user');
