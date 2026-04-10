@@ -3990,28 +3990,22 @@ button:active { transform: scale(0.98); }`}</style>
           const getLastMsgTime = (col: ConversationColumn) =>
             col.messages.length > 0 ? parseTimestamp(col.messages[col.messages.length - 1].timestamp || '0').getTime() : 0;
           const sorted = [...columns].sort((a, b) => {
+            // Sort order: Pinned → AI Drafts → Received inbound → Recently texted
             const aPinned = pinnedConversations.has(a.id) ? 1 : 0;
             const bPinned = pinnedConversations.has(b.id) ? 1 : 0;
             if (aPinned !== bPinned) return bPinned - aPinned;
-            // Pending AI drafts sort to the left (after pinned)
+
+            // 1. AI Drafts waiting for approval (leftmost after pinned)
             const aHasDraft = a.messages.some(m => m.isAIDraft) ? 1 : 0;
             const bHasDraft = b.messages.some(m => m.isAIDraft) ? 1 : 0;
             if (aHasDraft !== bHasDraft) return bHasDraft - aHasDraft;
-            if (streamSortMode === 'unread') {
-              const aUnread = a.contact?.tag === 'UNREAD' ? 1 : 0;
-              const bUnread = b.contact?.tag === 'UNREAD' ? 1 : 0;
-              if (aUnread !== bUnread) return bUnread - aUnread;
-              return getLastMsgTime(b) - getLastMsgTime(a);
-            }
-            if (streamSortMode === 'recent') {
-              return getLastMsgTime(b) - getLastMsgTime(a);
-            }
-            if (streamSortMode === 'name') {
-              return (a.contact?.name || '').localeCompare(b.contact?.name || '');
-            }
-            if (streamSortMode === 'most-messages') {
-              return b.messages.length - a.messages.length;
-            }
+
+            // 2. Recently received an inbound text (they replied — needs attention)
+            const aLastInbound = a.messages.length > 0 && a.messages[a.messages.length - 1].direction === 'incoming' ? 1 : 0;
+            const bLastInbound = b.messages.length > 0 && b.messages[b.messages.length - 1].direction === 'incoming' ? 1 : 0;
+            if (aLastInbound !== bLastInbound) return bLastInbound - aLastInbound;
+
+            // 3. Within each tier, sort by most recent message time
             return getLastMsgTime(b) - getLastMsgTime(a);
           });
           // Filter: if showReadStreams is off, only show pinned + unread
