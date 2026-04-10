@@ -3060,9 +3060,11 @@ button:active { transform: scale(0.98); }`}</style>
                            tile.greekOrg.slice(0, 3).toUpperCase())
                         : tile.state ? (tile.state.length > 3 ? tile.state.slice(0, 2).toUpperCase() : tile.state.toUpperCase()) : ''}
                     </span>
-                    {/* Bottom-left: message count */}
-                    <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 10, fontWeight: 700, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {tile.msgCount}
+                    {/* Bottom-left: time of last action */}
+                    <span style={{ position: 'absolute', bottom: 3, left: 5, fontSize: 8, fontWeight: 600, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace",
+                      color: tile.direction === 'incoming' ? '#4ADE80' : '#fff',
+                    }}>
+                      {tile.timestamp ? fmtMsgTime(tile.timestamp) : ''}
                     </span>
                     {/* Bottom-right: age */}
                     {tile.age && tile.age > 0 && tile.age < 100 && (
