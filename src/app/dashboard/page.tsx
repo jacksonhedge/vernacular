@@ -10119,6 +10119,7 @@ button:active { transform: scale(0.98); }`}</style>
                         onMouseLeave={e => (e.currentTarget.style.color = '#c4c4c6')}>👎</button>
                     </div>
                   )}
+                  </div>
                 </div>
               ))}
               {aiCopilotLoading && (
