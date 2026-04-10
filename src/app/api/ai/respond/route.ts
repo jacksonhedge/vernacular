@@ -31,6 +31,9 @@ interface AIRespondRequest {
 }
 
 export async function POST(request: Request) {
+  // AI auto-respond is FULLY DISABLED — re-enable when ready for production
+  return NextResponse.json({ ok: false, error: 'AI auto-respond is disabled' }, { status: 503 });
+
   try {
     const body: AIRespondRequest = await request.json();
     const {
