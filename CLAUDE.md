@@ -205,5 +205,65 @@ Priority: Add auth middleware before onboarding any client.
 
 ---
 
-## Git Tags
+## Development & Deployment
+
+### Local Dev
+```bash
+npm install
+npm run dev          # localhost:3000
+```
+
+### Push to Production
+```bash
+# 1. Check for type errors FIRST (Vercel is stricter than local)
+npx tsc --noEmit
+
+# 2. If clean, commit and push — Vercel auto-deploys from main
+git add <files>
+git commit -m "description"
+git push origin main
+
+# 3. Deploy takes ~1-2 minutes. User tests on vernacular.chat directly.
+# 4. Hard refresh (Cmd+Shift+R) to see changes.
+```
+
+**ALWAYS push after frontend changes** — the user tests on production (vernacular.chat), not localhost.
+
+**ALWAYS run `npx tsc --noEmit` before pushing** — Vercel will reject builds with type errors.
+
+### Vercel
+- **Project**: Vernacular
+- **Auto-deploy**: every push to `main`
+- **Domain**: vernacular.chat
+- **Env vars**: Set in Vercel dashboard (Settings → Environment Variables)
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (had a trailing newline issue — `%0A` in WebSocket URL — re-paste cleanly if WebSocket errors appear)
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `ANTHROPIC_API_KEY`
+  - `ADMIN_PASSWORD`
+
+### Wade Station (Mac Relay)
+Wade runs on a MacBook Air. To update station scripts:
+```bash
+# SSH or screen-share into Wade, then:
+cd ~/vernacular
+cp station/outbound.sh station/outbound.sh.backup   # ALWAYS backup first
+git pull origin main
+./station/stop.sh && sleep 2 && ./station/start.sh
+
+# If it breaks, revert immediately:
+cp station/outbound.sh.backup station/outbound.sh
+./station/stop.sh && sleep 2 && ./station/start.sh
+```
+
+**NEVER update Wade's outbound.sh without testing the full send flow first.**
+**ALWAYS keep .backup files.**
+
+### Supabase
+- **Project ID**: `miuyksnwzkhiyyilchjs`
+- **URL**: `https://miuyksnwzkhiyyilchjs.supabase.co`
+- **MCP tool**: `mcp__supabase__execute_sql` for direct SQL
+- **Schema reference**: See memory file `reference_vernacular_schema.md`
+
+### Git Tags
 - `v1.0-stable` — Known-good baseline from April 8, 2026. Rollback: `git reset --hard v1.0-stable`
