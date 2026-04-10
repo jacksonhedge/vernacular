@@ -437,6 +437,8 @@ export default function DashboardPage() {
   const [activeAccountView, setActiveAccountView] = useState<string>('all');
   const [showAICopilot, setShowAICopilot] = useState(false);
   const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
+  const [aiChatSessionId, setAiChatSessionId] = useState<string | null>(null);
+  const [aiPastSessions, setAiPastSessions] = useState<Array<{ id: string; preview: string; created_at: string; message_count: number }>>([]);
   const [aiCopilotInput, setAiCopilotInput] = useState('');
   const [aiCopilotLoading, setAiCopilotLoading] = useState(false);
   const [aiPermissions, setAiPermissions] = useState({ sendMessages: false, editContacts: true, viewConversations: true });
@@ -514,6 +516,66 @@ export default function DashboardPage() {
       if (d.knowledge) setCraigKnowledge(d.knowledge);
     }).catch(() => {});
   }, []);
+
+  // Load past Craig chat sessions + restore last session
+  useEffect(() => {
+    if (!user) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    supabase.from('ai_chat_sessions')
+      .select('id, preview, created_at, message_count')
+      .eq('organization_id', orgId)
+      .order('updated_at', { ascending: false })
+      .limit(20)
+      .then(({ data }) => {
+        if (data) setAiPastSessions(data);
+        // Restore the most recent session
+        if (data && data.length > 0) {
+          const lastId = data[0].id;
+          supabase.from('ai_chat_sessions').select('messages').eq('id', lastId).single()
+            .then(({ data: session }) => {
+              if (session?.messages && Array.isArray(session.messages) && session.messages.length > 0) {
+                setAiCopilotMessages(session.messages as typeof aiCopilotMessages);
+                setAiChatSessionId(lastId);
+              }
+            });
+        }
+      });
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save Craig chat session on every message
+  useEffect(() => {
+    if (!user || aiCopilotMessages.length === 0) return;
+    const orgId = (user.organizations as Record<string, unknown>)?.id as string;
+    if (!orgId) return;
+    const userId = (user as Record<string, unknown>)?.id as string;
+    const preview = aiCopilotMessages[aiCopilotMessages.length - 1]?.text?.substring(0, 100) || '';
+    const save = async () => {
+      if (aiChatSessionId) {
+        // Update existing session
+        await supabase.from('ai_chat_sessions').update({
+          messages: aiCopilotMessages,
+          message_count: aiCopilotMessages.length,
+          preview,
+          updated_at: new Date().toISOString(),
+        }).eq('id', aiChatSessionId);
+      } else {
+        // Create new session
+        const { data } = await supabase.from('ai_chat_sessions').insert({
+          organization_id: orgId,
+          user_id: userId || null,
+          messages: aiCopilotMessages,
+          model_used: aiCopilotModel,
+          message_count: aiCopilotMessages.length,
+          preview,
+        }).select('id').single();
+        if (data) setAiChatSessionId(data.id);
+      }
+    };
+    // Debounce save — wait 2 seconds after last message
+    const timer = setTimeout(save, 2000);
+    return () => clearTimeout(timer);
+  }, [aiCopilotMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
@@ -9682,16 +9744,25 @@ button:active { transform: scale(0.98); }`}</style>
                 {(org?.name as string) || 'Vernacular'}
               </div>
               <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <button onClick={() => {
+                <button onClick={async () => {
                   setShowCraigHistory(prev => !prev);
                   if (!showCraigHistory) {
-                    try {
-                      const saved = JSON.parse(localStorage.getItem('vernacular-craig-history') || '[]');
-                      setCraigChatHistory(saved);
-                    } catch { /* silent */ }
+                    const orgId = getOrgId();
+                    const { data } = await supabase.from('ai_chat_sessions')
+                      .select('id, preview, created_at, message_count')
+                      .eq('organization_id', orgId)
+                      .order('updated_at', { ascending: false }).limit(20);
+                    if (data) setAiPastSessions(data);
                   }
                 }} title="Previous chats" style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: showCraigHistory ? 'rgba(124,58,237,0.15)' : 'rgba(124,58,237,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showCraigHistory ? '#7C3AED' : '#A78BFA', fontSize: 12 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                </button>
+                {/* New Chat button */}
+                <button onClick={() => {
+                  setAiCopilotMessages([]);
+                  setAiChatSessionId(null);
+                }} title="New chat" style={{ width: 26, height: 26, borderRadius: 8, border: 'none', background: 'rgba(55,138,221,0.06)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#378ADD', fontSize: 14 }}>
+                  +
                 </button>
                 <button onClick={async () => {
                   setShowTokenUsage(prev => !prev);
@@ -9760,19 +9831,28 @@ button:active { transform: scale(0.98); }`}</style>
                     setAiCopilotMessages([]);
                   }} style={{ fontSize: 10, fontWeight: 600, color: '#378ADD', background: 'none', border: 'none', cursor: 'pointer' }}>+ New Chat</button>
                 </div>
-                {craigChatHistory.length === 0 ? (
+                {aiPastSessions.length === 0 ? (
                   <div style={{ fontSize: 11, color: '#c4c4c6', textAlign: 'center', padding: 12 }}>No previous chats</div>
                 ) : (
-                  craigChatHistory.slice().reverse().map(chat => (
-                    <div key={chat.id} style={{
-                      padding: '6px 8px', borderRadius: 6, cursor: 'pointer', marginBottom: 4,
-                      background: 'rgba(0,0,0,0.02)', fontSize: 12,
+                  aiPastSessions.map(session => (
+                    <div key={session.id} onClick={async () => {
+                      const { data } = await supabase.from('ai_chat_sessions').select('messages').eq('id', session.id).single();
+                      if (data?.messages) {
+                        setAiCopilotMessages(data.messages as typeof aiCopilotMessages);
+                        setAiChatSessionId(session.id);
+                        setShowCraigHistory(false);
+                      }
+                    }} style={{
+                      padding: '8px 10px', borderRadius: 8, cursor: 'pointer', marginBottom: 4,
+                      background: aiChatSessionId === session.id ? 'rgba(55,138,221,0.08)' : 'rgba(0,0,0,0.02)',
+                      border: aiChatSessionId === session.id ? '1px solid rgba(55,138,221,0.2)' : '1px solid transparent',
+                      fontSize: 12,
                     }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(55,138,221,0.06)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.02)')}
+                      onMouseEnter={e => { if (aiChatSessionId !== session.id) e.currentTarget.style.background = 'rgba(55,138,221,0.06)'; }}
+                      onMouseLeave={e => { if (aiChatSessionId !== session.id) e.currentTarget.style.background = 'rgba(0,0,0,0.02)'; }}
                     >
-                      <div style={{ fontWeight: 500, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.preview}</div>
-                      <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 2 }}>{chat.date} · {chat.msgs} messages</div>
+                      <div style={{ fontWeight: 500, color: '#1c1c1e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.preview}</div>
+                      <div style={{ fontSize: 10, color: '#8e8e93', marginTop: 2 }}>{new Date(session.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {session.message_count} messages</div>
                     </div>
                   ))
                 )}
@@ -10087,6 +10167,11 @@ PERSONALITY & RULES:
 - When conversations reveal patterns, suggest improving the initiative.
 - If the user describes a new campaign, proactively offer to create an initiative.
 - When asked to pick a random contact, ACTUALLY pick one from the CONTACTS list above. Don't make up a number.
+
+PAST CONVERSATIONS (your memory — you had these chats before):
+${aiPastSessions.slice(0, 5).map(s => `- ${new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: "${s.preview}" (${s.message_count} msgs)`).join('\n') || 'No past sessions yet'}
+
+If the user references something from a previous conversation, you can use [LOOKUP:activity:7] to search recent history. You remember what you've discussed — use that context.
 
 PLATFORM KNOWLEDGE (from craig/*.md files):
 ${craigKnowledge || 'No global knowledge loaded.'}
