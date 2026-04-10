@@ -4021,14 +4021,31 @@ button:active { transform: scale(0.98); }`}</style>
             });
           }
           return visible;
-        })().map(col => (
+        })().map((col, colIdx) => {
+          // Rainbow tint: 10 soft pastel colors cycling left to right
+          const rainbowTints = [
+            'rgba(255, 200, 200, 0.15)', // soft red
+            'rgba(255, 210, 180, 0.15)', // soft orange
+            'rgba(255, 230, 170, 0.15)', // soft yellow
+            'rgba(210, 245, 180, 0.15)', // soft lime
+            'rgba(180, 240, 210, 0.15)', // soft mint
+            'rgba(180, 230, 245, 0.15)', // soft cyan
+            'rgba(190, 210, 255, 0.15)', // soft blue
+            'rgba(210, 195, 255, 0.15)', // soft indigo
+            'rgba(235, 195, 255, 0.15)', // soft purple
+            'rgba(255, 195, 230, 0.15)', // soft pink
+          ];
+          const tint = rainbowTints[colIdx % rainbowTints.length];
+          const hasDraft = col.messages.some(m => m.isAIDraft);
+
+          return (
           <div key={col.id} id={`stream-col-${col.id}`} style={{
             width: 340, minWidth: 340, height: '100%', display: 'flex', flexDirection: 'column',
-            background: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '#fff' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? 'linear-gradient(180deg, #FFFBEB, #FEF3C7, #fff)' : '#fff',
+            background: `linear-gradient(180deg, ${tint.replace('0.15', '0.3')}, ${tint}, #fff)`,
             borderRadius: 12,
-            border: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '2px solid #FBBF24' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '2px solid rgba(245,158,11,0.3)' : '1px solid rgba(0,0,0,0.08)',
+            border: hasDraft ? '2px solid #FBBF24' : '1px solid rgba(0,0,0,0.08)',
             marginRight: 12, overflow: 'hidden',
-            boxShadow: (col.aiMode === 'draft' || col.aiMode === 'auto') ? '0 0 0 1px #FBBF24, 0 2px 12px rgba(251,191,36,0.2)' : col.messages.length === 0 || (col.messages.length === 1 && col.messages[0].isAIDraft) ? '0 2px 12px rgba(245,158,11,0.15)' : '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
+            boxShadow: hasDraft ? '0 0 0 1px #FBBF24, 0 2px 12px rgba(251,191,36,0.2)' : '0 1px 4px rgba(0,0,0,0.06)', flexShrink: 0,
           }}>
             {/* Column Header */}
             <div style={{
@@ -4882,7 +4899,8 @@ button:active { transform: scale(0.98); }`}</style>
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
       </div>{/* end stream columns flex-column */}
       </div>}
