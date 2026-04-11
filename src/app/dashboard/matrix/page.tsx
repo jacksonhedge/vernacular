@@ -2,8 +2,345 @@
 
 import { useState } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
-import { fmtMsgTime, parseTimestamp, normalizePhone, greekLetters } from '@/lib/utils';
+import { fmtMsgTime, parseTimestamp, normalizePhone, greekLetters, formatTime } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import type { ContactRecord } from '@/types/dashboard';
+
+// ── Tile Modal with editable contact fields ──────────────────────────────
+
+function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose }: {
+  tileId: string;
+  allTiles: Array<{ id: string; name: string; initials: string; phone: string; status: string; colId: string; msgCount: number; state: string; greekOrg: string; age: number | null; text: string; timestamp: string; direction: string }>;
+  columns: Array<{ id: string; messages: Array<{ id: string; text: string; direction: string; timestamp: string; isAIDraft?: boolean; status?: string }> }>;
+  contacts: ContactRecord[];
+  tileColor: (status: string) => { bg: string; glow: string; text: string };
+  onClose: () => void;
+}) {
+  const tile = allTiles.find(t => t.id === tileId);
+  const col = tile ? columns.find(c => c.id === tile.colId) : null;
+  const contactRecord = tile ? contacts.find(c => c.phone === tile.phone) : null;
+
+  const [activeTab, setActiveTab] = useState<'chat' | 'details'>('chat');
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: contactRecord?.full_name || tile?.name || '',
+    email: contactRecord?.email || '',
+    company: contactRecord?.company || '',
+    job_title: contactRecord?.job_title || '',
+    state: contactRecord?.state || tile?.state || '',
+    greek_org: contactRecord?.greek_org || tile?.greekOrg || '',
+    school: contactRecord?.school || '',
+    notes: contactRecord?.notes || '',
+    tags: (contactRecord?.tags || []).join(', '),
+    linkedin_url: contactRecord?.linkedin_url || '',
+    instagram_handle: contactRecord?.instagram_handle || '',
+    venmo_handle: contactRecord?.venmo_handle || '',
+  });
+
+  if (!tile || !col) return null;
+
+  const colors = tileColor(tile.status);
+
+  const saveContact = async () => {
+    if (!contactRecord?.id) return;
+    setSaving(true);
+    await supabase.from('contacts').update({
+      full_name: editForm.full_name,
+      first_name: editForm.full_name.split(' ')[0] || '',
+      last_name: editForm.full_name.split(' ').slice(1).join(' ') || '',
+      email: editForm.email,
+      company: editForm.company,
+      job_title: editForm.job_title,
+      state: editForm.state,
+      greek_org: editForm.greek_org,
+      school: editForm.school,
+      notes: editForm.notes,
+      tags: editForm.tags.split(',').map(t => t.trim()).filter(Boolean),
+      linkedin_url: editForm.linkedin_url,
+      instagram_handle: editForm.instagram_handle,
+      venmo_handle: editForm.venmo_handle,
+    }).eq('id', contactRecord.id);
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', borderRadius: 8,
+    border: '1px solid rgba(0,0,0,0.1)', fontSize: 13,
+    fontFamily: "'Inter', sans-serif", outline: 'none',
+    background: '#fff', color: '#0c0f1a', boxSizing: 'border-box',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 10, fontWeight: 700, color: '#9ca3af',
+    textTransform: 'uppercase', letterSpacing: '0.06em',
+    display: 'block', marginBottom: 4,
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400,
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 20, width: 480, maxHeight: '85vh',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.4)', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {/* Header with gradient */}
+        <div style={{
+          padding: '22px 24px 18px',
+          background: `linear-gradient(145deg, ${colors.bg}, ${colors.bg}cc)`,
+          position: 'relative',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{
+              width: 54, height: 54, borderRadius: 16,
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 20, fontWeight: 800,
+            }}>
+              {tile.initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>{tile.name}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{tile.phone}</div>
+            </div>
+            <button onClick={onClose} style={{
+              background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
+              color: '#fff', fontSize: 16, width: 32, height: 32, borderRadius: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(4px)',
+            }}>x</button>
+          </div>
+
+          {/* Quick stats row */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 14 }}>
+            {[
+              { label: 'Messages', value: String(tile.msgCount) },
+              { label: 'Status', value: tile.status.charAt(0).toUpperCase() + tile.status.slice(1) },
+              ...(tile.state ? [{ label: 'State', value: tile.state }] : []),
+              ...(tile.greekOrg && tile.greekOrg !== 'None' ? [{ label: 'Org', value: greekLetters(tile.greekOrg) }] : []),
+              ...(tile.age ? [{ label: 'Age', value: String(tile.age) }] : []),
+            ].map(stat => (
+              <div key={stat.label} style={{
+                padding: '6px 12px', borderRadius: 8,
+                background: 'rgba(255,255,255,0.12)',
+                backdropFilter: 'blur(4px)',
+              }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{stat.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginTop: 1 }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{
+          display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.06)',
+          background: '#fafbfc',
+        }}>
+          {(['chat', 'details'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+              flex: 1, padding: '10px 0', border: 'none', cursor: 'pointer',
+              background: 'transparent',
+              borderBottom: activeTab === tab ? '2px solid #2678FF' : '2px solid transparent',
+              color: activeTab === tab ? '#2678FF' : '#9ca3af',
+              fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              {tab === 'chat' ? 'Conversation' : 'Contact Details'}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        {activeTab === 'chat' ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', maxHeight: 380, background: '#f8f9fb' }}>
+            {col.messages.slice(-25).map(msg => (
+              <div key={msg.id} style={{
+                display: 'flex', justifyContent: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
+                marginBottom: 6,
+              }}>
+                <div style={{
+                  maxWidth: '80%', padding: '9px 14px',
+                  borderRadius: msg.direction === 'outgoing' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  background: msg.isAIDraft ? '#FEF3C7' : msg.direction === 'outgoing' ? '#2678FF' : '#fff',
+                  color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#0c0f1a',
+                  fontSize: 13, lineHeight: 1.45,
+                  border: msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                  boxShadow: msg.direction === 'outgoing' && !msg.isAIDraft ? '0 1px 3px rgba(38,120,255,0.15)' : 'none',
+                }}>
+                  {msg.text}
+                  <div style={{ fontSize: 9, marginTop: 3, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {fmtMsgTime(msg.timestamp)}
+                    {msg.isAIDraft && ' · AI Draft'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', maxHeight: 380 }}>
+            {!contactRecord ? (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: '#9ca3af', fontSize: 13 }}>
+                No contact record found for this phone number.
+              </div>
+            ) : editing ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Full Name</label>
+                    <input value={editForm.full_name} onChange={e => setEditForm(p => ({ ...p, full_name: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Company</label>
+                    <input value={editForm.company} onChange={e => setEditForm(p => ({ ...p, company: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Job Title</label>
+                    <input value={editForm.job_title} onChange={e => setEditForm(p => ({ ...p, job_title: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>State</label>
+                    <input value={editForm.state} onChange={e => setEditForm(p => ({ ...p, state: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Greek Org</label>
+                    <input value={editForm.greek_org} onChange={e => setEditForm(p => ({ ...p, greek_org: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>School</label>
+                    <input value={editForm.school} onChange={e => setEditForm(p => ({ ...p, school: e.target.value }))} style={fieldStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Venmo</label>
+                    <input value={editForm.venmo_handle} onChange={e => setEditForm(p => ({ ...p, venmo_handle: e.target.value }))} style={fieldStyle} placeholder="@handle" />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>LinkedIn</label>
+                  <input value={editForm.linkedin_url} onChange={e => setEditForm(p => ({ ...p, linkedin_url: e.target.value }))} style={fieldStyle} placeholder="https://linkedin.com/in/..." />
+                </div>
+                <div>
+                  <label style={labelStyle}>Instagram</label>
+                  <input value={editForm.instagram_handle} onChange={e => setEditForm(p => ({ ...p, instagram_handle: e.target.value }))} style={fieldStyle} placeholder="@handle" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Tags (comma separated)</label>
+                  <input value={editForm.tags} onChange={e => setEditForm(p => ({ ...p, tags: e.target.value }))} style={fieldStyle} placeholder="vip, testing, nj" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Notes</label>
+                  <textarea value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={3} style={{ ...fieldStyle, resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={saveContact} disabled={saving} style={{
+                    flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+                    background: '#2678FF', color: '#fff', fontSize: 13, fontWeight: 700,
+                    cursor: 'pointer', opacity: saving ? 0.6 : 1,
+                  }}>
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button onClick={() => setEditing(false)} style={{
+                    padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)',
+                    background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Read-only contact view */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                  <button onClick={() => setEditing(true)} style={{
+                    padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                    background: '#fff', color: '#2678FF', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    Edit Contact
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  {[
+                    { label: 'Phone', value: tile.phone, mono: true },
+                    { label: 'Email', value: contactRecord.email },
+                    { label: 'Company', value: contactRecord.company },
+                    { label: 'Title', value: contactRecord.job_title },
+                    { label: 'State', value: contactRecord.state },
+                    { label: 'Greek Org', value: contactRecord.greek_org },
+                    { label: 'School', value: contactRecord.school },
+                    { label: 'Source', value: contactRecord.source || contactRecord.import_source },
+                    { label: 'LinkedIn', value: contactRecord.linkedin_url, link: true },
+                    { label: 'Instagram', value: contactRecord.instagram_handle ? `@${contactRecord.instagram_handle}` : '' },
+                    { label: 'Venmo', value: contactRecord.venmo_handle ? `@${contactRecord.venmo_handle}` : '' },
+                    { label: 'Created', value: contactRecord.created_at ? formatTime(contactRecord.created_at) : '' },
+                  ].filter(f => f.value).map(field => (
+                    <div key={field.label}>
+                      <div style={labelStyle}>{field.label}</div>
+                      {field.link ? (
+                        <a href={field.value} target="_blank" rel="noopener noreferrer" style={{
+                          fontSize: 13, color: '#2678FF', fontWeight: 500, textDecoration: 'none',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block',
+                        }}>
+                          {field.value}
+                        </a>
+                      ) : (
+                        <div style={{
+                          fontSize: 13, color: '#0c0f1a', fontWeight: 500,
+                          fontFamily: field.mono ? "'JetBrains Mono', monospace" : "'Inter', sans-serif",
+                        }}>
+                          {field.value}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Tags */}
+                {contactRecord.tags && contactRecord.tags.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={labelStyle}>Tags</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {contactRecord.tags.map(tag => (
+                        <span key={tag} style={{
+                          fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 6,
+                          background: 'rgba(38,120,255,0.08)', color: '#2678FF',
+                        }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Notes */}
+                {contactRecord.notes && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={labelStyle}>Notes</div>
+                    <div style={{
+                      fontSize: 13, color: '#6b7280', lineHeight: 1.5,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
+                    }}>
+                      {contactRecord.notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function MatrixPage() {
   const {
@@ -250,62 +587,146 @@ export default function MatrixPage() {
             );
           }
 
-          // Vacant tile
+          // Vacant tile — subtle grid pattern
           if (!tile) {
-            return <div key={`vacant-${idx}`} style={{ aspectRatio: '1', borderRadius: 6, background: '#1a1a2e', opacity: 0.4 }} />;
+            return (
+              <div key={`vacant-${idx}`} style={{
+                aspectRatio: '1', borderRadius: 8,
+                background: 'linear-gradient(145deg, #12132a, #0e0f22)',
+                border: '1px solid rgba(255,255,255,0.03)',
+                opacity: 0.6,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{
+                  width: 3, height: 3, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.06)',
+                }} />
+              </div>
+            );
           }
 
-          // Active tile
+          // Active tile — 4-corner data layout
           const colors = tileColor(tile.status);
+          const firstName = tile.name.trim().split(' ')[0] || '';
+          const displayName = !firstName || firstName === 'Unknown' ? tile.initials : firstName.length > 7 ? tile.initials : firstName;
+          const statusLabel = tile.status === 'received' ? 'REPLY' : tile.status === 'draft' ? 'DRAFT' : tile.status === 'queued' ? 'QUEUE' : tile.status === 'failed' ? 'FAIL' : '';
+          const statusDot = tile.status === 'received' ? '#4ADE80' : tile.status === 'draft' ? '#FCD34D' : tile.status === 'queued' ? '#60A5FA' : tile.status === 'failed' ? '#F87171' : 'rgba(255,255,255,0.3)';
+          const cornerTag = tile.greekOrg && !['None', 'NA', 'n/a', ''].includes(tile.greekOrg)
+            ? greekLetters(tile.greekOrg)
+            : tile.state ? tile.state.slice(0, 2).toUpperCase() : '';
+          const relTime = tile.timestamp ? formatTime(tile.timestamp) : '';
+
           return (
             <button key={tile.id || idx} className="disco-tile"
               onClick={() => setExpandedTileId(expandedTileId === tile.id ? null : tile.id)}
-              title={`${tile.name}: "${tile.text.substring(0, 60)}" — ${tile.status}`}
+              title={`${tile.name} · ${tile.phone}\n"${tile.text.substring(0, 80)}"\n${tile.msgCount} msgs · ${tile.status}`}
               style={{
-                aspectRatio: '1', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: colors.bg, color: colors.text,
+                aspectRatio: '1', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(145deg, ${colors.bg}, ${colors.bg}dd)`,
+                color: colors.text,
                 boxShadow: colors.glow,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                padding: 2, overflow: 'hidden', position: 'relative',
+                padding: 0, overflow: 'hidden', position: 'relative',
                 transition: 'all 0.2s',
                 animation: tile.status === 'draft' ? 'nasaUrgent 1.5s ease-in-out infinite' :
                   tile.status === 'queued' ? 'nasaPulse 2s ease-in-out infinite' : 'none',
-                opacity: expandedTileId === tile.id ? 1 : 0.85,
+                opacity: expandedTileId === tile.id ? 1 : 0.88,
                 outline: expandedTileId === tile.id ? '2px solid #fff' : 'none',
                 outlineOffset: 1,
               }}
             >
-              <span style={{ position: 'absolute', top: 3, left: 5, fontSize: 10, opacity: 0.6 }}>
-                {tile.direction === 'incoming' ? '↙' : '↗'}
-              </span>
-              <span style={{
-                position: 'absolute', top: 3, right: 4, fontSize: 10, fontWeight: 900, opacity: 0.9,
-                fontFamily: "'JetBrains Mono', monospace",
-                background: 'rgba(0,0,0,0.2)', padding: '1px 4px', borderRadius: 3,
+              {/* ═══ TOP-LEFT: Status dot + label ═══ */}
+              <div style={{
+                position: 'absolute', top: 4, left: 5,
+                display: 'flex', alignItems: 'center', gap: 3,
               }}>
-                {tile.greekOrg && !['None', 'NA', 'n/a'].includes(tile.greekOrg) ? greekLetters(tile.greekOrg) : tile.state ? tile.state.slice(0, 2).toUpperCase() : ''}
-              </span>
+                <div style={{
+                  width: 5, height: 5, borderRadius: '50%', background: statusDot,
+                  boxShadow: tile.status === 'received' ? `0 0 4px ${statusDot}` : 'none',
+                }} />
+                {statusLabel && (
+                  <span style={{
+                    fontSize: 6, fontWeight: 800, color: statusDot,
+                    letterSpacing: '0.06em',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                  }}>
+                    {statusLabel}
+                  </span>
+                )}
+              </div>
+
+              {/* ═══ TOP-RIGHT: Org/State badge ═══ */}
+              {cornerTag && (
+                <span style={{
+                  position: 'absolute', top: 3, right: 4,
+                  fontSize: 9, fontWeight: 900,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: 'rgba(0,0,0,0.3)', padding: '1px 5px', borderRadius: 4,
+                  letterSpacing: '0.03em',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                  backdropFilter: 'blur(4px)',
+                }}>
+                  {cornerTag}
+                </span>
+              )}
+
+              {/* ═══ CENTER: Name ═══ */}
               <span style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                textAlign: 'center', fontSize: 10, fontWeight: 700, padding: '3px 0',
-                fontFamily: "'JetBrains Mono', monospace",
-                background: tile.direction === 'incoming' ? 'rgba(34,197,94,0.3)' : 'rgba(0,0,0,0.2)',
-                color: tile.direction === 'incoming' ? '#4ADE80' : '#fff',
-                borderRadius: '0 0 6px 6px',
-              }}>
-                {tile.timestamp ? fmtMsgTime(tile.timestamp) : '—'}
-              </span>
-              <span style={{
-                fontSize: (tile.name.split(' ')[0] || '').length > 6 ? 18 : 24,
+                fontSize: displayName.length > 5 ? 17 : 22,
                 fontWeight: 900, textAlign: 'center', lineHeight: 1,
-                letterSpacing: '-0.04em', textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                letterSpacing: '-0.04em',
+                textShadow: '0 2px 6px rgba(0,0,0,0.5)',
+                marginTop: 2,
               }}>
-                {(() => {
-                  const firstName = tile.name.trim().split(' ')[0] || '';
-                  if (!firstName || firstName === 'Unknown') return tile.initials;
-                  return firstName.length > 6 ? tile.initials : firstName;
-                })()}
+                {displayName}
               </span>
+
+              {/* ═══ BOTTOM-LEFT: Message count ═══ */}
+              <span style={{
+                position: 'absolute', bottom: 16, left: 5,
+                fontSize: 7, fontWeight: 700, color: 'rgba(255,255,255,0.5)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                {tile.msgCount > 0 ? `${tile.msgCount}msg` : ''}
+              </span>
+
+              {/* ═══ BOTTOM-RIGHT: Age or direction ═══ */}
+              <span style={{
+                position: 'absolute', bottom: 16, right: 5,
+                fontSize: 7, fontWeight: 700, color: 'rgba(255,255,255,0.45)',
+                fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                {tile.age ? `${tile.age}y` : tile.direction === 'incoming' ? '↙in' : '↗out'}
+              </span>
+
+              {/* ═══ BOTTOM BAR: Time + date ═══ */}
+              <div style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '3px 6px',
+                background: tile.direction === 'incoming'
+                  ? 'linear-gradient(90deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))'
+                  : 'linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.15))',
+                borderRadius: '0 0 8px 8px',
+                backdropFilter: 'blur(4px)',
+              }}>
+                <span style={{
+                  fontSize: 8, fontWeight: 700,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: tile.direction === 'incoming' ? '#4ADE80' : 'rgba(255,255,255,0.7)',
+                }}>
+                  {tile.timestamp ? fmtMsgTime(tile.timestamp) : '—'}
+                </span>
+                <span style={{
+                  fontSize: 7, fontWeight: 600,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  color: 'rgba(255,255,255,0.35)',
+                }}>
+                  {relTime}
+                </span>
+              </div>
+
               {/* Ghost on AI tiles */}
               {(tile.aiMode === 'draft' || tile.aiMode === 'auto' || tile.status === 'draft') && (() => {
                 const ghost = ghostConfig[idx % ghostConfig.length];
@@ -323,85 +744,15 @@ export default function MatrixPage() {
         })}
       </div>
 
-      {/* Expanded tile modal */}
-      {expandedTileId && (() => {
-        const tile = allTiles.find(t => t.id === expandedTileId);
-        if (!tile) return null;
-        const col = columns.find(c => c.id === tile.colId);
-        if (!col) return null;
-        return (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400,
-          }} onClick={() => setExpandedTileId(null)}>
-            <div onClick={e => e.stopPropagation()} style={{
-              background: '#fff', borderRadius: 20, width: 420, maxHeight: '80vh',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.4)', overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-            }}>
-              {/* Header */}
-              <div style={{
-                padding: '20px 24px',
-                background: `linear-gradient(135deg, ${tileColor(tile.status).bg}, ${tileColor(tile.status).bg}cc)`,
-                display: 'flex', alignItems: 'center', gap: 14,
-              }}>
-                <div style={{
-                  width: 48, height: 48, borderRadius: 14,
-                  background: 'rgba(255,255,255,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 18, fontWeight: 800,
-                }}>
-                  {tile.initials}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{tile.name}</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: "'JetBrains Mono', monospace" }}>{tile.phone}</div>
-                </div>
-                <button onClick={() => setExpandedTileId(null)} style={{
-                  background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer',
-                  color: '#fff', fontSize: 16, width: 32, height: 32, borderRadius: 10,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>x</button>
-              </div>
-              {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', maxHeight: 400, background: '#f8f9fb' }}>
-                {col.messages.slice(-20).map(msg => (
-                  <div key={msg.id} style={{
-                    display: 'flex', justifyContent: msg.direction === 'outgoing' ? 'flex-end' : 'flex-start',
-                    marginBottom: 6,
-                  }}>
-                    <div style={{
-                      maxWidth: '80%', padding: '8px 12px',
-                      borderRadius: msg.direction === 'outgoing' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                      background: msg.isAIDraft ? '#FEF3C7' : msg.direction === 'outgoing' ? '#2678FF' : '#fff',
-                      color: msg.isAIDraft ? '#92400E' : msg.direction === 'outgoing' ? '#fff' : '#0c0f1a',
-                      fontSize: 13, lineHeight: 1.4,
-                      border: msg.direction === 'incoming' ? '1px solid rgba(0,0,0,0.06)' : 'none',
-                    }}>
-                      {msg.text}
-                      <div style={{ fontSize: 9, marginTop: 3, opacity: 0.5, fontFamily: "'JetBrains Mono', monospace" }}>
-                        {fmtMsgTime(msg.timestamp)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Stats */}
-              <div style={{
-                padding: '14px 20px', borderTop: '1px solid rgba(0,0,0,0.06)',
-                display: 'flex', gap: 16, background: '#fff',
-              }}>
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                  <span style={{ fontWeight: 700, color: '#0c0f1a' }}>{tile.msgCount}</span> messages
-                </div>
-                {tile.state && <div style={{ fontSize: 11, color: '#2678FF', fontWeight: 600 }}>{tile.state}</div>}
-                {tile.greekOrg && tile.greekOrg !== 'None' && <div style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600 }}>{tile.greekOrg}</div>}
-                {tile.age && <div style={{ fontSize: 11, color: '#9ca3af' }}>Age: {tile.age}</div>}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* Expanded tile modal — with editable contact fields */}
+      {expandedTileId && <TileModal
+        tileId={expandedTileId}
+        allTiles={allTiles}
+        columns={columns}
+        contacts={contacts}
+        tileColor={tileColor}
+        onClose={() => setExpandedTileId(null)}
+      />}
     </div>
   );
 }
