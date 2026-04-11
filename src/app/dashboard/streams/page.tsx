@@ -16,6 +16,8 @@ export default function StreamsPage() {
     lastReloadTime, dbInitiatives,
     activeInitiativeFilter, setActiveInitiativeFilter, initiativePhones,
     ghostConfig, recentlySentCols,
+    showAICopilot, setShowAICopilot,
+    setAiCopilotMessages, aiCopilotMessages,
   } = useDashboard();
 
   const [conversationSearch, setConversationSearch] = useState('');
@@ -338,6 +340,32 @@ export default function StreamsPage() {
                         {col.contact?.phone}
                       </div>
                     </div>
+                    {/* Ask Craig to draft */}
+                    <button onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAICopilot(true);
+                      const contactName = col.contact?.name || 'this contact';
+                      const lastMsgs = col.messages.slice(-3).map(m =>
+                        `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
+                      ).join('\n');
+                      const prompt = `Draft a reply to ${contactName}. Here's the recent conversation:\n${lastMsgs}`;
+                      setAiCopilotMessages(prev => [...prev, { role: 'user', text: prompt }]);
+                    }} title="Ask Craig to draft a reply" style={{
+                      width: 28, height: 28, borderRadius: 8, border: 'none',
+                      background: 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))',
+                      color: '#2678FF', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
+                        <circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                        <circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                      </svg>
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} style={{
                       width: 24, height: 24, borderRadius: 6, border: 'none',
                       background: 'rgba(0,0,0,0.04)', color: '#9ca3af',
@@ -453,11 +481,38 @@ export default function StreamsPage() {
                     background: '#fff',
                   }}>
                     <div style={{
-                      display: 'flex', gap: 8, alignItems: 'flex-end',
+                      display: 'flex', gap: 6, alignItems: 'flex-end',
                       background: '#f8f9fb', borderRadius: 12,
                       border: '1px solid rgba(0,0,0,0.06)',
-                      padding: '4px 4px 4px 14px',
+                      padding: '4px 4px 4px 6px',
                     }}>
+                      {/* Craig draft button inside input */}
+                      <button
+                        onClick={() => {
+                          setShowAICopilot(true);
+                          const name = col.contact?.name || 'contact';
+                          const last3 = col.messages.slice(-3).map(m =>
+                            `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
+                          ).join('\n');
+                          setAiCopilotMessages(prev => [...prev, { role: 'user', text: `Draft a reply to ${name}:\n${last3}` }]);
+                        }}
+                        title="Ask Craig to draft"
+                        style={{
+                          width: 30, height: 30, borderRadius: 8, border: 'none',
+                          background: 'transparent', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, color: '#9ca3af',
+                          transition: 'color 0.15s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#2678FF'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                          <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
+                          <circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                          <circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                        </svg>
+                      </button>
                       <input
                         value={inputValues[col.id] || ''}
                         onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}

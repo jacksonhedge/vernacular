@@ -8,13 +8,14 @@ import type { ContactRecord } from '@/types/dashboard';
 
 // ── Tile Modal with editable contact fields ──────────────────────────────
 
-function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose }: {
+function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose, onAskCraig }: {
   tileId: string;
   allTiles: Array<{ id: string; name: string; initials: string; phone: string; status: string; colId: string; msgCount: number; state: string; greekOrg: string; age: number | null; text: string; timestamp: string; direction: string }>;
   columns: Array<{ id: string; messages: Array<{ id: string; text: string; direction: string; timestamp: string; isAIDraft?: boolean; status?: string }> }>;
   contacts: ContactRecord[];
   tileColor: (status: string) => { bg: string; glow: string; text: string };
   onClose: () => void;
+  onAskCraig?: (name: string, messages: Array<{ text: string; direction: string }>) => void;
 }) {
   const tile = allTiles.find(t => t.id === tileId);
   const col = tile ? columns.find(c => c.id === tile.colId) : null;
@@ -109,12 +110,31 @@ function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose }: 
               <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>{tile.name}</div>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>{tile.phone}</div>
             </div>
-            <button onClick={onClose} style={{
-              background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
-              color: '#fff', fontSize: 16, width: 32, height: 32, borderRadius: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backdropFilter: 'blur(4px)',
-            }}>x</button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {onAskCraig && (
+                <button onClick={() => onAskCraig(tile.name, col!.messages)} title="Ask Craig about this contact" style={{
+                  background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
+                  color: '#fff', width: 32, height: 32, borderRadius: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(4px)', transition: 'background 0.15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
+                    <circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none" />
+                    <circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none" />
+                  </svg>
+                </button>
+              )}
+              <button onClick={onClose} style={{
+                background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
+                color: '#fff', fontSize: 16, width: 32, height: 32, borderRadius: 10,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backdropFilter: 'blur(4px)',
+              }}>x</button>
+            </div>
           </div>
 
           {/* Quick stats row */}
@@ -347,6 +367,7 @@ export default function MatrixPage() {
     columns, contacts, allConversations,
     dbInitiatives, activeInitiativeFilter, setActiveInitiativeFilter, initiativePhones,
     ghostConfig, orgId, setColumns,
+    setShowAICopilot, setAiCopilotMessages,
   } = useDashboard();
 
   const [expandedTileId, setExpandedTileId] = useState<string | null>(null);
@@ -438,45 +459,58 @@ export default function MatrixPage() {
           </div>
         </div>
 
-        {/* Initiative buttons + launch controls */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {dbInitiatives.filter(i => !i.parent_id).map(init => {
-            const isActive = stagedInitiativeId === init.id;
-            return (
-              <button key={init.id} onClick={async () => {
-                if (isActive) { setStagedContacts([]); setStagedMessages([]); setStagedInitiativeId(null); return; }
-                const res = await fetch('/api/ai/search-history', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'initiative_details', query: init.title, orgId }),
-                });
-                const data = await res.json();
-                const contactLines = (data.result || '').split('\n').filter((l: string) => l.startsWith('- '));
-                const parsed = contactLines.map((l: string) => {
-                  const match = l.match(/- (.+?) \| \((\d{3})\) (\d{3})-(\d{4})(?:\s*\|\s*([^|]*))?/);
-                  if (!match) return null;
-                  const name = match[1].trim();
-                  const phone = `(${match[2]}) ${match[3]}-${match[4]}`;
-                  const st = (match[5] || '').trim();
-                  const firstName = name.split(' ')[0];
-                  const isPhoneNum = name.startsWith('(') || name.startsWith('+') || name.match(/^\d/);
-                  const initials = isPhoneNum ? name.replace(/\D/g, '').slice(-4) : name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
-                  return { name, phone, firstName, initials, state: st };
-                }).filter(Boolean) as typeof stagedContacts;
-                setStagedContacts(parsed);
-                setStagedMessages([]);
-                setStagedInitiativeId(init.id);
-              }} style={{
-                padding: '9px 20px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                background: isActive ? '#2678FF' : 'rgba(255,255,255,0.06)',
-                color: '#fff',
-                border: isActive ? '2px solid #60A5FA' : '2px solid transparent',
-                boxShadow: isActive ? '0 0 16px rgba(38,120,255,0.4)' : 'none',
-                transition: 'all 0.2s',
-              }}>
+        {/* Initiative dropdown + launch controls */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            value={stagedInitiativeId || ''}
+            onChange={async (e) => {
+              const id = e.target.value;
+              if (!id) { setStagedContacts([]); setStagedMessages([]); setStagedInitiativeId(null); return; }
+              setStagedInitiativeId(id);
+              const init = dbInitiatives.find(i => i.id === id);
+              if (!init) return;
+              const res = await fetch('/api/ai/search-history', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'initiative_details', query: init.title, orgId }),
+              });
+              const data = await res.json();
+              const contactLines = (data.result || '').split('\n').filter((l: string) => l.startsWith('- '));
+              const parsed = contactLines.map((l: string) => {
+                const match = l.match(/- (.+?) \| \((\d{3})\) (\d{3})-(\d{4})(?:\s*\|\s*([^|]*))?/);
+                if (!match) return null;
+                const name = match[1].trim();
+                const phone = `(${match[2]}) ${match[3]}-${match[4]}`;
+                const st = (match[5] || '').trim();
+                const firstName = name.split(' ')[0];
+                const isPhoneNum = name.startsWith('(') || name.startsWith('+') || name.match(/^\d/);
+                const initials = isPhoneNum ? name.replace(/\D/g, '').slice(-4) : name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+                return { name, phone, firstName, initials, state: st };
+              }).filter(Boolean) as typeof stagedContacts;
+              setStagedContacts(parsed);
+              setStagedMessages([]);
+            }}
+            style={{
+              padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+              background: stagedInitiativeId ? 'rgba(38,120,255,0.15)' : 'rgba(255,255,255,0.06)',
+              color: '#fff',
+              border: stagedInitiativeId ? '1.5px solid rgba(96,165,250,0.4)' : '1.5px solid rgba(255,255,255,0.1)',
+              cursor: 'pointer', outline: 'none',
+              fontFamily: "'Inter', sans-serif",
+              minWidth: 200,
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              paddingRight: 36,
+            }}
+          >
+            <option value="" style={{ background: '#1a1a2e', color: '#fff' }}>Stage Initiative...</option>
+            {dbInitiatives.filter(i => !i.parent_id).map(init => (
+              <option key={init.id} value={init.id} style={{ background: '#1a1a2e', color: '#fff' }}>
                 {init.title}
-              </button>
-            );
-          })}
+              </option>
+            ))}
+          </select>
           <div style={{ flex: 1 }} />
           {stagedContacts.length > 0 && (
             <>
@@ -656,20 +690,49 @@ export default function MatrixPage() {
                 )}
               </div>
 
-              {/* ═══ TOP-RIGHT: Org/State badge ═══ */}
-              {cornerTag && (
-                <span style={{
-                  position: 'absolute', top: 3, right: 4,
-                  fontSize: 9, fontWeight: 900,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  background: 'rgba(0,0,0,0.3)', padding: '1px 5px', borderRadius: 4,
-                  letterSpacing: '0.03em',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                  backdropFilter: 'blur(4px)',
-                }}>
-                  {cornerTag}
-                </span>
-              )}
+              {/* ═══ TOP-RIGHT: Org/State logo badge — BIG and prominent ═══ */}
+              {cornerTag && (() => {
+                const isGreek = tile.greekOrg && !['None', 'NA', 'n/a', ''].includes(tile.greekOrg);
+                // Color coding by org
+                const orgColors: Record<string, { bg: string; border: string }> = {
+                  'ΣΧ': { bg: 'rgba(30,58,138,0.85)', border: 'rgba(96,165,250,0.5)' },
+                  'ΧΦ': { bg: 'rgba(127,29,29,0.85)', border: 'rgba(248,113,113,0.5)' },
+                  'ΔΖ': { bg: 'rgba(21,128,61,0.85)', border: 'rgba(74,222,128,0.5)' },
+                  'ΖΤΑ': { bg: 'rgba(126,34,206,0.85)', border: 'rgba(192,132,252,0.5)' },
+                  'ΑΣΦ': { bg: 'rgba(161,98,7,0.85)', border: 'rgba(253,224,71,0.5)' },
+                  'ΒΘΠ': { bg: 'rgba(15,23,42,0.85)', border: 'rgba(148,163,184,0.5)' },
+                  'ΦΣΚ': { bg: 'rgba(21,94,117,0.85)', border: 'rgba(34,211,238,0.5)' },
+                  'ΘΧ': { bg: 'rgba(120,53,15,0.85)', border: 'rgba(251,146,60,0.5)' },
+                };
+                const orgColor = orgColors[cornerTag] || { bg: 'rgba(15,23,42,0.8)', border: 'rgba(148,163,184,0.4)' };
+
+                return (
+                  <div style={{
+                    position: 'absolute', top: 2, right: 2,
+                    width: isGreek ? 28 : 24, height: isGreek ? 28 : 24,
+                    borderRadius: isGreek ? 8 : 6,
+                    background: isGreek ? orgColor.bg : 'rgba(15,23,42,0.75)',
+                    border: `1.5px solid ${isGreek ? orgColor.border : 'rgba(255,255,255,0.2)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: isGreek
+                      ? `0 2px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)`
+                      : '0 1px 4px rgba(0,0,0,0.3)',
+                  }}>
+                    <span style={{
+                      fontSize: isGreek ? 13 : 11,
+                      fontWeight: 900,
+                      color: '#fff',
+                      letterSpacing: isGreek ? '0.02em' : '0.04em',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                      fontFamily: isGreek ? 'serif' : "'JetBrains Mono', monospace",
+                      lineHeight: 1,
+                    }}>
+                      {cornerTag}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* ═══ CENTER: Name ═══ */}
               <span style={{
@@ -752,6 +815,13 @@ export default function MatrixPage() {
         contacts={contacts}
         tileColor={tileColor}
         onClose={() => setExpandedTileId(null)}
+        onAskCraig={(name, messages) => {
+          setShowAICopilot(true);
+          const last5 = messages.slice(-5).map(m =>
+            `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
+          ).join('\n');
+          setAiCopilotMessages(prev => [...prev, { role: 'user', text: `Help me with ${name}. Here's our recent conversation:\n${last5}\n\nWhat should I say next?` }]);
+        }}
       />}
     </div>
   );
