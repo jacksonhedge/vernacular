@@ -1,0 +1,539 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useDashboard } from '@/contexts/DashboardContext';
+import { fmtMsgTime, parseTimestamp, normalizePhone } from '@/lib/utils';
+import type { ConversationColumn, Contact } from '@/types/dashboard';
+
+export default function StreamsPage() {
+  const {
+    columns, setColumns, allConversations, contacts,
+    selectedConversationId, setSelectedConversationId,
+    readConversations, setReadConversations,
+    dismissedColumns, setDismissedColumns,
+    inputValues, setInputValues,
+    sendMessage, addColumn, removeColumn, playSound,
+    lastReloadTime, dbInitiatives,
+    activeInitiativeFilter, setActiveInitiativeFilter, initiativePhones,
+    ghostConfig, recentlySentCols,
+  } = useDashboard();
+
+  const [conversationSearch, setConversationSearch] = useState('');
+  type SortMode = 'unread' | 'recent' | 'name' | 'most-messages';
+  const [streamSortMode, setStreamSortMode] = useState<SortMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vernacular-sort-mode');
+      if (saved && ['unread', 'recent', 'name', 'most-messages'].includes(saved)) return saved as SortMode;
+    }
+    return 'unread';
+  });
+  const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
+  const [contactPickerSearch, setContactPickerSearch] = useState('');
+  const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
+  const streamsScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
+
+  // Filter columns by initiative
+  const filteredColumns = activeInitiativeFilter
+    ? columns.filter(col => {
+      if (!col.contact?.phone) return false;
+      return initiativePhones.has(normalizePhone(col.contact.phone));
+    })
+    : columns;
+
+  // Sort columns
+  const sortedColumns = [...filteredColumns].sort((a, b) => {
+    // Pinned first
+    // Recently sent columns keep position
+    if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
+    if (!recentlySentCols.has(a.id) && recentlySentCols.has(b.id)) return 1;
+
+    const getPriority = (col: ConversationColumn) => {
+      const last = col.messages[col.messages.length - 1];
+      if (last?.isAIDraft) return 0; // AI drafts first
+      if (last?.direction === 'incoming') return 1; // Unread
+      return 2;
+    };
+
+    if (streamSortMode === 'unread') {
+      const pDiff = getPriority(a) - getPriority(b);
+      if (pDiff !== 0) return pDiff;
+    }
+    if (streamSortMode === 'name') {
+      return (a.contact?.name || '').localeCompare(b.contact?.name || '');
+    }
+    if (streamSortMode === 'most-messages') {
+      return b.messages.length - a.messages.length;
+    }
+    // Default: recent
+    const aTime = a.messages.length > 0 ? parseTimestamp(a.messages[a.messages.length - 1].timestamp || '0').getTime() : 0;
+    const bTime = b.messages.length > 0 ? parseTimestamp(b.messages[b.messages.length - 1].timestamp || '0').getTime() : 0;
+    return bTime - aTime;
+  });
+
+  // Contact list for left panel
+  const activeChats = allConversations
+    .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Top Bar */}
+      <div style={{
+        height: 56, minHeight: 56, background: '#fff',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 24px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0c0f1a', margin: 0, letterSpacing: '-0.02em' }}>
+            Streams
+          </h2>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: '#9ca3af',
+            background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            {sortedColumns.length} active
+          </span>
+          {lastReloadTime && (
+            <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
+              Updated {lastReloadTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Sort */}
+          <select value={streamSortMode} onChange={e => setStreamSortMode(e.target.value as typeof streamSortMode)} style={{
+            padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)',
+            background: '#fff', color: '#0c0f1a', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', outline: 'none', fontFamily: "'Inter', sans-serif",
+          }}>
+            <option value="unread">Unread First</option>
+            <option value="recent">Most Recent</option>
+            <option value="name">By Name</option>
+            <option value="most-messages">Most Messages</option>
+          </select>
+          <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.06)' }} />
+          <button onClick={addColumn} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 8,
+            background: '#2678FF', color: '#fff',
+            border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 600,
+            boxShadow: '0 1px 3px rgba(38,120,255,0.3)',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            New Chat
+          </button>
+        </div>
+      </div>
+
+      {/* Initiative Filter Bar */}
+      {dbInitiatives.filter(i => !i.parent_id).length > 0 && (
+        <div style={{
+          padding: '8px 24px', background: '#fafbfc',
+          borderBottom: '1px solid rgba(0,0,0,0.04)',
+          display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto',
+        }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 4, flexShrink: 0 }}>
+            Filter:
+          </span>
+          <button
+            onClick={() => setActiveInitiativeFilter(null)}
+            style={{
+              padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+              border: !activeInitiativeFilter ? '1px solid #2678FF' : '1px solid rgba(0,0,0,0.08)',
+              background: !activeInitiativeFilter ? 'rgba(38,120,255,0.08)' : '#fff',
+              color: !activeInitiativeFilter ? '#2678FF' : '#6b7280',
+              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            All
+          </button>
+          {dbInitiatives.filter(i => !i.parent_id).map(init => (
+            <button key={init.id}
+              onClick={() => setActiveInitiativeFilter(activeInitiativeFilter === init.id ? null : init.id)}
+              style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                border: activeInitiativeFilter === init.id ? '1px solid #2678FF' : '1px solid rgba(0,0,0,0.08)',
+                background: activeInitiativeFilter === init.id ? 'rgba(38,120,255,0.08)' : '#fff',
+                color: activeInitiativeFilter === init.id ? '#2678FF' : '#6b7280',
+                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >
+              {init.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main content: Contact list + Streams */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {/* Contact List Panel */}
+        <div style={{
+          width: 280, minWidth: 280, maxWidth: 280,
+          display: 'flex', flexDirection: 'column',
+          borderRight: '1px solid rgba(0,0,0,0.06)',
+          background: '#fff', flexShrink: 0,
+        }}>
+          {/* Search */}
+          <div style={{ padding: '12px 12px 8px' }}>
+            <div style={{ position: 'relative' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}>
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                value={conversationSearch}
+                onChange={e => setConversationSearch(e.target.value)}
+                placeholder="Search conversations..."
+                style={{
+                  width: '100%', padding: '9px 12px 9px 34px', borderRadius: 10,
+                  border: '1px solid rgba(0,0,0,0.06)', fontSize: 13, outline: 'none',
+                  fontFamily: "'Inter', sans-serif", background: '#f8f9fb',
+                  boxSizing: 'border-box', color: '#0c0f1a',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Active label */}
+          <div style={{
+            padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)',
+          }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Active ({activeChats.length})
+            </span>
+          </div>
+
+          {/* Chat list */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {activeChats.map(col => {
+              const lastMsg = col.messages[col.messages.length - 1];
+              const hasUnread = lastMsg?.direction === 'incoming' && !readConversations.has(col.id);
+              const hasAiDraft = lastMsg?.isAIDraft;
+              const isSelected = selectedConversationId === col.id;
+              const isOpen = columns.some(c => c.id === col.id);
+
+              return (
+                <button key={col.id} onClick={() => {
+                  playSound('click');
+                  setSelectedConversationId(col.id);
+                  setReadConversations(prev => new Set(prev).add(col.id));
+                  // Add to columns if not present
+                  setColumns(prev => {
+                    if (prev.some(c => c.id === col.id)) {
+                      const existing = prev.find(c => c.id === col.id)!;
+                      return [existing, ...prev.filter(c => c.id !== col.id)];
+                    }
+                    return [col, ...prev];
+                  });
+                  setDismissedColumns(prev => {
+                    const next = new Set(prev); next.delete(col.id);
+                    localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                    return next;
+                  });
+                  setTimeout(() => {
+                    document.getElementById(`stream-col-${col.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                  }, 50);
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                  background: isSelected ? 'rgba(38,120,255,0.06)' : hasAiDraft ? 'rgba(245,158,11,0.04)' : hasUnread ? 'rgba(34,197,94,0.04)' : 'transparent',
+                  borderBottom: '1px solid rgba(0,0,0,0.03)',
+                  borderLeft: isSelected ? '3px solid #2678FF' : '3px solid transparent',
+                  transition: 'background 0.15s',
+                }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 12,
+                    background: isSelected ? 'rgba(38,120,255,0.1)' : 'rgba(0,0,0,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, fontSize: 14, fontWeight: 700, color: isSelected ? '#2678FF' : '#6b7280',
+                  }}>
+                    {col.contact?.initials || '??'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: hasUnread ? 700 : 600, color: '#0c0f1a',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {col.contact?.name || 'Unknown'}
+                    </div>
+                    <div style={{
+                      fontSize: 11, color: '#9ca3af',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      marginTop: 2,
+                    }}>
+                      {lastMsg?.text || 'No messages'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {fmtMsgTime(lastMsg?.timestamp || '')}
+                    </span>
+                    {hasUnread && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#2678FF' }} />}
+                    {hasAiDraft && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#F59E0B' }} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stream Columns */}
+        <div ref={streamsScrollRef} style={{
+          flex: 1, display: 'flex', overflowX: 'auto', overflowY: 'hidden',
+          gap: 0, background: '#f0f2f5', padding: '0 0 0 1px',
+        }}>
+          {sortedColumns.length === 0 ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>💬</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#0c0f1a', marginBottom: 6 }}>No active streams</div>
+                <div style={{ fontSize: 13, color: '#9ca3af' }}>Click a conversation on the left or start a new chat</div>
+              </div>
+            </div>
+          ) : (
+            sortedColumns.filter(col => col.contact).map(col => {
+              const lastMsg = col.messages[col.messages.length - 1];
+              const hasUnread = lastMsg?.direction === 'incoming';
+              const isSelected = selectedConversationId === col.id;
+
+              return (
+                <div
+                  key={col.id}
+                  id={`stream-col-${col.id}`}
+                  onClick={() => setSelectedConversationId(col.id)}
+                  style={{
+                    width: 340, minWidth: 340,
+                    display: 'flex', flexDirection: 'column',
+                    background: '#fff',
+                    borderRight: '1px solid rgba(0,0,0,0.06)',
+                    borderTop: isSelected ? '3px solid #2678FF' : '3px solid transparent',
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  {/* Column Header */}
+                  <div style={{
+                    padding: '14px 16px 12px',
+                    borderBottom: '1px solid rgba(0,0,0,0.06)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                  }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: 'rgba(38,120,255,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: '#2678FF', flexShrink: 0,
+                    }}>
+                      {col.contact?.initials}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {col.contact?.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#2678FF', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {col.contact?.phone}
+                      </div>
+                    </div>
+                    <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} style={{
+                      width: 24, height: 24, borderRadius: 6, border: 'none',
+                      background: 'rgba(0,0,0,0.04)', color: '#9ca3af',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12,
+                    }}>
+                      x
+                    </button>
+                  </div>
+
+                  {/* Messages */}
+                  <div id={`stream-msgs-${col.id}`} style={{
+                    flex: 1, overflowY: 'auto', padding: '12px 16px',
+                    display: 'flex', flexDirection: 'column', gap: 4,
+                    background: '#f8f9fb',
+                  }}>
+                    {col.messages.map(msg => {
+                      const isOutgoing = msg.direction === 'outgoing';
+                      const isDraft = msg.isAIDraft;
+                      const isFailed = msg.status === 'failed' || msg.id.startsWith('failed-');
+
+                      return (
+                        <div key={msg.id} style={{
+                          display: 'flex', justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
+                        }}
+                          onContextMenu={e => {
+                            e.preventDefault();
+                            setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
+                          }}
+                        >
+                          <div style={{
+                            maxWidth: '80%',
+                            padding: '9px 14px',
+                            borderRadius: isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                            background: isDraft ? '#FEF3C7' : isFailed ? '#FEE2E2' : isOutgoing ? '#2678FF' : '#fff',
+                            color: isDraft ? '#92400E' : isFailed ? '#DC2626' : isOutgoing ? '#fff' : '#0c0f1a',
+                            fontSize: 13, lineHeight: 1.45,
+                            border: isDraft ? '1px solid rgba(245,158,11,0.3)' : isFailed ? '1px solid rgba(220,38,38,0.2)' : isOutgoing ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                            boxShadow: isOutgoing && !isDraft && !isFailed ? '0 1px 3px rgba(38,120,255,0.2)' : 'none',
+                            wordBreak: 'break-word',
+                          }}>
+                            {msg.text}
+                            <div style={{
+                              fontSize: 10, marginTop: 4, opacity: 0.6,
+                              textAlign: isOutgoing ? 'right' : 'left',
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                              {fmtMsgTime(msg.timestamp)}
+                              {isDraft && ' · AI Draft'}
+                              {isFailed && ' · Failed'}
+                              {msg.status === 'Queued' && ' · Queued'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* AI Draft approval buttons */}
+                    {col.messages.some(m => m.isAIDraft) && (() => {
+                      const draft = [...col.messages].reverse().find(m => m.isAIDraft);
+                      if (!draft) return null;
+                      return (
+                        <div style={{
+                          display: 'flex', gap: 6, justifyContent: 'flex-end',
+                          padding: '4px 0',
+                        }}>
+                          <button onClick={() => {
+                            // Approve: send the draft as a real message
+                            setInputValues(prev => ({ ...prev, [col.id]: draft.text }));
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c, messages: c.messages.filter(m => m.id !== draft.id),
+                            } : c));
+                            setTimeout(() => sendMessage(col.id), 50);
+                          }} style={{
+                            padding: '5px 12px', borderRadius: 6, border: 'none',
+                            background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700,
+                            cursor: 'pointer',
+                          }}>
+                            Send
+                          </button>
+                          <button onClick={() => {
+                            setInputValues(prev => ({ ...prev, [col.id]: draft.text }));
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c, messages: c.messages.filter(m => m.id !== draft.id),
+                            } : c));
+                          }} style={{
+                            padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                            background: '#fff', color: '#6b7280', fontSize: 11, fontWeight: 600,
+                            cursor: 'pointer',
+                          }}>
+                            Edit
+                          </button>
+                          <button onClick={() => {
+                            setColumns(prev => prev.map(c => c.id === col.id ? {
+                              ...c, messages: c.messages.filter(m => m.id !== draft.id),
+                            } : c));
+                          }} style={{
+                            padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                            background: '#fff', color: '#9ca3af', fontSize: 11, fontWeight: 600,
+                            cursor: 'pointer',
+                          }}>
+                            Dismiss
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Input */}
+                  <div style={{
+                    padding: '10px 12px 12px',
+                    borderTop: '1px solid rgba(0,0,0,0.06)',
+                    background: '#fff',
+                  }}>
+                    <div style={{
+                      display: 'flex', gap: 8, alignItems: 'flex-end',
+                      background: '#f8f9fb', borderRadius: 12,
+                      border: '1px solid rgba(0,0,0,0.06)',
+                      padding: '4px 4px 4px 14px',
+                    }}>
+                      <input
+                        value={inputValues[col.id] || ''}
+                        onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(col.id); } }}
+                        placeholder="iMessage..."
+                        style={{
+                          flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                          color: '#0c0f1a', fontSize: 13, padding: '8px 0',
+                          fontFamily: "'Inter', sans-serif",
+                        }}
+                      />
+                      <button
+                        onClick={() => sendMessage(col.id)}
+                        disabled={!(inputValues[col.id] || '').trim()}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: (inputValues[col.id] || '').trim() ? '#2678FF' : 'rgba(0,0,0,0.04)',
+                          border: 'none', cursor: (inputValues[col.id] || '').trim() ? 'pointer' : 'default',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke={(inputValues[col.id] || '').trim() ? '#fff' : '#c4c4c6'}
+                          strokeWidth="2" strokeLinecap="round">
+                          <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Context Menu */}
+      {msgContextMenu && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setMsgContextMenu(null)}>
+          <div style={{
+            position: 'absolute', left: msgContextMenu.x, top: Math.max(10, msgContextMenu.y - 120),
+            background: '#fff', borderRadius: 10, padding: 4,
+            boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.08)',
+            minWidth: 160,
+          }} onClick={e => e.stopPropagation()}>
+            {[
+              { label: 'Copy Text', action: () => {
+                const col = columns.find(c => c.id === msgContextMenu.colId);
+                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+                if (msg) navigator.clipboard.writeText(msg.text);
+              }},
+              { label: 'Resend', action: () => {
+                const col = columns.find(c => c.id === msgContextMenu.colId);
+                const msg = col?.messages.find(m => m.id === msgContextMenu.msgId);
+                if (msg) {
+                  setInputValues(prev => ({ ...prev, [msgContextMenu.colId]: msg.text }));
+                  setTimeout(() => sendMessage(msgContextMenu.colId), 50);
+                }
+              }},
+            ].map(item => (
+              <button key={item.label} onClick={() => { item.action(); setMsgContextMenu(null); }} style={{
+                display: 'block', width: '100%', padding: '8px 14px', border: 'none',
+                background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                fontSize: 13, fontWeight: 500, color: '#0c0f1a', borderRadius: 6,
+                fontFamily: "'Inter', sans-serif",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
