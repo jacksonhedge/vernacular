@@ -150,11 +150,12 @@ export default function CraigPanel() {
               boxShadow: '0 2px 12px rgba(38,120,255,0.35)',
               position: 'relative',
             }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                <circle cx="9" cy="10" r="1.5" fill="#fff" stroke="none" />
-                <circle cx="15" cy="10" r="1.5" fill="#fff" stroke="none" />
-                <path d="M9 15c1.5 1.5 4.5 1.5 6 0" />
+              <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                <path d="M12 12 L24 4 L24 20 Z" fill="#2678FF">
+                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                </path>
               </svg>
               {/* Online indicator */}
               <div style={{
@@ -224,17 +225,17 @@ export default function CraigPanel() {
           <div style={{ textAlign: 'center', padding: '32px 16px' }}>
             {/* Craig avatar */}
             <div style={{
-              width: 72, height: 72, borderRadius: 20,
-              background: 'linear-gradient(135deg, rgba(38,120,255,0.12), rgba(99,102,241,0.12))',
-              border: '1px solid rgba(38,120,255,0.15)',
+              width: 80, height: 80, borderRadius: 20,
+              background: 'radial-gradient(circle at 50% 50%, rgba(255,224,0,0.08), transparent 70%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px',
             }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2678FF" strokeWidth="1.3" strokeLinecap="round">
-                <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                <circle cx="9" cy="10" r="1.5" fill="#2678FF" stroke="none" />
-                <circle cx="15" cy="10" r="1.5" fill="#2678FF" stroke="none" />
-                <path d="M9 15c1.5 1.5 4.5 1.5 6 0" />
+              <svg width="56" height="56" viewBox="0 0 24 24" style={{ overflow: 'visible', filter: 'drop-shadow(0 4px 12px rgba(255,224,0,0.3))' }}>
+                <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                <circle cx="10" cy="7" r="1.5" fill="#1c1c00" />
+                <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
+                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                </path>
               </svg>
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>
@@ -291,14 +292,16 @@ export default function CraigPanel() {
             {msg.role === 'assistant' && (
               <div style={{
                 width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-                background: 'linear-gradient(135deg, #2678FF, #6366f1)',
+                background: '#0a0d18',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginTop: 2,
+                marginTop: 2, padding: 3,
               }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                  <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                  <circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none" />
-                  <circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none" />
+                <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                  <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                  <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                  <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
+                    <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                  </path>
                 </svg>
               </div>
             )}
@@ -345,14 +348,16 @@ export default function CraigPanel() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <div style={{
               width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-              background: 'linear-gradient(135deg, #2678FF, #6366f1)',
+              background: '#0a0d18',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: 2,
+              marginTop: 2, padding: 3,
             }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                <circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none" />
-                <circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none" />
+              <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
+                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                </path>
               </svg>
             </div>
             <div style={{

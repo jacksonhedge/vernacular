@@ -121,10 +121,12 @@ function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose, on
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                    <circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none" />
-                    <circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none" />
+                  <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                    <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                    <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                    <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
+                      <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                    </path>
                   </svg>
                 </button>
               )}

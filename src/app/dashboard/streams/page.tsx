@@ -153,16 +153,13 @@ export default function StreamsPage() {
         padding: '0 24px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0c0f1a', margin: 0, letterSpacing: '-0.02em' }}>
-            Streams
-          </h2>
-          {/* Refresh button — pulls outbound messages sent from Mac device */}
+          {/* Refresh button — pulls outbound messages sent from Mac device (FAR LEFT) */}
           <button
             onClick={refreshOutbound}
             disabled={refreshing}
             title="Refresh — sync messages sent from your Mac (last 24h)"
             style={{
-              width: 28, height: 28, borderRadius: 8,
+              width: 30, height: 30, borderRadius: 8,
               background: refreshing ? 'rgba(38,120,255,0.1)' : 'rgba(0,0,0,0.04)',
               border: '1px solid rgba(0,0,0,0.06)',
               cursor: refreshing ? 'default' : 'pointer',
@@ -173,13 +170,16 @@ export default function StreamsPage() {
             onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(38,120,255,0.08)'; e.currentTarget.style.color = '#2678FF'; } }}
             onMouseLeave={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#6b7280'; } }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ animation: refreshing ? 'refreshSpin 0.8s linear infinite' : 'none' }}
             >
               <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
           </button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0c0f1a', margin: 0, letterSpacing: '-0.02em' }}>
+            Streams
+          </h2>
           <span style={{
             fontSize: 11, fontWeight: 600, color: '#9ca3af',
             background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
@@ -222,40 +222,6 @@ export default function StreamsPage() {
             <option value="name">By Name</option>
             <option value="most-messages">Most Messages</option>
           </select>
-          {/* Craig Button — yellow pulsing */}
-          <button onClick={() => setShowAICopilot(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '8px 14px', borderRadius: 8,
-            background: 'linear-gradient(135deg, #FFD700, #F59E0B)',
-            color: '#1c1c00', border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em',
-            boxShadow: '0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,215,0,0.2)',
-            animation: 'craigPulseYellow 1.6s ease-in-out infinite',
-            textShadow: '0 1px 0 rgba(255,255,255,0.3)',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.animation = 'none'; e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={e => { e.currentTarget.style.animation = 'craigPulseYellow 1.6s ease-in-out infinite'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-              <circle cx="9" cy="10" r="1.3" fill="#1c1c00" stroke="none" />
-              <circle cx="15" cy="10" r="1.3" fill="#1c1c00" stroke="none" />
-              <path d="M9 15c1.5 1.5 4.5 1.5 6 0" />
-            </svg>
-            Ask Craig
-          </button>
-          <style>{`
-            @keyframes craigPulseYellow {
-              0%, 100% {
-                box-shadow: 0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,215,0,0.2);
-                transform: scale(1);
-              }
-              50% {
-                box-shadow: 0 4px 16px rgba(245,158,11,0.6), 0 0 0 6px rgba(255,215,0,0.15);
-                transform: scale(1.03);
-              }
-            }
-          `}</style>
           <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.06)' }} />
           <button onClick={addColumn} style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -270,6 +236,42 @@ export default function StreamsPage() {
             </svg>
             New Chat
           </button>
+          {/* Craig Button — Pac-Man face, yellow pulsing (RIGHT of New Chat) */}
+          <button onClick={() => setShowAICopilot(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px', borderRadius: 8,
+            background: 'linear-gradient(135deg, #FFE000, #F59E0B)',
+            color: '#1c1c00', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em',
+            boxShadow: '0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,224,0,0.2)',
+            animation: 'craigPulseYellow 1.6s ease-in-out infinite',
+            textShadow: '0 1px 0 rgba(255,255,255,0.3)',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.animation = 'none'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.animation = 'craigPulseYellow 1.6s ease-in-out infinite'; e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            {/* PAC-MAN icon with chomping mouth */}
+            <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+              <circle cx="12" cy="12" r="11" fill="#FFE000" stroke="#1c1c00" strokeWidth="0.5" />
+              <circle cx="10" cy="7" r="1.3" fill="#1c1c00" />
+              <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
+                <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+              </path>
+            </svg>
+            Ask Craig
+          </button>
+          <style>{`
+            @keyframes craigPulseYellow {
+              0%, 100% {
+                box-shadow: 0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,224,0,0.2);
+                transform: scale(1);
+              }
+              50% {
+                box-shadow: 0 4px 16px rgba(245,158,11,0.6), 0 0 0 6px rgba(255,224,0,0.15);
+                transform: scale(1.03);
+              }
+            }
+          `}</style>
         </div>
       </div>
 
@@ -500,10 +502,12 @@ export default function StreamsPage() {
                       onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                        <circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none" />
-                        <circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                      <svg width="16" height="16" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                        <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                        <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                        <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
+                          <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                        </path>
                       </svg>
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} style={{
@@ -647,10 +651,12 @@ export default function StreamsPage() {
                         onMouseEnter={e => { e.currentTarget.style.color = '#2678FF'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                          <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                          <circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none" />
-                          <circle cx="15" cy="10" r="1.2" fill="currentColor" stroke="none" />
+                        <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                          <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                          <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                          <path d="M12 12 L24 4 L24 20 Z" fill="#f8f9fb">
+                            <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+                          </path>
                         </svg>
                       </button>
                       <input

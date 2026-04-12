@@ -12,22 +12,24 @@ function CraigFAB() {
       onClick={() => setShowAICopilot(true)}
       style={{
         position: 'fixed', bottom: 24, right: 24, zIndex: 300,
-        width: 56, height: 56, borderRadius: 16,
-        background: 'linear-gradient(135deg, #2678FF, #6366f1)',
-        border: 'none', cursor: 'pointer',
+        width: 58, height: 58, borderRadius: 16,
+        background: '#0c0f1a',
+        border: '2px solid rgba(255,224,0,0.3)',
+        cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 4px 20px rgba(38,120,255,0.4), 0 0 0 3px rgba(38,120,255,0.1)',
+        boxShadow: '0 4px 20px rgba(245,158,11,0.4), 0 0 0 3px rgba(255,224,0,0.15)',
         transition: 'all 0.2s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(38,120,255,0.5), 0 0 0 4px rgba(38,120,255,0.15)'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(38,120,255,0.4), 0 0 0 3px rgba(38,120,255,0.1)'; }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(245,158,11,0.5), 0 0 0 4px rgba(255,224,0,0.2)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,158,11,0.4), 0 0 0 3px rgba(255,224,0,0.15)'; }}
       title="Open Craig AI"
     >
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-        <circle cx="9" cy="10" r="1.5" fill="#fff" stroke="none" />
-        <circle cx="15" cy="10" r="1.5" fill="#fff" stroke="none" />
-        <path d="M9 15c1.5 1.5 4.5 1.5 6 0" />
+      <svg width="30" height="30" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+        <circle cx="12" cy="12" r="11" fill="#FFE000" stroke="#1c1c00" strokeWidth="0.5" />
+        <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+        <path d="M12 12 L24 4 L24 20 Z" fill="#2678FF">
+          <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
+        </path>
       </svg>
     </button>
   );

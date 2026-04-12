@@ -1,0 +1,45 @@
+name: VernacularApp
+options:
+  bundleIdPrefix: com.coverpay.vernacular
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
+
+targets:
+  VernacularApp:
+    type: application
+    platform: iOS
+    sources:
+      - VernacularApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.coverpay.vernacular
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_FILE: VernacularApp/Info.plist
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    info:
+      path: VernacularApp/Info.plist
+      properties:
+        CFBundleDisplayName: Vernacular
+        CFBundleName: VernacularApp
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSFaceIDUsageDescription: Vernacular uses Face ID to sign you in securely without a password.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
