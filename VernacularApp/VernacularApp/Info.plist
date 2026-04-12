@@ -22,13 +22,28 @@
 	<string>1</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
+		<!-- Default App Transport Security: HTTPS required for all connections.
+		     Supabase, vernacular.chat, and all first-party endpoints use HTTPS. -->
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<false/>
 	</dict>
+	<!-- Supabase config — anon keys are designed to be public but we still keep them
+	     out of source control. Xcode build variables will inject the real values. -->
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Vernacular uses Face ID to sign you in securely without a password.</string>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+		<key>UIImageName</key>
+		<string>VernacularLogo</string>
+		<key>UIImageRespectsSafeAreaInsets</key>
+		<false/>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

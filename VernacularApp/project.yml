@@ -1,6 +1,6 @@
 name: VernacularApp
 options:
-  bundleIdPrefix: com.coverpay.vernacular
+  bundleIdPrefix: com.hedgeinc.vernacular
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "16.0"
@@ -19,14 +19,19 @@ targets:
       - VernacularApp
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.coverpay.vernacular
+        PRODUCT_BUNDLE_IDENTIFIER: com.hedgeinc.vernacular
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: VernacularApp/Info.plist
         SWIFT_VERSION: "5.9"
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: ""  # Set this in Xcode to your Hedge Inc. team ID
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Privacy manifest required for TestFlight / App Store submission
+        GENERATE_INFOPLIST_FILE: NO
+        # Supabase config — override per-config via .xcconfig or Xcode build settings
+        SUPABASE_URL: https://miuyksnwzkhiyyilchjs.supabase.co
+        SUPABASE_ANON_KEY: ""  # Set in Xcode build settings or .xcconfig, do NOT commit
     dependencies:
       - package: Supabase
         product: Supabase
@@ -37,9 +42,14 @@ targets:
         CFBundleName: VernacularApp
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: VernacularLogo
+          UIImageRespectsSafeAreaInsets: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSFaceIDUsageDescription: Vernacular uses Face ID to sign you in securely without a password.
         NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
+          NSAllowsArbitraryLoads: false
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)

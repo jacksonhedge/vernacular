@@ -7,7 +7,35 @@
 
 ## 🚧 Current Sprint
 
-_(nothing currently in flight — ready to pick up next task)_
+### TestFlight Submission (Hedge, Inc. developer account)
+Goal: install Vernacular on Jackson's phone via TestFlight, under the Hedge Inc. Apple Developer account.
+
+**Blockers (must fix before build succeeds):**
+- [ ] Set Hedge Inc. Team ID in Xcode Signing & Capabilities
+- [ ] Generate signing certificate + provisioning profile via Apple Developer portal
+
+**Required for App Store Connect upload:**
+- [ ] Create `VernacularApp/PrivacyInfo.xcprivacy` manifest
+  - Declare: Supabase networking, LocalAuthentication (Face ID), Keychain access
+- [ ] Remove `NSAllowsArbitraryLoads: true` from Info.plist OR whitelist only Supabase/vernacular.chat domains
+- [ ] Rename bundle ID: `com.coverpay.vernacular` → `com.hedge.vernacular` (or `com.hedgeinc.vernacular`)
+- [ ] Move hardcoded Supabase anon key out of `SupabaseService.swift` (use Info.plist or build config)
+- [ ] Generate app icons at all required sizes (iPhone @2x/@3x, iPad if applicable) — currently only 1024×1024
+- [ ] Create branded launch screen (currently blank white default)
+
+**App Store Connect steps:**
+- [ ] Create app record in App Store Connect under Hedge Inc. team
+- [ ] Fill out App Privacy questionnaire (what data is collected, how used)
+- [ ] Write app description + keywords
+- [ ] Upload screenshots (6.5" and 6.7" iPhone sizes minimum)
+- [ ] Add Jackson + any testers to TestFlight internal testing group
+- [ ] Archive + upload build from Xcode (Product → Archive → Distribute)
+
+**After approval:**
+- [ ] Install TestFlight on Jackson's phone
+- [ ] Accept tester invite email
+- [ ] Install Vernacular build
+- [ ] Test core flows on device: login, send message, view contacts, Craig chat
 
 ---
 

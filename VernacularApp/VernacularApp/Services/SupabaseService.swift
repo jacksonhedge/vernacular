@@ -12,9 +12,16 @@ final class SupabaseService: ObservableObject {
     @Published var organizationId: UUID?
 
     private nonisolated init() {
+        // Read config from Info.plist (populated at build time via .xcconfig)
+        // This keeps the anon key out of source code while staying simple.
+        let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
+            ?? "https://miuyksnwzkhiyyilchjs.supabase.co"
+        let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String
+            ?? ""
+
         client = SupabaseClient(
-            supabaseURL: URL(string: "https://miuyksnwzkhiyyilchjs.supabase.co")!,
-            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdXlrc253emtoaXl5aWxjaGpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODcwNzcsImV4cCI6MjA5MDQ2MzA3N30.D9-XO0-XgxpzwygqbYYutCIWEuBsd80KGCthJOp5OeQ"
+            supabaseURL: URL(string: url)!,
+            supabaseKey: key
         )
     }
 
