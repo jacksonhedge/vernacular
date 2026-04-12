@@ -1,7 +1,93 @@
 # Vernacular — Product Roadmap
 
 **Owner:** Jackson Fitzgerald, Hedge Inc.
-**Last Updated:** April 2026
+**Last Updated:** 2026-04-12
+
+---
+
+## 🚧 Current Sprint
+
+_(nothing currently in flight — ready to pick up next task)_
+
+---
+
+## ⭐ Next Up (High Priority)
+
+### iOS TestFlight Release
+Get Vernacular iOS app approved for TestFlight so external testers can install.
+- [ ] Set Apple Developer Team ID in Xcode (blocks build)
+- [ ] Create `PrivacyInfo.xcprivacy` manifest (required Spring 2024+)
+- [ ] Remove `NSAllowsArbitraryLoads: true` from Info.plist
+- [ ] Generate app icons at all required sizes (currently only 1024×1024)
+- [ ] Create branded launch screen
+- [ ] Rename bundle ID from `com.coverpay.vernacular` to `com.hedge.vernacular`
+- [ ] Move hardcoded Supabase key out of source code
+
+### Settings Page Migration
+Port from `page.old.tsx` — still a "coming soon" placeholder.
+- [ ] Org settings form (company name, AI defaults)
+- [ ] Quiet hours configuration (timezone-aware)
+- [ ] Rate limits (max messages/day, max AI drafts/day, max blast recipients)
+- [ ] Notification preferences
+- [ ] Slack webhook configuration
+
+### Local LLM Integration (when M4 Max arrives)
+Mac fleet ordered (~$13,200). Pre-wire Craig for local model support.
+- [ ] Add "Local" as 4th option in Craig's model selector
+- [ ] `OLLAMA_API_URL` env var in Vercel
+- [ ] Route handler in `/api/ai/chat` detects `model === 'local'` and proxies to Ollama
+- [ ] Tailscale setup on M4 Max
+- [ ] Pull 3 models: Mistral Nemo 12B, Mistral Large 123B Q4, Qwen 32B Q5
+- [ ] Fine-tune LoRA on ~10K sent messages (tone matching)
+
+### Dashboard Placeholder Pages
+All currently show "coming soon" — need full migration from monolith.
+- [ ] Integrations page (Notion/Slack/AI providers)
+- [ ] Team page (member list + invite flow)
+- [ ] Stations detail view (test messaging pipeline)
+- [ ] Initiatives detail view (memories/instructions/examples editor)
+- [ ] Schedule calendar week view
+- [ ] Profile editing + password change
+
+---
+
+## ✅ Recently Shipped
+
+### 2026-04-12
+- **Craig auto-reset after 2min idle** (`96a52cd`) — fresh chat each panel-open if stale
+- **Craig deep polish** (`0ccd1b9`) — adaptive bubble widths, message grouping, timestamps, day separators, markdown rendering, action tag chips with icons, 3-stage loading, scroll-to-bottom FAB, copy button per message
+- **Pac-Man character everywhere** (`c756471`, `7ced1df`) — replaced robot icon across sidebar, panel, FAB, in-column buttons, matrix modal
+- **Streams button layout** (`7ced1df`) — refresh button moved to far left, "Ask Craig" moved right of New Chat
+- **Refresh button for Mac-sent messages** (`dcca511`) — calls poll-inbound + re-fetches, shows toast with sync count
+- **Pulsing yellow "Ask Craig" button** (`7f479a8`) — prominent gold gradient next to Unread First
+- **Full Contacts page** (`b73aa0a`) — list/card views, VCF + CSV import with column mapping, VCF + CSV export, contact detail sidebar
+
+### 2026-04-11
+- **Craig AI access points** (`5acfb3d`) — floating FAB, stream column headers, in-input shortcut, matrix modal
+- **Matrix: 4-corner tile layout** (`4037130`) — status dot, org/state badge, message count, age/direction, split time bar
+- **Matrix: editable contact modal** (`4037130`) — Conversation + Contact Details tabs with inline editing
+- **Matrix: prominent org logo badges** — 28×28px colored shield badges per Greek org
+- **Matrix: initiative dropdown** — replaced multi-select buttons with single dropdown
+- **Enterprise dashboard redesign** (`335aa1d`) — broke 11K-line monolith into sub-routes, dark sidebar, Craig panel, DashboardContext
+
+### 2026-04-09
+- Craig model default to Sonnet 4.6, casual tone, action tags
+- Matrix view with initiative staging + LAUNCH
+- Initiative contacts loaded via service-role API
+- Delivery status simplified to Delivered / Not Delivered
+- CSV upload creates initiatives via Craig
+- 62 NJ contacts imported + linked to Testers in NJ
+
+---
+
+## 🔄 How This File Works (Option 4 — filesystem sync workflow)
+
+1. **Every commit that ships something meaningful** → Claude appends to "Recently Shipped" with SHA + description
+2. **Every new priority from conversation** → Claude adds to "Current Sprint" or "Next Up"
+3. **When you want to refresh your Claude project** → Drag `VERNACULAR_CAPABILITIES_YYYY-MM-DD.md` + `ROADMAP.md` into your Claude project knowledge
+4. **Capabilities file is dated** — new ones get created after major architecture changes; old versions serve as historical snapshots
+5. **Don't manually edit during active sessions** — let Claude own these files. Edit between sessions freely.
+6. **The "Phase 1-5" product vision below** is the long-term North Star — slower-changing, edit when strategic direction shifts.
 
 ---
 
