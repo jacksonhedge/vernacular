@@ -18,7 +18,72 @@ export default function StreamsPage() {
     ghostConfig, recentlySentCols,
     showAICopilot, setShowAICopilot,
     setAiCopilotMessages, aiCopilotMessages,
+    setAllConversations, orgId,
   } = useDashboard();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshCount, setLastRefreshCount] = useState<number | null>(null);
+
+  const refreshOutbound = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setLastRefreshCount(null);
+    try {
+      // Step 1: link any unlinked messages (inbound + outbound from Wade's chat.db)
+      const pollRes = await fetch('/api/engine/poll-inbound');
+      const pollData = pollRes.ok ? await pollRes.json() : { synced: 0 };
+
+      // Step 2: re-fetch the conversation list
+      const convRes = await fetch(`/api/conversations/list?orgId=${orgId}`);
+      if (convRes.ok) {
+        const data = await convRes.json();
+        if (data.conversations?.length > 0) {
+          const fresh = data.conversations.map((conv: Record<string, unknown>) => {
+            const contact = conv.contact as Record<string, unknown>;
+            const unreadCt = conv.unreadCount as number;
+            const messages = conv.messages as Record<string, unknown>[];
+            return {
+              id: `real-${conv.conversationId}`,
+              conversationId: conv.conversationId as string,
+              aiMode: (conv.aiMode as string) || 'draft',
+              goal: (conv.goal as string) || '',
+              contact: {
+                id: (contact.id as string) || '',
+                name: (contact.name as string) || 'Unknown',
+                initials: (contact.initials as string) || '??',
+                tag: unreadCt > 0 ? 'UNREAD' : 'ACTIVE',
+                tagColor: unreadCt > 0 ? '#EF4444' : '#22C55E',
+                tagBg: unreadCt > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                phone: (contact.phone as string) || '',
+              },
+              messages: (messages || []).map((m: Record<string, unknown>) => ({
+                id: m.id as string,
+                text: m.text as string,
+                direction: m.direction as 'outgoing' | 'incoming',
+                timestamp: m.timestamp as string,
+                isAIDraft: m.isAIDraft as boolean | undefined,
+              })),
+            };
+          });
+          setAllConversations(fresh);
+          setColumns(prev => {
+            const freshMap = new Map(fresh.map((c: ConversationColumn) => [c.id, c]));
+            return prev.map(existing => {
+              const f = freshMap.get(existing.id) as ConversationColumn | undefined;
+              if (f) return { ...existing, messages: f.messages, contact: f.contact };
+              return existing;
+            });
+          });
+        }
+      }
+      setLastRefreshCount(pollData.synced || 0);
+      setTimeout(() => setLastRefreshCount(null), 4000);
+    } catch {
+      setLastRefreshCount(-1);
+      setTimeout(() => setLastRefreshCount(null), 4000);
+    }
+    setRefreshing(false);
+  };
 
   const [conversationSearch, setConversationSearch] = useState('');
   type SortMode = 'unread' | 'recent' | 'name' | 'most-messages';
@@ -87,10 +152,34 @@ export default function StreamsPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0c0f1a', margin: 0, letterSpacing: '-0.02em' }}>
             Streams
           </h2>
+          {/* Refresh button — pulls outbound messages sent from Mac device */}
+          <button
+            onClick={refreshOutbound}
+            disabled={refreshing}
+            title="Refresh — sync messages sent from your Mac (last 24h)"
+            style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: refreshing ? 'rgba(38,120,255,0.1)' : 'rgba(0,0,0,0.04)',
+              border: '1px solid rgba(0,0,0,0.06)',
+              cursor: refreshing ? 'default' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: refreshing ? '#2678FF' : '#6b7280',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(38,120,255,0.08)'; e.currentTarget.style.color = '#2678FF'; } }}
+            onMouseLeave={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#6b7280'; } }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ animation: refreshing ? 'refreshSpin 0.8s linear infinite' : 'none' }}
+            >
+              <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
           <span style={{
             fontSize: 11, fontWeight: 600, color: '#9ca3af',
             background: 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: 6,
@@ -98,11 +187,28 @@ export default function StreamsPage() {
           }}>
             {sortedColumns.length} active
           </span>
-          {lastReloadTime && (
+          {lastReloadTime && !lastRefreshCount && (
             <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
               Updated {lastReloadTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
             </span>
           )}
+          {/* Refresh result toast */}
+          {lastRefreshCount !== null && (
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              color: lastRefreshCount === -1 ? '#EF4444' : lastRefreshCount === 0 ? '#9ca3af' : '#22C55E',
+              background: lastRefreshCount === -1 ? 'rgba(239,68,68,0.08)' : lastRefreshCount === 0 ? 'rgba(0,0,0,0.04)' : 'rgba(34,197,94,0.08)',
+              padding: '3px 10px', borderRadius: 6,
+              fontFamily: "'JetBrains Mono', monospace",
+              animation: 'fadeSlideIn 0.3s ease-out',
+            }}>
+              {lastRefreshCount === -1 ? 'Refresh failed' : lastRefreshCount === 0 ? 'Up to date' : `+${lastRefreshCount} synced`}
+            </span>
+          )}
+          <style>{`
+            @keyframes refreshSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+          `}</style>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Sort */}
