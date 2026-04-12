@@ -34,6 +34,9 @@ targets:
         DEVELOPMENT_TEAM: ""  # Set this in Xcode to your Hedge Inc. team ID
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # iPhone only (TARGETED_DEVICE_FAMILY = 1). iPad would require
+        # supporting all four orientations for multitasking.
+        TARGETED_DEVICE_FAMILY: "1"
         # Privacy manifest required for TestFlight / App Store submission
         GENERATE_INFOPLIST_FILE: NO
         # SUPABASE_URL and SUPABASE_ANON_KEY come from Configs/Debug.xcconfig
