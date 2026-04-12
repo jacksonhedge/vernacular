@@ -154,7 +154,6 @@ export default function CraigPanel() {
                 <circle cx="12" cy="12" r="11" fill="#FFE000" />
                 <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
                 <path d="M12 12 L24 4 L24 20 Z" fill="#2678FF">
-                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                 </path>
               </svg>
               {/* Online indicator */}
@@ -234,7 +233,6 @@ export default function CraigPanel() {
                 <circle cx="12" cy="12" r="11" fill="#FFE000" />
                 <circle cx="10" cy="7" r="1.5" fill="#1c1c00" />
                 <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                 </path>
               </svg>
             </div>
@@ -300,7 +298,6 @@ export default function CraigPanel() {
                   <circle cx="12" cy="12" r="11" fill="#FFE000" />
                   <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
                   <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                    <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                   </path>
                 </svg>
               </div>
@@ -356,7 +353,6 @@ export default function CraigPanel() {
                 <circle cx="12" cy="12" r="11" fill="#FFE000" />
                 <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
                 <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                  <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                 </path>
               </svg>
             </div>

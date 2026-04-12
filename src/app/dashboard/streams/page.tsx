@@ -255,7 +255,6 @@ export default function StreamsPage() {
               <circle cx="12" cy="12" r="11" fill="#FFE000" stroke="#1c1c00" strokeWidth="0.5" />
               <circle cx="10" cy="7" r="1.3" fill="#1c1c00" />
               <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-                <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
               </path>
             </svg>
             Ask Craig
@@ -506,7 +505,6 @@ export default function StreamsPage() {
                         <circle cx="12" cy="12" r="11" fill="#FFE000" />
                         <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
                         <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-                          <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                         </path>
                       </svg>
                     </button>
@@ -655,7 +653,6 @@ export default function StreamsPage() {
                           <circle cx="12" cy="12" r="11" fill="#FFE000" />
                           <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
                           <path d="M12 12 L24 4 L24 20 Z" fill="#f8f9fb">
-                            <animate attributeName="d" values="M12 12 L24 3 L24 21 Z;M12 12 L24 10 L24 14 Z;M12 12 L24 3 L24 21 Z" dur="0.5s" repeatCount="indefinite" />
                           </path>
                         </svg>
                       </button>
