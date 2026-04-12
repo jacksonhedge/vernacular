@@ -1,0 +1,7 @@
+// Vernacular — Debug configuration TEMPLATE
+//
+// Copy this file to Debug.xcconfig and fill in your real values.
+// The actual Debug.xcconfig is gitignored to keep credentials out of source.
+
+SUPABASE_URL = https:/$()/YOUR-PROJECT.supabase.co
+SUPABASE_ANON_KEY = YOUR_SUPABASE_ANON_KEY

@@ -1,0 +1,8 @@
+// Vernacular — Release configuration TEMPLATE
+//
+// Copy this file to Release.xcconfig and fill in your real values.
+// The actual Release.xcconfig is gitignored to keep credentials out of source.
+// In CI, write these values at build time via repository secrets.
+
+SUPABASE_URL = https:/$()/YOUR-PROJECT.supabase.co
+SUPABASE_ANON_KEY = YOUR_SUPABASE_ANON_KEY
