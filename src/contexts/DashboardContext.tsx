@@ -55,8 +55,8 @@ interface DashboardContextValue {
   // Craig AI
   showAICopilot: boolean;
   setShowAICopilot: (show: boolean) => void;
-  aiCopilotMessages: Array<{ role: 'user' | 'assistant'; text: string }>;
-  setAiCopilotMessages: React.Dispatch<React.SetStateAction<Array<{ role: 'user' | 'assistant'; text: string }>>>;
+  aiCopilotMessages: Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>;
+  setAiCopilotMessages: React.Dispatch<React.SetStateAction<Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>>>;
   aiChatSessionId: string | null;
   setAiChatSessionId: (id: string | null) => void;
   aiCopilotModel: 'haiku' | 'sonnet' | 'opus';
@@ -140,7 +140,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Craig AI
   const [showAICopilot, setShowAICopilot] = useState(false);
-  const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([]);
+  const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>>([]);
   const [aiChatSessionId, setAiChatSessionId] = useState<string | null>(null);
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('sonnet');
   const [craigKnowledge, setCraigKnowledge] = useState('');

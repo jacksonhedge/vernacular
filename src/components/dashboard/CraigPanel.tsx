@@ -1,42 +1,202 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
+
+function PacMan({ size = 22, mouthFill = '#0a0d18' }: { size?: number; mouthFill?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+      <circle cx="12" cy="12" r="11" fill="#FFE000" />
+      <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+      <path d="M12 12 L24 4 L24 20 Z" fill={mouthFill} />
+    </svg>
+  );
+}
+
+function fmtTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function fmtDay(ts: number): string {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400000);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+const ACTION_META: Record<string, { icon: string; bg: string; border: string; color: string }> = {
+  SEND: { icon: '📤', bg: 'rgba(38,120,255,0.15)', border: 'rgba(38,120,255,0.3)', color: '#60A5FA' },
+  BULK_SEND: { icon: '📢', bg: 'rgba(38,120,255,0.2)', border: 'rgba(38,120,255,0.35)', color: '#60A5FA' },
+  LOOKUP: { icon: '🔍', bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.3)', color: '#C4B5FD' },
+  SCHEDULE: { icon: '📅', bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.3)', color: '#FCD34D' },
+  INITIATIVE: { icon: '⭐', bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', color: '#4ADE80' },
+  UPDATE: { icon: '✏️', bg: 'rgba(236,72,153,0.15)', border: 'rgba(236,72,153,0.3)', color: '#F472B6' },
+};
+
+function renderInline(text: string, keyPrefix: string): React.ReactNode {
+  const tagPattern = /(\[[A-Z_]+:[^\]]+\])/g;
+  const parts = text.split(tagPattern);
+  return parts.map((part, pi) => {
+    const tagMatch = part.match(/^\[([A-Z_]+):([^\]]+)\]$/);
+    if (tagMatch) {
+      const [, type, arg] = tagMatch;
+      const meta = ACTION_META[type] || { icon: '⚙', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.1)', color: '#9CA3AF' };
+      return (
+        <span key={`${keyPrefix}-p${pi}`} title={arg} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '3px 9px', margin: '2px 2px',
+          borderRadius: 6, background: meta.bg, border: `1px solid ${meta.border}`,
+          fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace",
+          color: meta.color, verticalAlign: 'baseline',
+        }}>
+          <span style={{ fontSize: 10 }}>{meta.icon}</span>
+          <span>{type}</span>
+          <span style={{ opacity: 0.6, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{arg.split(':')[0]}</span>
+        </span>
+      );
+    }
+    const nodes: React.ReactNode[] = [];
+    let idx = 0;
+    const boldCodeRegex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+    let match;
+    let cursor = 0;
+    while ((match = boldCodeRegex.exec(part)) !== null) {
+      if (match.index > cursor) nodes.push(<span key={`${keyPrefix}-p${pi}-t${idx++}`}>{part.slice(cursor, match.index)}</span>);
+      const matched = match[0];
+      if (matched.startsWith('**')) {
+        nodes.push(<strong key={`${keyPrefix}-p${pi}-t${idx++}`} style={{ fontWeight: 700, color: '#fff' }}>{matched.slice(2, -2)}</strong>);
+      } else {
+        nodes.push(<code key={`${keyPrefix}-p${pi}-t${idx++}`} style={{
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 4, padding: '1px 6px', fontSize: 12,
+          fontFamily: "'JetBrains Mono', monospace", color: '#FCD34D',
+        }}>{matched.slice(1, -1)}</code>);
+      }
+      cursor = match.index + matched.length;
+    }
+    if (cursor < part.length) nodes.push(<span key={`${keyPrefix}-p${pi}-t${idx++}`}>{part.slice(cursor)}</span>);
+    return <span key={`${keyPrefix}-p${pi}`}>{nodes.length ? nodes : part}</span>;
+  });
+}
+
+function renderFormatted(text: string, keyPrefix: string): React.ReactNode {
+  const blocks = text.split(/\n\n+/);
+  return blocks.map((block, bi) => {
+    if (block.startsWith('```')) {
+      const code = block.replace(/^```\w*\n?/, '').replace(/```$/, '');
+      return (
+        <pre key={`${keyPrefix}-b${bi}`} style={{
+          background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 8, padding: '10px 14px', margin: '6px 0',
+          fontSize: 12, fontFamily: "'JetBrains Mono', monospace",
+          color: '#E5E7EB', overflowX: 'auto', lineHeight: 1.5,
+        }}>{code}</pre>
+      );
+    }
+    const lines = block.split('\n');
+    const isList = lines.every(l => /^[\-•*]\s/.test(l.trim()) || l.trim() === '');
+    if (isList && lines.some(l => l.trim())) {
+      return (
+        <ul key={`${keyPrefix}-b${bi}`} style={{ margin: '4px 0', paddingLeft: 18, listStyle: 'none' }}>
+          {lines.filter(l => l.trim()).map((l, li) => (
+            <li key={li} style={{ position: 'relative', padding: '2px 0' }}>
+              <span style={{ position: 'absolute', left: -14, color: 'rgba(255,224,0,0.7)' }}>•</span>
+              {renderInline(l.replace(/^[\-•*]\s/, ''), `${keyPrefix}-b${bi}-l${li}`)}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    if (lines.every(l => l.startsWith('>') || !l.trim())) {
+      return (
+        <blockquote key={`${keyPrefix}-b${bi}`} style={{
+          borderLeft: '3px solid rgba(255,224,0,0.4)',
+          paddingLeft: 12, margin: '6px 0',
+          color: 'rgba(255,255,255,0.6)', fontStyle: 'italic',
+        }}>
+          {lines.map(l => l.replace(/^>\s?/, '')).join('\n')}
+        </blockquote>
+      );
+    }
+    return (
+      <p key={`${keyPrefix}-b${bi}`} style={{ margin: bi === 0 ? 0 : '6px 0 0', lineHeight: 1.55 }}>
+        {block.split('\n').map((line, li, arr) => (
+          <span key={li}>
+            {renderInline(line, `${keyPrefix}-b${bi}-l${li}`)}
+            {li < arr.length - 1 && <br />}
+          </span>
+        ))}
+      </p>
+    );
+  });
+}
 
 export default function CraigPanel() {
   const {
-    showAICopilot, setShowAICopilot,
-    aiCopilotMessages, setAiCopilotMessages,
+    setShowAICopilot, aiCopilotMessages, setAiCopilotMessages,
     aiCopilotModel, setAiCopilotModel,
-    orgId, columns, contacts, allConversations,
+    orgId, columns, contacts,
     craigKnowledge, orgKnowledge,
-    dbInitiatives, setColumns,
+    dbInitiatives, setColumns, showAICopilot,
   } = useDashboard();
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  const [loadingStage, setLoadingStage] = useState<'dots' | 'breathing' | 'streaming'>('dots');
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const messageRuns = useMemo(() => {
+    const runs: Array<{ role: 'user' | 'assistant'; items: typeof aiCopilotMessages; firstTs?: number; lastTs?: number }> = [];
+    for (const msg of aiCopilotMessages) {
+      const last = runs[runs.length - 1];
+      if (last && last.role === msg.role) {
+        last.items.push(msg);
+        last.lastTs = msg.ts;
+      } else {
+        runs.push({ role: msg.role, items: [msg], firstTs: msg.ts, lastTs: msg.ts });
+      }
+    }
+    return runs;
+  }, [aiCopilotMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiCopilotMessages, streamingText]);
 
-  // Auto-focus input when panel opens
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [showAICopilot]);
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const handler = () => {
+      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      setShowScrollBtn(!nearBottom);
+    };
+    el.addEventListener('scroll', handler);
+    return () => el.removeEventListener('scroll', handler);
+  }, []);
 
   const sendToCraig = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
-    const userMsg = { role: 'user' as const, text };
+    const userMsg = { role: 'user' as const, text, ts: Date.now() };
     setAiCopilotMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+    setLoadingStage('dots');
     setStreamingText('');
+
+    const breathTimer = setTimeout(() => setLoadingStage('breathing'), 500);
 
     try {
       const contactSummary = columns.slice(0, 30).map(col => {
@@ -53,25 +213,17 @@ export default function CraigPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...aiCopilotMessages, userMsg].map(m => ({
-            role: m.role, content: m.text,
-          })),
-          model: aiCopilotModel,
-          orgId,
-          context: {
-            contacts: contactSummary,
-            initiatives: initiativeList,
-            knowledge: craigKnowledge,
-            orgKnowledge,
-          },
+          messages: [...aiCopilotMessages, userMsg].map(m => ({ role: m.role, content: m.text })),
+          model: aiCopilotModel, orgId,
+          context: { contacts: contactSummary, initiatives: initiativeList, knowledge: craigKnowledge, orgKnowledge },
         }),
       });
 
+      clearTimeout(breathTimer);
       const data = await res.json();
       const reply = data.response || data.message || 'No response';
 
-      // Simulate streaming effect for better UX
-      setStreamingText('');
+      setLoadingStage('streaming');
       const words = reply.split(' ');
       let accumulated = '';
       for (let i = 0; i < words.length; i++) {
@@ -80,13 +232,15 @@ export default function CraigPanel() {
         await new Promise(r => setTimeout(r, 18));
       }
       setStreamingText('');
-      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: reply, ts: Date.now() }]);
       handleCraigActions(reply);
     } catch {
+      clearTimeout(breathTimer);
       setStreamingText('');
-      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: 'Failed to reach Craig. Check your connection.' }]);
+      setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: 'Failed to reach Craig. Check your connection.', ts: Date.now() }]);
     } finally {
       setLoading(false);
+      setLoadingStage('dots');
     }
   };
 
@@ -103,16 +257,18 @@ export default function CraigPanel() {
       });
       if (col) {
         const draftMsg = {
-          id: `ai-draft-${Date.now()}`,
-          text: message.trim(),
-          direction: 'outgoing' as const,
-          timestamp: new Date().toISOString(),
-          isAIDraft: true,
-          status: 'Draft',
+          id: `ai-draft-${Date.now()}`, text: message.trim(), direction: 'outgoing' as const,
+          timestamp: new Date().toISOString(), isAIDraft: true, status: 'Draft',
         };
         setColumns(prev => prev.map(c => c.id === col.id ? { ...c, messages: [...c.messages, draftMsg] } : c));
       }
     }
+  };
+
+  const copyMessage = async (text: string, idx: number) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 1500);
   };
 
   const clearChat = () => {
@@ -120,43 +276,28 @@ export default function CraigPanel() {
     setStreamingText('');
   };
 
-  const formatCraigMessage = (text: string) => {
-    // Bold action tags
-    return text.replace(/\[(SEND|LOOKUP|BULK_SEND|UPDATE|INITIATIVE|SCHEDULE):[^\]]+\]/g, (match) => {
-      return match; // keep as-is, styled differently below
-    });
-  };
-
   return (
     <div style={{
-      width: 400, minWidth: 400,
-      height: '100vh',
+      width: 400, minWidth: 400, height: '100vh',
       display: 'flex', flexDirection: 'column',
-      background: '#0a0d18',
-      borderLeft: '1px solid rgba(255,255,255,0.06)',
+      background: '#0a0d18', borderLeft: '1px solid rgba(255,255,255,0.06)',
+      position: 'relative',
     }}>
       {/* Header */}
       <div style={{
-        padding: '14px 20px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: 'linear-gradient(180deg, rgba(38,120,255,0.06) 0%, transparent 100%)',
+        padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(180deg, rgba(255,224,0,0.04) 0%, transparent 100%)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 12,
-              background: 'linear-gradient(135deg, #2678FF, #6366f1)',
+              width: 38, height: 38, borderRadius: 12, padding: 4,
+              background: '#0a0d18', border: '1.5px solid rgba(255,224,0,0.3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 12px rgba(38,120,255,0.35)',
               position: 'relative',
+              animation: loading && loadingStage === 'breathing' ? 'craigBreath 2s ease-in-out infinite' : 'none',
             }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                <path d="M12 12 L24 4 L24 20 Z" fill="#2678FF">
-                </path>
-              </svg>
-              {/* Online indicator */}
+              <PacMan size={26} mouthFill="#0a0d18" />
               <div style={{
                 position: 'absolute', bottom: -1, right: -1,
                 width: 10, height: 10, borderRadius: 5,
@@ -166,22 +307,17 @@ export default function CraigPanel() {
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>Craig</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
-                {loading ? 'Thinking...' : 'AI Copilot'} · {aiCopilotModel}
+                {loading ? (loadingStage === 'streaming' ? 'Writing...' : 'Thinking...') : 'AI Copilot'} · {aiCopilotModel}
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <select
-              value={aiCopilotModel}
-              onChange={e => setAiCopilotModel(e.target.value as typeof aiCopilotModel)}
-              style={{
-                padding: '5px 8px', borderRadius: 6,
-                background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600,
-                cursor: 'pointer', outline: 'none',
-                fontFamily: "'JetBrains Mono', monospace",
-              }}
-            >
+            <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as typeof aiCopilotModel)} style={{
+              padding: '5px 8px', borderRadius: 6,
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600,
+              cursor: 'pointer', outline: 'none', fontFamily: "'JetBrains Mono', monospace",
+            }}>
               <option value="haiku">Haiku</option>
               <option value="sonnet">Sonnet</option>
               <option value="opus">Opus</option>
@@ -190,7 +326,7 @@ export default function CraigPanel() {
               <button onClick={clearChat} title="New chat" style={{
                 width: 28, height: 28, borderRadius: 7,
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.3)', fontSize: 12, cursor: 'pointer',
+                color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -198,15 +334,12 @@ export default function CraigPanel() {
                 </svg>
               </button>
             )}
-            <button
-              onClick={() => setShowAICopilot(false)}
-              style={{
-                width: 28, height: 28, borderRadius: 7,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.3)', fontSize: 14,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
+            <button onClick={() => setShowAICopilot(false)} style={{
+              width: 28, height: 28, borderRadius: 7,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M9 18l6-6-6-6" />
               </svg>
@@ -216,25 +349,21 @@ export default function CraigPanel() {
       </div>
 
       {/* Messages */}
-      <div id="craig-messages" style={{
+      <div ref={messagesRef} style={{
         flex: 1, overflowY: 'auto', padding: '20px 16px',
-        display: 'flex', flexDirection: 'column', gap: 16,
+        display: 'flex', flexDirection: 'column', gap: 0,
       }}>
         {aiCopilotMessages.length === 0 && !streamingText && (
           <div style={{ textAlign: 'center', padding: '32px 16px' }}>
-            {/* Craig avatar */}
             <div style={{
               width: 80, height: 80, borderRadius: 20,
               background: 'radial-gradient(circle at 50% 50%, rgba(255,224,0,0.08), transparent 70%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px',
             }}>
-              <svg width="56" height="56" viewBox="0 0 24 24" style={{ overflow: 'visible', filter: 'drop-shadow(0 4px 12px rgba(255,224,0,0.3))' }}>
-                <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                <circle cx="10" cy="7" r="1.5" fill="#1c1c00" />
-                <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                </path>
-              </svg>
+              <div style={{ filter: 'drop-shadow(0 4px 12px rgba(255,224,0,0.3))' }}>
+                <PacMan size={56} mouthFill="#0a0d18" />
+              </div>
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>
               Hey, I&apos;m Craig
@@ -242,8 +371,6 @@ export default function CraigPanel() {
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto 24px' }}>
               Your AI copilot for messaging. I can draft replies, search contacts, analyze conversations, and manage initiatives.
             </div>
-
-            {/* Quick actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
                 { icon: '💬', text: 'Draft a message to my VIP contacts' },
@@ -253,17 +380,14 @@ export default function CraigPanel() {
               ].map(prompt => (
                 <button key={prompt.text} onClick={() => { setInput(prompt.text); setTimeout(() => inputRef.current?.focus(), 50); }} style={{
                   padding: '12px 16px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
                   color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', textAlign: 'left',
-                  fontFamily: "'Inter', sans-serif",
-                  transition: 'all 0.15s',
-                  display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 10,
                 }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(38,120,255,0.06)';
-                    e.currentTarget.style.borderColor = 'rgba(38,120,255,0.15)';
+                    e.currentTarget.style.background = 'rgba(255,224,0,0.06)';
+                    e.currentTarget.style.borderColor = 'rgba(255,224,0,0.15)';
                     e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
                   }}
                   onMouseLeave={e => {
@@ -280,95 +404,142 @@ export default function CraigPanel() {
           </div>
         )}
 
-        {aiCopilotMessages.map((msg, i) => (
-          <div key={i} style={{
-            display: 'flex', gap: 10,
-            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-            alignItems: 'flex-start',
-          }}>
-            {/* Craig avatar for assistant messages */}
-            {msg.role === 'assistant' && (
-              <div style={{
-                width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-                background: '#0a0d18',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginTop: 2, padding: 3,
-              }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                  <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                  <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                  <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                  </path>
-                </svg>
-              </div>
-            )}
-            <div style={{
-              maxWidth: msg.role === 'user' ? '82%' : '85%',
-              padding: '11px 15px',
-              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '4px 16px 16px 16px',
-              background: msg.role === 'user'
-                ? 'linear-gradient(135deg, #2678FF, #1a5fd4)'
-                : 'rgba(255,255,255,0.05)',
-              border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
-              color: msg.role === 'user' ? '#fff' : 'rgba(255,255,255,0.85)',
-              fontSize: 13, lineHeight: 1.55,
-              fontFamily: "'Inter', sans-serif",
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              boxShadow: msg.role === 'user' ? '0 2px 8px rgba(38,120,255,0.2)' : 'none',
-            }}>
-              {/* Render action tags with special styling */}
-              {msg.text.split(/(\[[A-Z_]+:[^\]]+\])/).map((part, pi) => {
-                if (part.match(/^\[[A-Z_]+:[^\]]+\]$/)) {
-                  return (
-                    <span key={pi} style={{
-                      display: 'inline-block', margin: '4px 0',
-                      padding: '4px 8px', borderRadius: 6,
-                      background: 'rgba(38,120,255,0.15)',
-                      border: '1px solid rgba(38,120,255,0.25)',
-                      fontSize: 11, fontWeight: 600,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: '#60A5FA',
-                    }}>
-                      {part}
-                    </span>
-                  );
-                }
-                return <span key={pi}>{part}</span>;
-              })}
-            </div>
-          </div>
-        ))}
+        {messageRuns.map((run, ri) => {
+          const prevRun = ri > 0 ? messageRuns[ri - 1] : null;
+          const showDaySeparator = !prevRun || (run.firstTs && prevRun.lastTs && fmtDay(run.firstTs) !== fmtDay(prevRun.lastTs));
+          const showTimeGap = prevRun?.lastTs && run.firstTs && (run.firstTs - prevRun.lastTs) > 30 * 60 * 1000;
 
-        {/* Streaming response */}
+          return (
+            <div key={`run-${ri}`}>
+              {showDaySeparator && run.firstTs && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 12px' }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {fmtDay(run.firstTs)}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+                </div>
+              )}
+
+              {!showDaySeparator && showTimeGap && run.firstTs && (
+                <div style={{ textAlign: 'center', margin: '14px 0 8px' }}>
+                  <span style={{
+                    fontSize: 10, color: 'rgba(255,255,255,0.3)',
+                    background: 'rgba(255,255,255,0.04)', padding: '3px 10px', borderRadius: 10,
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}>
+                    {fmtTime(run.firstTs)}
+                  </span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 14 }}>
+                {run.items.map((msg, mi) => {
+                  const isFirst = mi === 0;
+                  const isLast = mi === run.items.length - 1;
+                  const globalIdx = aiCopilotMessages.indexOf(msg);
+                  const isShort = msg.text.length < 60 && !msg.text.includes('\n');
+                  const isLong = msg.text.length > 300;
+
+                  return (
+                    <div key={`run-${ri}-msg-${mi}`} style={{
+                      display: 'flex', gap: 10,
+                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      alignItems: 'flex-start',
+                    }}>
+                      {msg.role === 'assistant' && (
+                        <div style={{ width: 28, flexShrink: 0 }}>
+                          {isFirst && (
+                            <div style={{
+                              width: 28, height: 28, borderRadius: 9, padding: 3,
+                              background: '#0c0f1a', border: '1px solid rgba(255,224,0,0.15)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              marginTop: 2,
+                            }}>
+                              <PacMan size={22} mouthFill="#0c0f1a" />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div style={{
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                        maxWidth: isLong ? '92%' : isShort ? 'max-content' : '80%',
+                        minWidth: 0,
+                      }}>
+                        <div style={{
+                          padding: isShort ? '8px 13px' : '10px 15px',
+                          borderRadius: msg.role === 'user'
+                            ? (isFirst ? '16px 16px 4px 16px' : '16px 4px 4px 16px')
+                            : (isFirst ? '4px 16px 16px 16px' : '16px 16px 16px 4px'),
+                          background: msg.role === 'user'
+                            ? 'linear-gradient(135deg, #2678FF, #1a5fd4)'
+                            : 'rgba(255,255,255,0.05)',
+                          border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                          color: msg.role === 'user' ? '#fff' : 'rgba(255,255,255,0.88)',
+                          fontSize: 13, lineHeight: 1.55,
+                          wordBreak: 'break-word',
+                          boxShadow: msg.role === 'user' ? '0 2px 8px rgba(38,120,255,0.2)' : 'none',
+                        }}>
+                          {msg.role === 'user' ? msg.text : renderFormatted(msg.text, `r${ri}m${mi}`)}
+                        </div>
+
+                        {isLast && msg.ts && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
+                            padding: '0 4px',
+                          }}>
+                            <span style={{
+                              fontSize: 9, color: 'rgba(255,255,255,0.25)',
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                              {fmtTime(msg.ts)}
+                            </span>
+                            {msg.role === 'assistant' && (
+                              <button onClick={() => copyMessage(msg.text, globalIdx)} style={{
+                                padding: '2px 6px', borderRadius: 4, border: 'none',
+                                background: 'transparent', cursor: 'pointer',
+                                fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.35)',
+                                fontFamily: "'Inter', sans-serif", transition: 'color 0.15s',
+                              }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#FCD34D'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; }}
+                              >
+                                {copiedIdx === globalIdx ? '✓ COPIED' : 'COPY'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
         {streamingText && (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-              background: '#0a0d18',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: 2, padding: 3,
+              width: 28, height: 28, borderRadius: 9, flexShrink: 0, padding: 3,
+              background: '#0c0f1a', border: '1px solid rgba(255,224,0,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
             }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                <path d="M12 12 L24 4 L24 20 Z" fill="#0a0d18">
-                </path>
-              </svg>
+              <PacMan size={22} mouthFill="#0c0f1a" />
             </div>
             <div style={{
-              maxWidth: '85%', padding: '11px 15px',
+              maxWidth: '85%', padding: '10px 15px',
               borderRadius: '4px 16px 16px 16px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.85)',
-              fontSize: 13, lineHeight: 1.55,
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.88)', fontSize: 13, lineHeight: 1.55,
+              wordBreak: 'break-word',
             }}>
-              {streamingText}
+              {renderFormatted(streamingText, 'streaming')}
               <span style={{
-                display: 'inline-block', width: 2, height: 15,
-                background: '#2678FF', marginLeft: 2,
+                display: 'inline-block', width: 2, height: 14,
+                background: '#FCD34D', marginLeft: 2,
                 animation: 'blink 1s step-end infinite',
                 verticalAlign: 'text-bottom',
               }} />
@@ -376,40 +547,35 @@ export default function CraigPanel() {
           </div>
         )}
 
-        {/* Loading indicator */}
         {loading && !streamingText && (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 14 }}>
             <div style={{
-              width: 28, height: 28, borderRadius: 9, flexShrink: 0,
-              background: 'linear-gradient(135deg, #2678FF, #6366f1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: 2,
-              animation: 'craigThink 2s ease-in-out infinite',
+              width: 28, height: 28, borderRadius: 9, flexShrink: 0, padding: 3,
+              background: '#0c0f1a',
+              border: loadingStage === 'breathing' ? '1px solid rgba(255,224,0,0.4)' : '1px solid rgba(255,224,0,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
+              animation: loadingStage === 'breathing' ? 'craigBreath 2s ease-in-out infinite' : 'none',
+              boxShadow: loadingStage === 'breathing' ? '0 0 12px rgba(255,224,0,0.25)' : 'none',
             }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round">
-                <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
-                <circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none" />
-                <circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none" />
-              </svg>
+              <PacMan size={22} mouthFill="#0c0f1a" />
             </div>
             <div style={{
-              padding: '14px 18px',
+              padding: '12px 16px',
               borderRadius: '4px 16px 16px 16px',
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', gap: 10,
             }}>
               <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                 {[0, 1, 2].map(i => (
                   <div key={i} style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #2678FF, #6366f1)',
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: '#FFE000',
                     animation: `craigDot 1.4s ease-in-out ${i * 0.15}s infinite`,
                   }} />
                 ))}
               </div>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
-                Craig is thinking...
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>
+                {loadingStage === 'breathing' ? 'Almost there...' : 'Craig is thinking...'}
               </span>
             </div>
           </div>
@@ -418,13 +584,28 @@ export default function CraigPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {showScrollBtn && (
+        <button onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{
+          position: 'absolute', bottom: 90, right: 20, zIndex: 10,
+          width: 34, height: 34, borderRadius: 17,
+          background: 'rgba(38,120,255,0.2)', backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(38,120,255,0.3)',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#60A5FA',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          animation: 'fadeSlideUp 0.2s ease-out',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+      )}
+
       <div style={{
-        padding: '12px 16px 16px',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        background: 'linear-gradient(0deg, rgba(38,120,255,0.03) 0%, transparent 100%)',
+        padding: '12px 16px 16px', borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(0deg, rgba(255,224,0,0.02) 0%, transparent 100%)',
       }}>
-        {/* Context hint */}
         {aiCopilotMessages.length === 0 && (
           <div style={{
             fontSize: 10, color: 'rgba(255,255,255,0.2)', marginBottom: 8,
@@ -435,66 +616,50 @@ export default function CraigPanel() {
         )}
         <div style={{
           display: 'flex', gap: 8, alignItems: 'flex-end',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 14, padding: '4px 4px 4px 16px',
-          transition: 'border-color 0.15s',
-        }}
-          onFocus={() => {}}
-        >
+        }}>
           <textarea
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToCraig(); }
-            }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToCraig(); } }}
             placeholder="Ask Craig anything..."
             rows={1}
             style={{
               flex: 1, resize: 'none', border: 'none', outline: 'none',
               background: 'transparent', color: '#fff', fontSize: 13,
-              fontFamily: "'Inter', sans-serif", padding: '8px 0',
-              maxHeight: 120,
+              fontFamily: "'Inter', sans-serif", padding: '8px 0', maxHeight: 120,
             }}
           />
-          <button
-            onClick={sendToCraig}
-            disabled={!input.trim() || loading}
-            style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: input.trim() ? 'linear-gradient(135deg, #2678FF, #1a5fd4)' : 'rgba(255,255,255,0.04)',
-              border: 'none',
-              cursor: input.trim() ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-              flexShrink: 0,
-              boxShadow: input.trim() ? '0 2px 8px rgba(38,120,255,0.3)' : 'none',
-            }}
-          >
+          <button onClick={sendToCraig} disabled={!input.trim() || loading} style={{
+            width: 36, height: 36, borderRadius: 10, border: 'none',
+            background: input.trim() ? 'linear-gradient(135deg, #FFE000, #F59E0B)' : 'rgba(255,255,255,0.04)',
+            cursor: input.trim() ? 'pointer' : 'default',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s', flexShrink: 0,
+            boxShadow: input.trim() ? '0 2px 8px rgba(245,158,11,0.3)' : 'none',
+          }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke={input.trim() ? '#fff' : 'rgba(255,255,255,0.15)'}
-              strokeWidth="2" strokeLinecap="round">
+              stroke={input.trim() ? '#1c1c00' : 'rgba(255,255,255,0.15)'}
+              strokeWidth="2.2" strokeLinecap="round">
               <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Craig-specific animations */}
       <style>{`
         @keyframes craigDot {
-          0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
+          0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
           40% { transform: scale(1); opacity: 1; }
         }
-        @keyframes craigThink {
-          0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(38,120,255,0); }
-          50% { transform: scale(1.05); box-shadow: 0 0 12px rgba(38,120,255,0.3); }
+        @keyframes craigBreath {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(255,224,0,0.1); }
+          50% { transform: scale(1.06); box-shadow: 0 0 16px rgba(255,224,0,0.4); }
         }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   );
