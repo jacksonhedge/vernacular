@@ -116,6 +116,40 @@ export default function StreamsPage() {
             <option value="name">By Name</option>
             <option value="most-messages">Most Messages</option>
           </select>
+          {/* Craig Button — yellow pulsing */}
+          <button onClick={() => setShowAICopilot(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '8px 14px', borderRadius: 8,
+            background: 'linear-gradient(135deg, #FFD700, #F59E0B)',
+            color: '#1c1c00', border: 'none', cursor: 'pointer',
+            fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em',
+            boxShadow: '0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,215,0,0.2)',
+            animation: 'craigPulseYellow 1.6s ease-in-out infinite',
+            textShadow: '0 1px 0 rgba(255,255,255,0.3)',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.animation = 'none'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.animation = 'craigPulseYellow 1.6s ease-in-out infinite'; e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9.5 2A5.5 5.5 0 0 0 4 7.5V16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4V7.5A5.5 5.5 0 0 0 14.5 2z" />
+              <circle cx="9" cy="10" r="1.3" fill="#1c1c00" stroke="none" />
+              <circle cx="15" cy="10" r="1.3" fill="#1c1c00" stroke="none" />
+              <path d="M9 15c1.5 1.5 4.5 1.5 6 0" />
+            </svg>
+            Ask Craig
+          </button>
+          <style>{`
+            @keyframes craigPulseYellow {
+              0%, 100% {
+                box-shadow: 0 2px 8px rgba(245,158,11,0.4), 0 0 0 2px rgba(255,215,0,0.2);
+                transform: scale(1);
+              }
+              50% {
+                box-shadow: 0 4px 16px rgba(245,158,11,0.6), 0 0 0 6px rgba(255,215,0,0.15);
+                transform: scale(1.03);
+              }
+            }
+          `}</style>
           <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.06)' }} />
           <button onClick={addColumn} style={{
             display: 'flex', alignItems: 'center', gap: 6,
