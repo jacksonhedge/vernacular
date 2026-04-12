@@ -11,12 +11,19 @@ packages:
     url: https://github.com/supabase/supabase-swift
     from: "2.0.0"
 
+configs:
+  Debug: debug
+  Release: release
+
 targets:
   VernacularApp:
     type: application
     platform: iOS
     sources:
       - VernacularApp
+    configFiles:
+      Debug: Configs/Debug.xcconfig
+      Release: Configs/Release.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hedgeinc.vernacular
@@ -29,9 +36,9 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Privacy manifest required for TestFlight / App Store submission
         GENERATE_INFOPLIST_FILE: NO
-        # Supabase config — override per-config via .xcconfig or Xcode build settings
-        SUPABASE_URL: https://miuyksnwzkhiyyilchjs.supabase.co
-        SUPABASE_ANON_KEY: ""  # Set in Xcode build settings or .xcconfig, do NOT commit
+        # SUPABASE_URL and SUPABASE_ANON_KEY come from Configs/Debug.xcconfig
+        # (Debug) or Configs/Release.xcconfig (Release). Edit those files locally;
+        # do NOT commit real secrets.
     dependencies:
       - package: Supabase
         product: Supabase

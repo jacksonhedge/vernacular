@@ -1,0 +1,15 @@
+// Vernacular — Release configuration
+//
+// USED FOR TESTFLIGHT / APP STORE BUILDS.
+//
+// • Replace the placeholder values below with your real Supabase credentials
+//   BEFORE archiving for TestFlight/App Store.
+// • DO NOT commit real secrets to a public repo. Add this file to .gitignore
+//   if visibility is a concern.
+// • In CI (GitHub Actions / Xcode Cloud), write these values into the xcconfig
+//   at build time via repository secrets so they never touch source control.
+// • If either value is missing at build time, the app will fatalError on launch
+//   in Release mode (see SupabaseService.swift initializer).
+
+SUPABASE_URL = https:/$()/YOUR-PROJECT.supabase.co
+SUPABASE_ANON_KEY = YOUR_SUPABASE_ANON_KEY

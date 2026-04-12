@@ -7,3 +7,8 @@ node_modules
 station/.env
 .aidesigner/*
 !.aidesigner/.gitkeep
+
+# iOS: xcconfig files may contain Supabase credentials — keep out of git
+# (Commit the template versions once, then ignore further changes)
+# VernacularApp/Configs/Debug.xcconfig
+# VernacularApp/Configs/Release.xcconfig

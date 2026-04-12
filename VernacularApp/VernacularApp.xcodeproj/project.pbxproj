@@ -11,6 +11,7 @@
 		020FEAEE68CF8546ECED4D04 /* ChatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5746A968B669E2113B7A76FB /* ChatsView.swift */; };
 		0470045943D95A8D3A33CD3C /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE241ED38ABAA0EF71B5012B /* Conversation.swift */; };
 		04F4A8A72172433BB3D16E9A /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = B931946712C9D29D79D1B025 /* Contact.swift */; };
+		30A25931534C1A59CBF618BB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6F9188F5A35254F6C4A1878A /* PrivacyInfo.xcprivacy */; };
 		331F1F5B596E54018847E0B3 /* AIMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F6AC3A51994D48D1E7C8E9A /* AIMessage.swift */; };
 		40C838EEB5EAD2FAC4F44040 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0AD18C2ACE47CDAA6B849D2 /* SettingsView.swift */; };
 		4276945CAA4AD1AAF629F2E1 /* VernacularApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F629A10E395AC5DE1DA813C1 /* VernacularApp.swift */; };
@@ -31,11 +32,14 @@
 /* Begin PBXFileReference section */
 		1F6AC3A51994D48D1E7C8E9A /* AIMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMessage.swift; sourceTree = "<group>"; };
 		246BAD76635B744CE23958E6 /* VernacularApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VernacularApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30185A392D398230179D9D38 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		39660C29BBCCA2B6836CD024 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		39C2F844E4D35A6543D0D3C9 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		5746A968B669E2113B7A76FB /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
 		6A454C91533EB458ECB7BB5D /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		6F9188F5A35254F6C4A1878A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		740FB5F4BAC157E9567E3448 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
+		99C0199B50689127297362BA /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		AE63DE95E92928377F24C9CA /* AIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIView.swift; sourceTree = "<group>"; };
 		B931946712C9D29D79D1B025 /* Contact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Contact.swift; sourceTree = "<group>"; };
 		BE241ED38ABAA0EF71B5012B /* Conversation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
@@ -119,6 +123,7 @@
 			children = (
 				C8C7A3230DC668650C05CEF9 /* Assets.xcassets */,
 				F0E518974DE0F764B26C3637 /* Info.plist */,
+				6F9188F5A35254F6C4A1878A /* PrivacyInfo.xcprivacy */,
 				F629A10E395AC5DE1DA813C1 /* VernacularApp.swift */,
 				4CEDCDF9C4945B5D44AC6AC3 /* Extensions */,
 				B22BD5EFECB0CDD0AEB2922F /* Models */,
@@ -126,6 +131,15 @@
 				B385EBC7ECF3ED8D86F390B1 /* Views */,
 			);
 			path = VernacularApp;
+			sourceTree = "<group>";
+		};
+		B0255081EB9A133CC204C833 /* Configs */ = {
+			isa = PBXGroup;
+			children = (
+				30185A392D398230179D9D38 /* Debug.xcconfig */,
+				99C0199B50689127297362BA /* Release.xcconfig */,
+			);
+			path = Configs;
 			sourceTree = "<group>";
 		};
 		B22BD5EFECB0CDD0AEB2922F /* Models */ = {
@@ -163,6 +177,7 @@
 		DDF36BCC39A1B334C23BA365 = {
 			isa = PBXGroup;
 			children = (
+				B0255081EB9A133CC204C833 /* Configs */,
 				AF850B3510D921A63150B05E /* VernacularApp */,
 				481512E609DCEEE623E99340 /* Products */,
 			);
@@ -243,6 +258,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0E4C58407E0068AB343C554 /* Assets.xcassets in Resources */,
+				30A25931534C1A59CBF618BB /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -278,19 +294,21 @@
 /* Begin XCBuildConfiguration section */
 		2778B158028A0BA01BA6080D /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 30185A392D398230179D9D38 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VernacularApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.coverpay.vernacular;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hedgeinc.vernacular;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -355,19 +373,21 @@
 		};
 		3FDBCB124ECF4D674B20FD36 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 99C0199B50689127297362BA /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VernacularApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.coverpay.vernacular;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hedgeinc.vernacular;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";

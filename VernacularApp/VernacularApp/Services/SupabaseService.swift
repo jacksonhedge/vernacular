@@ -13,15 +13,24 @@ final class SupabaseService: ObservableObject {
 
     private nonisolated init() {
         // Read config from Info.plist (populated at build time via .xcconfig)
-        // This keeps the anon key out of source code while staying simple.
-        let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
-            ?? "https://miuyksnwzkhiyyilchjs.supabase.co"
-        let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String
-            ?? ""
+        // Keep secrets out of source; inject via build settings or CI.
+        let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
+        let anonKey = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String
+
+        #if DEBUG
+        // In debug, allow a local fallback for convenience but assert if key is missing.
+        let resolvedURL = urlString ?? "https://miuyksnwzkhiyyilchjs.supabase.co" // TODO: replace or remove fallback
+        assert(anonKey != nil && !(anonKey ?? "").isEmpty, "Missing SUPABASE_ANON_KEY in Info.plist (.xcconfig)")
+        #else
+        // In release, do not allow missing values.
+        guard let resolvedURL = urlString, let anonKey = anonKey, !resolvedURL.isEmpty, !anonKey.isEmpty else {
+            fatalError("Missing Supabase configuration. Ensure SUPABASE_URL and SUPABASE_ANON_KEY are set in Info.plist via build settings.")
+        }
+        #endif
 
         client = SupabaseClient(
-            supabaseURL: URL(string: url)!,
-            supabaseKey: key
+            supabaseURL: URL(string: resolvedURL)!,
+            supabaseKey: anonKey ?? ""
         )
     }
 
@@ -132,6 +141,27 @@ final class SupabaseService: ObservableObject {
         if isAuthenticated { await loadOrganization() }
     }
 
+    private func loadOrganization() async {
+        guard let userId = currentUser?.id else { return }
+        do {
+            struct UserRow: Codable {
+                let organizationId: UUID?
+                enum CodingKeys: String, CodingKey {
+                    case organizationId = "organization_id"
+                }
+            }
+            let users: [UserRow] = try await client.from("users")
+                .select("organization_id")
+                .eq("auth_id", value: userId.uuidString)
+                .limit(1)
+                .execute()
+                .value
+            organizationId = users.first?.organizationId
+        } catch {
+            print("Could not load org: \(error)")
+        }
+    }
+    
     // MARK: - Conversations
 
     func fetchConversations() async throws -> [Conversation] {
@@ -282,3 +312,4 @@ final class SupabaseService: ObservableObject {
         return response.reply
     }
 }
+
