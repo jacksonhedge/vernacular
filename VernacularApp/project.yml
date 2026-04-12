@@ -1,6 +1,6 @@
 name: VernacularApp
 options:
-  bundleIdPrefix: com.hedgeinc.vernacular
+  bundleIdPrefix: com.hedge.vernacular.app
   deploymentTarget:
     iOS: "17.0"
   xcodeVersion: "16.0"
@@ -26,7 +26,7 @@ targets:
       Release: Configs/Release.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.hedgeinc.vernacular
+        PRODUCT_BUNDLE_IDENTIFIER: com.hedge.vernacular.app
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: VernacularApp/Info.plist

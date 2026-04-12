@@ -11,7 +11,7 @@ final class BiometricService: ObservableObject {
     @Published var biometricType: LABiometryType = .none
 
     private let enabledKey = "biometric_auth_enabled"
-    private let keychainService = "com.hedgeinc.vernacular"
+    private let keychainService = "com.hedge.vernacular.app"
     private let keychainEmailKey = "biometric_email"
     private let keychainPasswordKey = "biometric_password"
 
