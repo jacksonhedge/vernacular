@@ -19,6 +19,7 @@ export default function StreamsPage() {
     showAICopilot, setShowAICopilot,
     setAiCopilotMessages, aiCopilotMessages,
     setAllConversations, orgId,
+    setRecentlySentCols,
   } = useDashboard();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -421,6 +422,8 @@ export default function StreamsPage() {
                   playSound('click');
                   setSelectedConversationId(col.id);
                   setReadConversations(prev => new Set(prev).add(col.id));
+                  // Pin newly opened stream to leftmost position
+                  setRecentlySentCols(prev => new Set(prev).add(col.id));
                   // Add to columns if not present
                   setColumns(prev => {
                     if (prev.some(c => c.id === col.id)) {

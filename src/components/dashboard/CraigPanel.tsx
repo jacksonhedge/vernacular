@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { supabase } from '@/lib/supabase';
 
 function PacMan({ size = 22 }: { size?: number; mouthFill?: string }) {
   return (
@@ -136,7 +137,7 @@ export default function CraigPanel() {
     orgId, columns, contacts,
     craigKnowledge, orgKnowledge,
     dbInitiatives, setColumns, showAICopilot,
-    setAiChatSessionId,
+    aiChatSessionId, setAiChatSessionId,
   } = useDashboard();
 
   const [input, setInput] = useState('');
@@ -298,10 +299,14 @@ export default function CraigPanel() {
   };
 
   const clearChat = () => {
+    const oldId = aiChatSessionId;
     setAiCopilotMessages([]);
     setStreamingText('');
     setAiChatSessionId(null);
     try { localStorage.setItem('vernacular-craig-fresh-at', String(Date.now())); } catch {}
+    if (oldId) {
+      supabase.from('ai_chat_sessions').delete().eq('id', oldId).then(() => {});
+    }
   };
 
   return (
