@@ -140,6 +140,7 @@ export default function CraigPanel() {
     orgId, columns, contacts,
     craigKnowledge, orgKnowledge,
     dbInitiatives, setColumns, showAICopilot,
+    setAiChatSessionId,
   } = useDashboard();
 
   const [input, setInput] = useState('');
@@ -303,6 +304,7 @@ export default function CraigPanel() {
   const clearChat = () => {
     setAiCopilotMessages([]);
     setStreamingText('');
+    setAiChatSessionId(null);
   };
 
   return (
@@ -351,7 +353,7 @@ export default function CraigPanel() {
               <option value="sonnet">Sonnet</option>
               <option value="opus">Opus</option>
             </select>
-            {aiCopilotMessages.length > 0 && (
+            {true && (
               <button onClick={clearChat} title="New chat" style={{
                 width: 28, height: 28, borderRadius: 7,
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',

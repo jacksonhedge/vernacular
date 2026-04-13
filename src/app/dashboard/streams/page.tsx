@@ -97,17 +97,35 @@ export default function StreamsPage() {
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
+  const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string } | null>(null);
+  const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-phones') || '[]')); } catch { return new Set(); }
+  });
+  const persistHiddenPhones = (next: Set<string>) => {
+    localStorage.setItem('vernacular-hidden-phones', JSON.stringify([...next]));
+    setHiddenPhones(next);
+  };
   const streamsScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!chatContextMenu) return;
+    const close = () => setChatContextMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    return () => { window.removeEventListener('click', close); window.removeEventListener('scroll', close, true); };
+  }, [chatContextMenu]);
 
   useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
 
-  // Filter columns by initiative
-  const filteredColumns = activeInitiativeFilter
+  // Filter columns by initiative + hidden phones
+  const filteredColumns = (activeInitiativeFilter
     ? columns.filter(col => {
       if (!col.contact?.phone) return false;
       return initiativePhones.has(normalizePhone(col.contact.phone));
     })
-    : columns;
+    : columns
+  ).filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)));
 
   // Sort columns
   const sortedColumns = [...filteredColumns].sort((a, b) => {
@@ -141,7 +159,8 @@ export default function StreamsPage() {
 
   // Contact list for left panel
   const activeChats = allConversations
-    .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()));
+    .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
+    .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)));
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -361,7 +380,17 @@ export default function StreamsPage() {
               const isOpen = columns.some(c => c.id === col.id);
 
               return (
-                <button key={col.id} onClick={() => {
+                <button key={col.id}
+                  onContextMenu={e => {
+                    e.preventDefault();
+                    setChatContextMenu({
+                      x: e.clientX, y: e.clientY,
+                      colId: col.id,
+                      phone: col.contact?.phone || '',
+                      name: col.contact?.name || 'Unknown',
+                    });
+                  }}
+                  onClick={() => {
                   playSound('click');
                   setSelectedConversationId(col.id);
                   setReadConversations(prev => new Set(prev).add(col.id));
@@ -729,6 +758,54 @@ export default function StreamsPage() {
                 {item.label}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chat row context menu (right-click on sidebar conversation) */}
+      {chatContextMenu && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setChatContextMenu(null)}>
+          <div style={{
+            position: 'absolute', left: chatContextMenu.x, top: Math.max(10, chatContextMenu.y - 10),
+            background: '#fff', borderRadius: 10, padding: 4,
+            boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1px solid rgba(0,0,0,0.08)',
+            minWidth: 220,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '8px 12px 6px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+              {chatContextMenu.name}
+            </div>
+            {[
+              { label: 'Remove from Active Streams', action: () => { removeColumn(chatContextMenu.colId); } },
+              { label: 'Hide this number (permanent)', action: () => {
+                if (!chatContextMenu.phone) return;
+                const key = normalizePhone(chatContextMenu.phone);
+                const next = new Set(hiddenPhones); next.add(key);
+                persistHiddenPhones(next);
+                removeColumn(chatContextMenu.colId);
+              }},
+            ].map(item => (
+              <button key={item.label} onClick={() => { item.action(); setChatContextMenu(null); }} style={{
+                display: 'block', width: '100%', padding: '9px 14px', border: 'none',
+                background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                fontSize: 13, fontWeight: 500, color: '#0c0f1a', borderRadius: 6,
+                fontFamily: "'Inter', sans-serif",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                {item.label}
+              </button>
+            ))}
+            {hiddenPhones.size > 0 && (
+              <button onClick={() => { persistHiddenPhones(new Set()); setChatContextMenu(null); }} style={{
+                display: 'block', width: '100%', padding: '9px 14px', border: 'none',
+                background: 'transparent', cursor: 'pointer', textAlign: 'left',
+                fontSize: 12, fontWeight: 500, color: '#9ca3af', borderRadius: 6,
+                fontFamily: "'Inter', sans-serif", borderTop: '1px solid rgba(0,0,0,0.04)', marginTop: 4,
+              }}>
+                Unhide all ({hiddenPhones.size})
+              </button>
+            )}
           </div>
         </div>
       )}

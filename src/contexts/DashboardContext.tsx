@@ -407,12 +407,15 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         .eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100)
         .then(({ data }) => { if (data) setCalendarEvents(data as CalendarEvent[]); });
 
-      // Restore last Craig session
+      // Restore last Craig session — only if updated within last 2 hours
       supabase.from('ai_chat_sessions')
-        .select('id, preview, created_at, message_count')
+        .select('id, preview, created_at, message_count, updated_at')
         .eq('organization_id', orgId).order('updated_at', { ascending: false }).limit(1)
         .then(({ data }) => {
           if (data?.[0]) {
+            const updatedAt = new Date(data[0].updated_at as string).getTime();
+            const idleMs = Date.now() - updatedAt;
+            if (idleMs > 2 * 60 * 60 * 1000) return; // stale — start fresh
             supabase.from('ai_chat_sessions').select('messages').eq('id', data[0].id).single()
               .then(({ data: session }) => {
                 if (session?.messages && Array.isArray(session.messages) && session.messages.length > 0) {
