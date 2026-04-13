@@ -106,6 +106,14 @@ export default function StreamsPage() {
     localStorage.setItem('vernacular-hidden-phones', JSON.stringify([...next]));
     setHiddenPhones(next);
   };
+  const [stackHidden, setStackHidden] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem('vernacular-stack-hidden') || '[]')); } catch { return new Set(); }
+  });
+  const persistStackHidden = (next: Set<string>) => {
+    localStorage.setItem('vernacular-stack-hidden', JSON.stringify([...next]));
+    setStackHidden(next);
+  };
   const streamsScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -160,7 +168,8 @@ export default function StreamsPage() {
   // Contact list for left panel
   const activeChats = allConversations
     .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
-    .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)));
+    .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
+    .filter(col => !stackHidden.has(col.id));
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -775,7 +784,12 @@ export default function StreamsPage() {
               {chatContextMenu.name}
             </div>
             {[
-              { label: 'Remove from Active Streams', action: () => { removeColumn(chatContextMenu.colId); } },
+              { label: 'Remove from streams', action: () => { removeColumn(chatContextMenu.colId); } },
+              { label: 'Remove from stack', action: () => {
+                const next = new Set(stackHidden); next.add(chatContextMenu.colId);
+                persistStackHidden(next);
+                removeColumn(chatContextMenu.colId);
+              }},
               { label: 'Hide this number (permanent)', action: () => {
                 if (!chatContextMenu.phone) return;
                 const key = normalizePhone(chatContextMenu.phone);
@@ -796,14 +810,14 @@ export default function StreamsPage() {
                 {item.label}
               </button>
             ))}
-            {hiddenPhones.size > 0 && (
-              <button onClick={() => { persistHiddenPhones(new Set()); setChatContextMenu(null); }} style={{
+            {(hiddenPhones.size + stackHidden.size) > 0 && (
+              <button onClick={() => { persistHiddenPhones(new Set()); persistStackHidden(new Set()); setChatContextMenu(null); }} style={{
                 display: 'block', width: '100%', padding: '9px 14px', border: 'none',
                 background: 'transparent', cursor: 'pointer', textAlign: 'left',
                 fontSize: 12, fontWeight: 500, color: '#9ca3af', borderRadius: 6,
                 fontFamily: "'Inter', sans-serif", borderTop: '1px solid rgba(0,0,0,0.04)', marginTop: 4,
               }}>
-                Unhide all ({hiddenPhones.size})
+                Unhide all ({hiddenPhones.size + stackHidden.size})
               </button>
             )}
           </div>
