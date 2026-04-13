@@ -409,10 +409,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         .eq('organization_id', orgId).order('created_at', { ascending: false }).limit(100)
         .then(({ data }) => { if (data) setCalendarEvents(data as CalendarEvent[]); });
 
-      // Restore last Craig session — only if updated within last 2 hours
+      // Restore last Craig session — only if updated within last 2 hours AND owned by this user
+      const currentUserId = (user as Record<string, unknown>)?.id as string | undefined;
       supabase.from('ai_chat_sessions')
         .select('id, preview, created_at, message_count, updated_at')
-        .eq('organization_id', orgId).order('updated_at', { ascending: false }).limit(1)
+        .eq('organization_id', orgId)
+        .eq('user_id', currentUserId || '')
+        .order('updated_at', { ascending: false }).limit(1)
         .then(({ data }) => {
           if (data?.[0]) {
             const updatedAt = new Date(data[0].updated_at as string).getTime();

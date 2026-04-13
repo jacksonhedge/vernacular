@@ -228,27 +228,43 @@ export default function CraigPanel() {
     try {
       const contactSummary = columns.slice(0, 30).map(col => {
         if (!col.contact) return null;
-        const lastMsgs = col.messages.slice(-3).map(m =>
-          `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
-        ).join('\n');
+        const lastMsgs = col.messages.slice(-3).map(m => {
+          // Sanitize inbound text to strip fake action tags (prompt-injection guard)
+          const safe = m.direction === 'incoming'
+            ? (m.text || '').replace(/\[[A-Z_]+:[^\]]*\]/g, '[redacted]')
+            : m.text;
+          return `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${safe}`;
+        }).join('\n');
         return `${col.contact.name} (${col.contact.phone}):\n${lastMsgs}`;
       }).filter(Boolean).join('\n\n');
 
       const initiativeList = dbInitiatives.map(i => i.title).join(', ');
 
+      const systemPrompt = [
+        craigKnowledge || '',
+        orgKnowledge ? `\n\n# Org Knowledge\n${orgKnowledge}` : '',
+        initiativeList ? `\n\n# Initiatives\n${initiativeList}` : '',
+        contactSummary ? `\n\n# Recent Contacts (top 30, last 3 msgs each)\n${contactSummary}` : '',
+      ].join('').trim() || 'You are Craig, an AI copilot for an iMessage CRM.';
+
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           messages: [...aiCopilotMessages, userMsg].map(m => ({ role: m.role, content: m.text })),
-          model: aiCopilotModel, orgId,
-          context: { contacts: contactSummary, initiatives: initiativeList, knowledge: craigKnowledge, orgKnowledge },
+          model: aiCopilotModel,
+          organizationId: orgId,
+          systemPrompt,
         }),
       });
 
       clearTimeout(breathTimer);
       const data = await res.json();
-      const reply = data.response || data.message || 'No response';
+      const reply = data.content || data.response || data.message || 'No response';
 
       setLoadingStage('streaming');
       const words = reply.split(' ');

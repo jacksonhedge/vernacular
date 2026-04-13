@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { deductCredits } from '@/lib/credits';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODELS: Record<string, string> = {
@@ -9,9 +10,16 @@ const MODELS: Record<string, string> = {
   'opus': 'claude-opus-4-6',
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthUser(request);
+    if (!authUser) return unauthorized();
+
     const { messages, model, systemPrompt, organizationId } = await request.json();
+
+    // Prevent cross-org usage: if client passed an org id, it must match the user's org
+    if (organizationId && organizationId !== authUser.org_id) return forbidden();
+    const orgId = authUser.org_id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'messages array required' }, { status: 400 });
@@ -64,16 +72,14 @@ export async function POST(request: Request) {
       tokens_total: totalTokens,
       cost_estimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
       action: 'ai_chat',
-      organization_id: organizationId || null,
+      organization_id: orgId,
     });
 
     // Deduct credits for AI chat usage
-    if (organizationId) {
-      await deductCredits(
-        supabase, organizationId, 'ai_chat',
-        `Craig (${modelKey}, ${totalTokens} tokens)`,
-      );
-    }
+    await deductCredits(
+      supabase, orgId, 'ai_chat',
+      `Craig (${modelKey}, ${totalTokens} tokens)`,
+    );
 
     return NextResponse.json({
       content,
