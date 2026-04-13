@@ -183,11 +183,17 @@ export default function StreamsPage() {
     return bTime - aTime;
   });
 
-  // Contact list for left panel
+  // Contact list for left panel — sorted by most-recent message to match streams' default order.
+  // Pinned / AI-drafted columns are NOT floated to top in the stack (only in streams).
   const activeChats = allConversations
     .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
     .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
-    .filter(col => !stackHidden.has(col.id));
+    .filter(col => !stackHidden.has(col.id))
+    .sort((a, b) => {
+      const aTime = a.messages.length > 0 ? parseTimestamp(a.messages[a.messages.length - 1].timestamp || '0').getTime() : 0;
+      const bTime = b.messages.length > 0 ? parseTimestamp(b.messages[b.messages.length - 1].timestamp || '0').getTime() : 0;
+      return bTime - aTime;
+    });
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -402,7 +408,7 @@ export default function StreamsPage() {
             {activeChats.map(col => {
               const lastMsg = col.messages[col.messages.length - 1];
               const hasUnread = lastMsg?.direction === 'incoming' && !readConversations.has(col.id);
-              const hasAiDraft = lastMsg?.isAIDraft;
+              const hasAiDraft = col.messages.some(m => m.isAIDraft);
               const isSelected = selectedConversationId === col.id;
               const isOpen = columns.some(c => c.id === col.id);
 
