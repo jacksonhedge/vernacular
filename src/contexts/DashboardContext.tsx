@@ -353,7 +353,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           setAllConversations(realColumns);
           let dismissed: Set<string>;
           try { dismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { dismissed = new Set(); }
-          setColumns(realColumns.filter(c => !dismissed.has(c.id)));
+          let stackHidden: Set<string>;
+          try { stackHidden = new Set(JSON.parse(localStorage.getItem('vernacular-stack-hidden') || '[]')); } catch { stackHidden = new Set(); }
+          setColumns(realColumns.filter(c => !dismissed.has(c.id) && !stackHidden.has(c.id)));
           setLastReloadTime(new Date());
         }
       }).catch(() => {});
@@ -507,7 +509,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               });
               let currentDismissed: Set<string>;
               try { currentDismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { currentDismissed = new Set(); }
-              const brandNew = Array.from(freshMap.values()).filter(c => !currentDismissed.has(c.id));
+              let currentStackHidden: Set<string>;
+              try { currentStackHidden = new Set(JSON.parse(localStorage.getItem('vernacular-stack-hidden') || '[]')); } catch { currentStackHidden = new Set(); }
+              const brandNew = Array.from(freshMap.values()).filter(c => !currentDismissed.has(c.id) && !currentStackHidden.has(c.id));
               const brandNewPhones = new Set(brandNew.map(c => normalizePhone(c.contact?.phone || '')).filter(Boolean));
               const cleaned = merged.filter(c => {
                 if (!c.id.startsWith('draft-col-')) return true;
