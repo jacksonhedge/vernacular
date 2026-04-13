@@ -115,6 +115,8 @@ export default function StreamsPage() {
     setStackHidden(next);
   };
   const streamsScrollRef = useRef<HTMLDivElement>(null);
+  const [scrolledTop, setScrolledTop] = useState<Record<string, boolean>>({});
+  const lastMsgCounts = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (!chatContextMenu) return;
@@ -125,6 +127,22 @@ export default function StreamsPage() {
   }, [chatContextMenu]);
 
   useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
+
+  // Auto-scroll each column to bottom on load / new message — unless user toggled it to top
+  useEffect(() => {
+    columns.forEach(col => {
+      const el = document.getElementById(`stream-msgs-${col.id}`);
+      if (!el) return;
+      const count = col.messages.length;
+      const prev = lastMsgCounts.current[col.id];
+      const firstRender = prev === undefined;
+      const hasNewMsg = !firstRender && count > prev;
+      lastMsgCounts.current[col.id] = count;
+      if ((firstRender || hasNewMsg) && !scrolledTop[col.id]) {
+        requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+      }
+    });
+  }, [columns, scrolledTop]);
 
   // Filter columns by initiative + hidden phones
   const filteredColumns = (activeInitiativeFilter
@@ -519,33 +537,50 @@ export default function StreamsPage() {
                         {col.contact?.phone}
                       </div>
                     </div>
-                    {/* Ask Craig to draft */}
-                    <button onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAICopilot(true);
-                      const contactName = col.contact?.name || 'this contact';
-                      const lastMsgs = col.messages.slice(-3).map(m =>
-                        `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
-                      ).join('\n');
-                      const prompt = `Draft a reply to ${contactName}. Here's the recent conversation:\n${lastMsgs}`;
-                      setAiCopilotMessages(prev => [...prev, { role: 'user', text: prompt }]);
-                    }} title="Ask Craig to draft a reply" style={{
-                      width: 28, height: 28, borderRadius: 8, border: 'none',
-                      background: 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))',
-                      color: '#2678FF', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.15s',
-                    }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                        <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                        <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                        <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-                        </path>
-                      </svg>
-                    </button>
+                    {/* Ask Craig + Scroll toggle stacked */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAICopilot(true);
+                        const contactName = col.contact?.name || 'this contact';
+                        const lastMsgs = col.messages.slice(-3).map(m =>
+                          `${m.direction === 'outgoing' ? 'You' : 'Them'}: ${m.text}`
+                        ).join('\n');
+                        const prompt = `Draft a reply to ${contactName}. Here's the recent conversation:\n${lastMsgs}`;
+                        setAiCopilotMessages(prev => [...prev, { role: 'user', text: prompt }]);
+                      }} title="Ask Craig to draft a reply" style={{
+                        width: 28, height: 28, borderRadius: 8, border: 'none',
+                        background: 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))',
+                        color: '#2678FF', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s',
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
+                          <circle cx="12" cy="12" r="11" fill="#FFE000" />
+                          <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
+                          <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
+                          </path>
+                        </svg>
+                      </button>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        const el = document.getElementById(`stream-msgs-${col.id}`);
+                        if (!el) return;
+                        const goingToTop = !scrolledTop[col.id];
+                        el.scrollTo({ top: goingToTop ? 0 : el.scrollHeight, behavior: 'smooth' });
+                        setScrolledTop(prev => ({ ...prev, [col.id]: goingToTop }));
+                      }} style={{
+                        padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.06)',
+                        background: 'rgba(0,0,0,0.02)', color: '#6b7280',
+                        fontSize: 9, fontWeight: 600, cursor: 'pointer', lineHeight: 1.2,
+                        fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap',
+                      }}>
+                        {scrolledTop[col.id] ? 'Scroll to Bottom' : 'Scroll to Top'}
+                      </button>
+                    </div>
                     <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} style={{
                       width: 24, height: 24, borderRadius: 6, border: 'none',
                       background: 'rgba(0,0,0,0.04)', color: '#9ca3af',
