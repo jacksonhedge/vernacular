@@ -416,6 +416,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
             const updatedAt = new Date(data[0].updated_at as string).getTime();
             const idleMs = Date.now() - updatedAt;
             if (idleMs > 2 * 60 * 60 * 1000) return; // stale — start fresh
+            // Respect "New Chat" — if the user clicked New Chat after this session was updated, skip restore
+            try {
+              const freshAt = Number(localStorage.getItem('vernacular-craig-fresh-at') || '0');
+              if (freshAt && updatedAt < freshAt) return;
+            } catch {}
             supabase.from('ai_chat_sessions').select('messages').eq('id', data[0].id).single()
               .then(({ data: session }) => {
                 if (session?.messages && Array.isArray(session.messages) && session.messages.length > 0) {

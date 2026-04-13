@@ -121,12 +121,7 @@ function TileModal({ tileId, allTiles, columns, contacts, tileColor, onClose, on
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                    <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                    <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                    <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-                    </path>
-                  </svg>
+                  <img src="/pacman.png" alt="Ask Craig" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
                 </button>
               )}
               <button onClick={onClose} style={{

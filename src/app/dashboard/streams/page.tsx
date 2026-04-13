@@ -302,13 +302,7 @@ export default function StreamsPage() {
             onMouseEnter={e => { e.currentTarget.style.animation = 'none'; e.currentTarget.style.transform = 'scale(1.05)'; }}
             onMouseLeave={e => { e.currentTarget.style.animation = 'craigPulseYellow 1.6s ease-in-out infinite'; e.currentTarget.style.transform = 'scale(1)'; }}
           >
-            {/* PAC-MAN icon with chomping mouth */}
-            <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-              <circle cx="12" cy="12" r="11" fill="#FFE000" stroke="#1c1c00" strokeWidth="0.5" />
-              <circle cx="10" cy="7" r="1.3" fill="#1c1c00" />
-              <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-              </path>
-            </svg>
+            <img src="/pacman.png" alt="" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
             Ask Craig
           </button>
           <style>{`
@@ -564,12 +558,7 @@ export default function StreamsPage() {
                         onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                          <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                          <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                          <path d="M12 12 L24 4 L24 20 Z" fill="#fff">
-                          </path>
-                        </svg>
+                        <img src="/pacman.png" alt="Ask Craig" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
                       </button>
                       <button onClick={(e) => {
                         e.stopPropagation();
@@ -728,12 +717,7 @@ export default function StreamsPage() {
                         onMouseEnter={e => { e.currentTarget.style.color = '#2678FF'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-                          <circle cx="12" cy="12" r="11" fill="#FFE000" />
-                          <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-                          <path d="M12 12 L24 4 L24 20 Z" fill="#f8f9fb">
-                          </path>
-                        </svg>
+                        <img src="/pacman.png" alt="Ask Craig" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
                       </button>
                       <input
                         value={inputValues[col.id] || ''}

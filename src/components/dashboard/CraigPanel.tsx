@@ -3,13 +3,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
 
-function PacMan({ size = 22, mouthFill = '#0a0d18' }: { size?: number; mouthFill?: string }) {
+function PacMan({ size = 22 }: { size?: number; mouthFill?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-      <circle cx="12" cy="12" r="11" fill="#FFE000" />
-      <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-      <path d="M12 12 L24 4 L24 20 Z" fill={mouthFill} />
-    </svg>
+    <img src="/pacman.png" alt="Craig" width={size} height={size} style={{ display: 'block', objectFit: 'contain' }} />
   );
 }
 
@@ -305,6 +301,7 @@ export default function CraigPanel() {
     setAiCopilotMessages([]);
     setStreamingText('');
     setAiChatSessionId(null);
+    try { localStorage.setItem('vernacular-craig-fresh-at', String(Date.now())); } catch {}
   };
 
   return (

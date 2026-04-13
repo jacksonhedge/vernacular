@@ -24,12 +24,7 @@ function CraigFAB() {
       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,158,11,0.4), 0 0 0 3px rgba(255,224,0,0.15)'; }}
       title="Open Craig AI"
     >
-      <svg width="30" height="30" viewBox="0 0 24 24" style={{ overflow: 'visible' }}>
-        <circle cx="12" cy="12" r="11" fill="#FFE000" stroke="#1c1c00" strokeWidth="0.5" />
-        <circle cx="10" cy="7" r="1.4" fill="#1c1c00" />
-        <path d="M12 12 L24 4 L24 20 Z" fill="#2678FF">
-        </path>
-      </svg>
+      <img src="/pacman.png" alt="Craig" width={32} height={32} style={{ display: 'block', objectFit: 'contain' }} />
     </button>
   );
 }
