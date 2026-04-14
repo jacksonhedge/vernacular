@@ -157,7 +157,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Conversations
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [readConversations, setReadConversations] = useState<Set<string>>(new Set());
+  const [readConversations, setReadConversationsRaw] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try { return new Set(JSON.parse(localStorage.getItem('vernacular-read-conversations') || '[]')); } catch { return new Set(); }
+    }
+    return new Set();
+  });
+  const setReadConversations: React.Dispatch<React.SetStateAction<Set<string>>> = (updater) => {
+    setReadConversationsRaw(prev => {
+      const next = typeof updater === 'function' ? (updater as (p: Set<string>) => Set<string>)(prev) : updater;
+      try { localStorage.setItem('vernacular-read-conversations', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
   const [pinnedConversations, setPinnedConversations] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
       try { return new Set(JSON.parse(localStorage.getItem('vernacular-pinned') || '[]')); } catch { return new Set(); }
