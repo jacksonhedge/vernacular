@@ -169,6 +169,9 @@ export default function StreamsPage() {
 
   // Sort columns
   const sortedColumns = [...filteredColumns].sort((a, b) => {
+    // Blank New-Chat picker columns (no contact yet) win everything — always leftmost
+    if (!a.contact && b.contact) return -1;
+    if (a.contact && !b.contact) return 1;
     // User-pinned leftmost always wins
     if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
     if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
