@@ -99,7 +99,10 @@ export default function StreamsPage() {
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
   const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string } | null>(null);
-  const [previewCol, setPreviewCol] = useState<ConversationColumn | null>(null);
+  const [previewColId, setPreviewColId] = useState<string | null>(null);
+  const previewCol = previewColId
+    ? (columns.find(c => c.id === previewColId) || allConversations.find(c => c.id === previewColId) || null)
+    : null;
   const [pinnedLeftColId, setPinnedLeftColId] = useState<string | null>(null);
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -446,7 +449,9 @@ export default function StreamsPage() {
                   playSound('click');
                   setSelectedConversationId(col.id);
                   setReadConversations(prev => new Set(prev).add(col.id));
-                  setPreviewCol(col);
+                  // Make sure the col is in `columns` so sendMessage + live updates work while previewing
+                  setColumns(prev => prev.some(c => c.id === col.id) ? prev : [...prev, col]);
+                  setPreviewColId(col.id);
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                   padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -808,7 +813,7 @@ export default function StreamsPage() {
 
       {/* Conversation preview modal (click on sidebar conversation) */}
       {previewCol && (
-        <div onClick={() => setPreviewCol(null)} style={{
+        <div onClick={() => setPreviewColId(null)} style={{
           position: 'fixed', inset: 0, zIndex: 1000,
           background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -842,7 +847,7 @@ export default function StreamsPage() {
               </div>
               <button onClick={() => {
                 const colToOpen = previewCol;
-                setPreviewCol(null);
+                setPreviewColId(null);
                 setPinnedLeftColId(colToOpen.id);
                 setColumns(prev => {
                   if (prev.some(c => c.id === colToOpen.id)) {
@@ -864,7 +869,7 @@ export default function StreamsPage() {
                 background: '#2678FF', color: '#fff', fontSize: 12, fontWeight: 700,
                 cursor: 'pointer',
               }}>Open as Stream</button>
-              <button onClick={() => setPreviewCol(null)} style={{
+              <button onClick={() => setPreviewColId(null)} style={{
                 width: 30, height: 30, borderRadius: 8, border: 'none',
                 background: 'rgba(0,0,0,0.04)', color: '#9ca3af', cursor: 'pointer',
                 fontSize: 14,
