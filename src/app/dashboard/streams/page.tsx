@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
+import { supabase } from '@/lib/supabase';
 import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone, formatPhoneNumber } from '@/lib/utils';
 import type { ConversationColumn, Contact, Message } from '@/types/dashboard';
 
@@ -106,6 +107,8 @@ export default function StreamsPage() {
   const [pinnedLeftColId, setPinnedLeftColId] = useState<string | null>(null);
   const [editingNameColId, setEditingNameColId] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
+  const [contactInfoColId, setContactInfoColId] = useState<string | null>(null);
+  const [contactInfoDraft, setContactInfoDraft] = useState<{ name: string; email: string; notes: string; importText: string }>({ name: '', email: '', notes: '', importText: '' });
   const [stickyLeftIds, setStickyLeftIds] = useState<string[]>([]); // cols that stay leftmost until explicitly closed
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -775,28 +778,49 @@ export default function StreamsPage() {
                     borderBottom: '1px solid rgba(0,0,0,0.06)',
                     display: 'flex', alignItems: 'center', gap: 10,
                   }}>
-                    {(() => {
-                      const name = col.contact?.name || '';
-                      const nameLooksLikePhone = /^[\s()+\-\d]+$/.test(name) || /^\d+$/.test((col.contact?.initials || '')) || col.contact?.tag === 'NEW';
-                      return (
-                        <div style={{
-                          width: 36, height: 36, borderRadius: 10,
-                          background: nameLooksLikePhone ? 'rgba(124,58,237,0.08)' : 'rgba(38,120,255,0.08)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 13, fontWeight: 700, color: nameLooksLikePhone ? '#7C3AED' : '#2678FF', flexShrink: 0,
-                        }}>
-                          {nameLooksLikePhone ? (
-                            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-label="Unknown contact">
-                              <path d="M4 16 C4 9 9 4 16 4 C23 4 28 9 28 16 L28 28 L24 25 L20 28 L16 25 L12 28 L8 25 L4 28 Z" fill="#C084FC" />
-                              <circle cx="12" cy="14" r="2.5" fill="#fff" />
-                              <circle cx="20" cy="14" r="2.5" fill="#fff" />
-                              <circle cx="12" cy="14" r="1.2" fill="#3b0764" />
-                              <circle cx="20" cy="14" r="1.2" fill="#3b0764" />
-                            </svg>
-                          ) : col.contact?.initials}
-                        </div>
-                      );
-                    })()}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                      {(() => {
+                        const name = col.contact?.name || '';
+                        const nameLooksLikePhone = /^[\s()+\-\d]+$/.test(name) || /^\d+$/.test((col.contact?.initials || '')) || col.contact?.tag === 'NEW';
+                        return (
+                          <div style={{
+                            width: 36, height: 36, borderRadius: 10,
+                            background: nameLooksLikePhone ? 'rgba(124,58,237,0.08)' : 'rgba(38,120,255,0.08)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 13, fontWeight: 700, color: nameLooksLikePhone ? '#7C3AED' : '#2678FF',
+                          }}>
+                            {nameLooksLikePhone ? (
+                              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-label="Unknown contact">
+                                <path d="M4 16 C4 9 9 4 16 4 C23 4 28 9 28 16 L28 28 L24 25 L20 28 L16 25 L12 28 L8 25 L4 28 Z" fill="#C084FC" />
+                                <circle cx="12" cy="14" r="2.5" fill="#fff" />
+                                <circle cx="20" cy="14" r="2.5" fill="#fff" />
+                                <circle cx="12" cy="14" r="1.2" fill="#3b0764" />
+                                <circle cx="20" cy="14" r="1.2" fill="#3b0764" />
+                              </svg>
+                            ) : col.contact?.initials}
+                          </div>
+                        );
+                      })()}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setContactInfoColId(col.id);
+                          setContactInfoDraft({
+                            name: col.contact?.name || '',
+                            email: '',
+                            notes: '',
+                            importText: '',
+                          });
+                        }}
+                        title="Edit contact info"
+                        style={{
+                          padding: '2px 7px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.06)',
+                          background: 'rgba(0,0,0,0.02)', color: '#6b7280',
+                          fontSize: 9, fontWeight: 700, cursor: 'pointer', lineHeight: 1.2,
+                          fontFamily: "'Inter', sans-serif",
+                        }}
+                      >Edit</button>
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {editingNameColId === col.id ? (
                         <input
@@ -1115,6 +1139,87 @@ export default function StreamsPage() {
         </div>
       )}
 
+      {/* Contact Info modal (Edit button below avatar) */}
+      {contactInfoColId && (() => {
+        const col = columns.find(c => c.id === contactInfoColId);
+        if (!col) return null;
+        const close = () => setContactInfoColId(null);
+        const save = async () => {
+          const trimmed = contactInfoDraft.name.trim();
+          setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
+            ...c,
+            contact: {
+              ...c.contact,
+              name: trimmed || c.contact.name,
+              initials: (trimmed
+                ? trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase()
+                : c.contact.initials) || '??',
+            },
+          } : c));
+          const phone = col.contact?.phone || '';
+          const combined = [
+            contactInfoDraft.email ? `Email: ${contactInfoDraft.email}` : '',
+            contactInfoDraft.notes ? `Notes:\n${contactInfoDraft.notes}` : '',
+            contactInfoDraft.importText ? `Previous conversation history:\n${contactInfoDraft.importText}` : '',
+          ].filter(Boolean).join('\n\n');
+          if (combined && orgId) {
+            try {
+              await supabase.from('org_knowledge').insert({
+                organization_id: orgId,
+                category: 'contact_memory',
+                title: `Contact: ${trimmed || col.contact?.name} ${phone ? `(${phone})` : ''}`.trim(),
+                content: combined,
+                enabled: true,
+              });
+            } catch {}
+          }
+          close();
+        };
+        return (
+          <div onClick={close} style={{
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40,
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              width: 520, maxWidth: '100%', maxHeight: '85vh',
+              background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden',
+            }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#0c0f1a', flex: 1 }}>Contact info</div>
+                <button onClick={close} style={{ width: 28, height: 28, borderRadius: 7, border: 'none', background: 'rgba(0,0,0,0.04)', color: '#9ca3af', cursor: 'pointer', fontSize: 14 }}>×</button>
+              </div>
+              <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <FieldRow label="Name">
+                  <input value={contactInfoDraft.name} onChange={e => setContactInfoDraft(d => ({ ...d, name: e.target.value }))}
+                    placeholder="Jane Smith" style={ciInput} />
+                </FieldRow>
+                <FieldRow label="Phone">
+                  <div style={{ ...ciInput, background: 'rgba(0,0,0,0.03)', color: '#6b7280', fontFamily: "'JetBrains Mono', monospace" }}>{col.contact?.phone || '—'}</div>
+                </FieldRow>
+                <FieldRow label="Email">
+                  <input value={contactInfoDraft.email} onChange={e => setContactInfoDraft(d => ({ ...d, email: e.target.value }))}
+                    placeholder="jane@example.com" style={ciInput} />
+                </FieldRow>
+                <FieldRow label="Notes" hint="Anything Craig should know about this person (tone, role, history).">
+                  <textarea value={contactInfoDraft.notes} onChange={e => setContactInfoDraft(d => ({ ...d, notes: e.target.value }))}
+                    rows={3} placeholder="VIP from Week 3 event, prefers terse replies…" style={{ ...ciInput, resize: 'vertical', minHeight: 70, fontFamily: "'Inter', sans-serif" }} />
+                </FieldRow>
+                <FieldRow label="Import previous chats" hint="Paste older text history (iMessage, Discord, email threads). Craig uses this as context when drafting replies for this contact.">
+                  <textarea value={contactInfoDraft.importText} onChange={e => setContactInfoDraft(d => ({ ...d, importText: e.target.value }))}
+                    rows={6} placeholder={'Them: hey man how\u2019s it going\nYou: lmk when you want to hop on\n…'} style={{ ...ciInput, resize: 'vertical', minHeight: 120, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }} />
+                </FieldRow>
+              </div>
+              <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button onClick={close} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={save} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2678FF', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Conversation preview modal (click on sidebar conversation) */}
       {previewCol && (
         <div onClick={() => setPreviewColId(null)} style={{
@@ -1336,6 +1441,23 @@ export default function StreamsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+const ciInput: React.CSSProperties = {
+  width: '100%', padding: '9px 12px', borderRadius: 8,
+  border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
+  fontSize: 13, fontFamily: "'Inter', sans-serif", color: '#0c0f1a',
+  background: '#fff', boxSizing: 'border-box',
+};
+
+function FieldRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      {children}
+      {hint && <div style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
 }
