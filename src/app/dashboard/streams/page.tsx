@@ -778,49 +778,50 @@ export default function StreamsPage() {
                     borderBottom: '1px solid rgba(0,0,0,0.06)',
                     display: 'flex', alignItems: 'center', gap: 10,
                   }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                      {(() => {
-                        const name = col.contact?.name || '';
-                        const nameLooksLikePhone = /^[\s()+\-\d]+$/.test(name) || /^\d+$/.test((col.contact?.initials || '')) || col.contact?.tag === 'NEW';
-                        return (
-                          <div style={{
-                            width: 36, height: 36, borderRadius: 10,
+                    {(() => {
+                      const name = col.contact?.name || '';
+                      const nameLooksLikePhone = /^[\s()+\-\d]+$/.test(name) || /^\d+$/.test((col.contact?.initials || '')) || col.contact?.tag === 'NEW';
+                      return (
+                        <div
+                          onClick={e => {
+                            e.stopPropagation();
+                            setContactInfoColId(col.id);
+                            setContactInfoDraft({ name: col.contact?.name || '', email: '', notes: '', importText: '' });
+                          }}
+                          title="Edit contact info"
+                          style={{
+                            width: 40, height: 40, borderRadius: 12,
                             background: nameLooksLikePhone ? 'rgba(124,58,237,0.08)' : 'rgba(38,120,255,0.08)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontSize: 13, fontWeight: 700, color: nameLooksLikePhone ? '#7C3AED' : '#2678FF',
+                            flexShrink: 0, cursor: 'pointer', position: 'relative',
+                          }}
+                        >
+                          {nameLooksLikePhone ? (
+                            <svg width="24" height="24" viewBox="0 0 32 32" fill="none" aria-label="Unknown contact">
+                              <path d="M4 16 C4 9 9 4 16 4 C23 4 28 9 28 16 L28 28 L24 25 L20 28 L16 25 L12 28 L8 25 L4 28 Z" fill="#C084FC" />
+                              <circle cx="12" cy="14" r="2.5" fill="#fff" />
+                              <circle cx="20" cy="14" r="2.5" fill="#fff" />
+                              <circle cx="12" cy="14" r="1.2" fill="#3b0764" />
+                              <circle cx="20" cy="14" r="1.2" fill="#3b0764" />
+                            </svg>
+                          ) : col.contact?.initials}
+                          {/* Tiny edit pencil in the corner */}
+                          <span style={{
+                            position: 'absolute', bottom: -3, right: -3,
+                            width: 15, height: 15, borderRadius: 8,
+                            background: '#fff', border: '1.5px solid #fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           }}>
-                            {nameLooksLikePhone ? (
-                              <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-label="Unknown contact">
-                                <path d="M4 16 C4 9 9 4 16 4 C23 4 28 9 28 16 L28 28 L24 25 L20 28 L16 25 L12 28 L8 25 L4 28 Z" fill="#C084FC" />
-                                <circle cx="12" cy="14" r="2.5" fill="#fff" />
-                                <circle cx="20" cy="14" r="2.5" fill="#fff" />
-                                <circle cx="12" cy="14" r="1.2" fill="#3b0764" />
-                                <circle cx="20" cy="14" r="1.2" fill="#3b0764" />
-                              </svg>
-                            ) : col.contact?.initials}
-                          </div>
-                        );
-                      })()}
-                      <button
-                        onClick={e => {
-                          e.stopPropagation();
-                          setContactInfoColId(col.id);
-                          setContactInfoDraft({
-                            name: col.contact?.name || '',
-                            email: '',
-                            notes: '',
-                            importText: '',
-                          });
-                        }}
-                        title="Edit contact info"
-                        style={{
-                          padding: '2px 7px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.06)',
-                          background: 'rgba(0,0,0,0.02)', color: '#6b7280',
-                          fontSize: 9, fontWeight: 700, cursor: 'pointer', lineHeight: 1.2,
-                          fontFamily: "'Inter', sans-serif",
-                        }}
-                      >Edit</button>
-                    </div>
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 20h9" />
+                              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {editingNameColId === col.id ? (
                         <input
@@ -873,8 +874,8 @@ export default function StreamsPage() {
                         {col.contact?.phone}
                       </div>
                     </div>
-                    {/* Ask Craig + Scroll toggle stacked */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+                    {/* Compact action row: Ask Craig, Scroll toggle, Close */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <button onClick={(e) => {
                         e.stopPropagation();
                         setShowAICopilot(true);
@@ -887,13 +888,10 @@ export default function StreamsPage() {
                       }} title="Ask Craig to draft a reply" style={{
                         width: 28, height: 28, borderRadius: 8, border: 'none',
                         background: 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))',
-                        color: '#2678FF', cursor: 'pointer',
+                        cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.2), rgba(99,102,241,0.2))'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(38,120,255,0.1), rgba(99,102,241,0.1))'; }}
-                      >
+                        transition: 'background 0.15s', padding: 0,
+                      }}>
                         <img src="/pacman.png" alt="Ask Craig" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
                       </button>
                       <button onClick={(e) => {
@@ -903,23 +901,31 @@ export default function StreamsPage() {
                         const goingToTop = !scrolledTop[col.id];
                         el.scrollTo({ top: goingToTop ? 0 : el.scrollHeight, behavior: 'smooth' });
                         setScrolledTop(prev => ({ ...prev, [col.id]: goingToTop }));
-                      }} style={{
-                        padding: '2px 6px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.06)',
-                        background: 'rgba(0,0,0,0.02)', color: '#6b7280',
-                        fontSize: 9, fontWeight: 600, cursor: 'pointer', lineHeight: 1.2,
-                        fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap',
-                      }}>
-                        {scrolledTop[col.id] ? 'Scroll to Bottom' : 'Scroll to Top'}
+                      }} title={scrolledTop[col.id] ? 'Scroll to bottom' : 'Scroll to top'}
+                        style={{
+                          width: 28, height: 28, borderRadius: 8, border: 'none',
+                          background: 'rgba(0,0,0,0.04)', color: '#6b7280',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 0,
+                        }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                          style={{ transform: scrolledTop[col.id] ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+                          <line x1="12" y1="19" x2="12" y2="5" />
+                          <polyline points="5 12 12 5 19 12" />
+                        </svg>
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} title="Close stream"
+                        style={{
+                          width: 28, height: 28, borderRadius: 8, border: 'none',
+                          background: 'rgba(0,0,0,0.04)', color: '#9ca3af',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: 0,
+                        }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
                       </button>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); removeColumn(col.id); }} style={{
-                      width: 24, height: 24, borderRadius: 6, border: 'none',
-                      background: 'rgba(0,0,0,0.04)', color: '#9ca3af',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12,
-                    }}>
-                      x
-                    </button>
                   </div>
 
                   {/* Messages */}
