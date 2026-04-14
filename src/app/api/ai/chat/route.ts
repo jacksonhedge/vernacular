@@ -5,7 +5,14 @@ import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODELS: Record<string, string> = {
-  'haiku': 'claude-3-haiku-20240307',
+  'haiku-3': 'claude-3-haiku-20240307',
+  'haiku-4.5': 'claude-haiku-4-5-20251001',
+  'sonnet-4.5': 'claude-sonnet-4-5',
+  'sonnet-4.6': 'claude-sonnet-4-6',
+  'opus-4.5': 'claude-opus-4-5',
+  'opus-4.6': 'claude-opus-4-6',
+  // Legacy aliases
+  'haiku': 'claude-haiku-4-5-20251001',
   'sonnet': 'claude-sonnet-4-6',
   'opus': 'claude-opus-4-6',
 };
@@ -94,8 +101,10 @@ export async function POST(request: NextRequest) {
     const content = data.content?.[0]?.text || '';
     const usage = data.usage || {};
     const totalTokens = (usage.input_tokens || 0) + (usage.output_tokens || 0);
-    const modelKey = model || 'sonnet';
+    const modelKey = model || 'sonnet-4.6';
+    const family = modelKey.split('-')[0];
     const tokenCosts: Record<string, number> = { haiku: 0.001, sonnet: 0.006, opus: 0.030 };
+    const costPerK = tokenCosts[family] ?? 0.006;
 
     // Track usage + deduct credits
     const supabase = createServiceClient();
@@ -104,7 +113,7 @@ export async function POST(request: NextRequest) {
       tokens_input: usage.input_tokens || 0,
       tokens_output: usage.output_tokens || 0,
       tokens_total: totalTokens,
-      cost_estimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
+      cost_estimate: (totalTokens / 1000) * costPerK,
       action: 'ai_chat',
       organization_id: orgId,
     });
@@ -119,7 +128,7 @@ export async function POST(request: NextRequest) {
       content,
       model: selectedModel,
       tokensUsed: totalTokens,
-      costEstimate: (totalTokens / 1000) * (tokenCosts[modelKey] || 0.006),
+      costEstimate: (totalTokens / 1000) * costPerK,
     });
   } catch (err) {
     return NextResponse.json({

@@ -393,9 +393,18 @@ export default function CraigPanel() {
               color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600,
               cursor: 'pointer', outline: 'none', fontFamily: "'JetBrains Mono', monospace",
             }}>
-              <option value="haiku">Haiku</option>
-              <option value="sonnet">Sonnet</option>
-              <option value="opus">Opus</option>
+              <optgroup label="Haiku">
+                <option value="haiku-4.5">Haiku 4.5</option>
+                <option value="haiku-3">Haiku 3</option>
+              </optgroup>
+              <optgroup label="Sonnet">
+                <option value="sonnet-4.6">Sonnet 4.6</option>
+                <option value="sonnet-4.5">Sonnet 4.5</option>
+              </optgroup>
+              <optgroup label="Opus">
+                <option value="opus-4.6">Opus 4.6</option>
+                <option value="opus-4.5">Opus 4.5</option>
+              </optgroup>
             </select>
             {true && (
               <button onClick={clearChat} title="New chat" style={{

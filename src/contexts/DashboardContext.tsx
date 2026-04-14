@@ -59,8 +59,8 @@ interface DashboardContextValue {
   setAiCopilotMessages: React.Dispatch<React.SetStateAction<Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>>>;
   aiChatSessionId: string | null;
   setAiChatSessionId: (id: string | null) => void;
-  aiCopilotModel: 'haiku' | 'sonnet' | 'opus';
-  setAiCopilotModel: (model: 'haiku' | 'sonnet' | 'opus') => void;
+  aiCopilotModel: 'haiku-3' | 'haiku-4.5' | 'sonnet-4.5' | 'sonnet-4.6' | 'opus-4.5' | 'opus-4.6';
+  setAiCopilotModel: React.Dispatch<React.SetStateAction<'haiku-3' | 'haiku-4.5' | 'sonnet-4.5' | 'sonnet-4.6' | 'opus-4.5' | 'opus-4.6'>>;
   craigKnowledge: string;
   orgKnowledge: string;
 
@@ -142,7 +142,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [showAICopilot, setShowAICopilot] = useState(false);
   const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>>([]);
   const [aiChatSessionId, setAiChatSessionId] = useState<string | null>(null);
-  const [aiCopilotModel, setAiCopilotModel] = useState<'haiku' | 'sonnet' | 'opus'>('sonnet');
+  const [aiCopilotModel, setAiCopilotModel] = useState<'haiku-3' | 'haiku-4.5' | 'sonnet-4.5' | 'sonnet-4.6' | 'opus-4.5' | 'opus-4.6'>('sonnet-4.6');
   const [craigKnowledge, setCraigKnowledge] = useState('');
   const [orgKnowledge, setOrgKnowledge] = useState('');
 
