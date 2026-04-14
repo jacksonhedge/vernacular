@@ -104,6 +104,8 @@ export default function StreamsPage() {
     ? (columns.find(c => c.id === previewColId) || allConversations.find(c => c.id === previewColId) || null)
     : null;
   const [pinnedLeftColId, setPinnedLeftColId] = useState<string | null>(null);
+  const [editingNameColId, setEditingNameColId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState('');
   const [stickyLeftIds, setStickyLeftIds] = useState<string[]>([]); // cols that stay leftmost until explicitly closed
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -773,18 +775,76 @@ export default function StreamsPage() {
                     borderBottom: '1px solid rgba(0,0,0,0.06)',
                     display: 'flex', alignItems: 'center', gap: 10,
                   }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: 'rgba(38,120,255,0.08)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, color: '#2678FF', flexShrink: 0,
-                    }}>
-                      {col.contact?.initials}
-                    </div>
+                    {(() => {
+                      const name = col.contact?.name || '';
+                      const nameLooksLikePhone = /^[\s()+\-\d]+$/.test(name) || /^\d+$/.test((col.contact?.initials || '')) || col.contact?.tag === 'NEW';
+                      return (
+                        <div style={{
+                          width: 36, height: 36, borderRadius: 10,
+                          background: nameLooksLikePhone ? 'rgba(124,58,237,0.08)' : 'rgba(38,120,255,0.08)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 700, color: nameLooksLikePhone ? '#7C3AED' : '#2678FF', flexShrink: 0,
+                        }}>
+                          {nameLooksLikePhone ? (
+                            <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-label="Unknown contact">
+                              <path d="M4 16 C4 9 9 4 16 4 C23 4 28 9 28 16 L28 28 L24 25 L20 28 L16 25 L12 28 L8 25 L4 28 Z" fill="#C084FC" />
+                              <circle cx="12" cy="14" r="2.5" fill="#fff" />
+                              <circle cx="20" cy="14" r="2.5" fill="#fff" />
+                              <circle cx="12" cy="14" r="1.2" fill="#3b0764" />
+                              <circle cx="20" cy="14" r="1.2" fill="#3b0764" />
+                            </svg>
+                          ) : col.contact?.initials}
+                        </div>
+                      );
+                    })()}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {col.contact?.name}
-                      </div>
+                      {editingNameColId === col.id ? (
+                        <input
+                          autoFocus
+                          value={nameDraft}
+                          onChange={e => setNameDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const trimmed = nameDraft.trim();
+                              if (trimmed) {
+                                setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
+                                  ...c, contact: { ...c.contact, name: trimmed, initials: trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??' },
+                                } : c));
+                              }
+                              setEditingNameColId(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingNameColId(null);
+                            }
+                          }}
+                          onBlur={() => {
+                            const trimmed = nameDraft.trim();
+                            if (trimmed) {
+                              setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
+                                ...c, contact: { ...c.contact, name: trimmed, initials: trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??' },
+                              } : c));
+                            }
+                            setEditingNameColId(null);
+                          }}
+                          style={{
+                            width: '100%', fontSize: 14, fontWeight: 700, color: '#0c0f1a',
+                            border: '1px solid rgba(38,120,255,0.3)', outline: 'none',
+                            padding: '2px 6px', borderRadius: 6, fontFamily: "'Inter', sans-serif",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNameDraft(col.contact?.name || '');
+                            setEditingNameColId(col.id);
+                          }}
+                          title="Click to edit name"
+                          style={{ fontSize: 14, fontWeight: 700, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                        >
+                          {col.contact?.name}
+                        </div>
+                      )}
                       <div style={{ fontSize: 11, color: '#2678FF', fontFamily: "'JetBrains Mono', monospace" }}>
                         {col.contact?.phone}
                       </div>
@@ -971,15 +1031,21 @@ export default function StreamsPage() {
                       >
                         <img src="/pacman.png" alt="Ask Craig" width={18} height={18} style={{ display: 'block', objectFit: 'contain' }} />
                       </button>
-                      <input
+                      <textarea
                         value={inputValues[col.id] || ''}
                         onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(col.id); } }}
                         placeholder="iMessage..."
+                        rows={1}
+                        ref={el => {
+                          if (el) { el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 160)}px`; }
+                        }}
                         style={{
                           flex: 1, border: 'none', outline: 'none', background: 'transparent',
                           color: '#0c0f1a', fontSize: 13, padding: '8px 0',
                           fontFamily: "'Inter', sans-serif",
+                          resize: 'none', overflow: 'auto', lineHeight: '1.4',
+                          minHeight: 20, maxHeight: 160,
                         }}
                       />
                       <button
@@ -1150,8 +1216,9 @@ export default function StreamsPage() {
               padding: '12px 16px', borderTop: '1px solid rgba(0,0,0,0.06)',
               display: 'flex', gap: 8, alignItems: 'center', background: '#fff',
             }}>
-              <input
+              <textarea
                 autoFocus
+                rows={1}
                 value={inputValues[previewCol.id] || ''}
                 onChange={e => setInputValues(prev => ({ ...prev, [previewCol.id]: e.target.value }))}
                 onKeyDown={e => {
@@ -1163,10 +1230,15 @@ export default function StreamsPage() {
                   }
                 }}
                 placeholder="iMessage..."
+                ref={el => {
+                  if (el) { el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 200)}px`; }
+                }}
                 style={{
                   flex: 1, padding: '9px 14px', borderRadius: 18,
                   border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
                   fontSize: 13, fontFamily: "'Inter', sans-serif",
+                  resize: 'none', overflow: 'auto', lineHeight: '1.4',
+                  minHeight: 36, maxHeight: 200,
                 }}
               />
               <button
