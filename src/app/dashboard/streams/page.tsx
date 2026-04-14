@@ -902,6 +902,46 @@ export default function StreamsPage() {
                 );
               })}
             </div>
+            {/* Reply input */}
+            <div style={{
+              padding: '12px 16px', borderTop: '1px solid rgba(0,0,0,0.06)',
+              display: 'flex', gap: 8, alignItems: 'center', background: '#fff',
+            }}>
+              <input
+                autoFocus
+                value={inputValues[previewCol.id] || ''}
+                onChange={e => setInputValues(prev => ({ ...prev, [previewCol.id]: e.target.value }))}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const text = (inputValues[previewCol.id] || '').trim();
+                    if (!text) return;
+                    sendMessage(previewCol.id);
+                  }
+                }}
+                placeholder="iMessage..."
+                style={{
+                  flex: 1, padding: '9px 14px', borderRadius: 18,
+                  border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
+                  fontSize: 13, fontFamily: "'Inter', sans-serif",
+                }}
+              />
+              <button
+                onClick={() => {
+                  const text = (inputValues[previewCol.id] || '').trim();
+                  if (!text) return;
+                  sendMessage(previewCol.id);
+                }}
+                disabled={!(inputValues[previewCol.id] || '').trim()}
+                style={{
+                  padding: '8px 14px', borderRadius: 18, border: 'none',
+                  background: (inputValues[previewCol.id] || '').trim() ? '#2678FF' : 'rgba(0,0,0,0.06)',
+                  color: (inputValues[previewCol.id] || '').trim() ? '#fff' : '#9ca3af',
+                  fontSize: 12, fontWeight: 700,
+                  cursor: (inputValues[previewCol.id] || '').trim() ? 'pointer' : 'default',
+                }}
+              >Send</button>
+            </div>
           </div>
         </div>
       )}
