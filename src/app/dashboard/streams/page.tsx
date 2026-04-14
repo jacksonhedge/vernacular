@@ -473,8 +473,14 @@ export default function StreamsPage() {
                     <div style={{
                       fontSize: 13, fontWeight: hasUnread ? 700 : 600, color: '#0c0f1a',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      display: 'flex', alignItems: 'center', gap: 6,
                     }}>
-                      {col.contact?.name || 'Unknown'}
+                      {hasUnread && (
+                        <span style={{ width: 8, height: 8, borderRadius: 4, background: '#2678FF', flexShrink: 0 }} />
+                      )}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {col.contact?.name || 'Unknown'}
+                      </span>
                     </div>
                     <div style={{
                       fontSize: 11, color: '#9ca3af',
@@ -484,11 +490,37 @@ export default function StreamsPage() {
                       {lastMsg?.text || 'No messages'}
                     </div>
                   </div>
+                  {/* Open / Close toggle */}
+                  <span
+                    role="button"
+                    title={isOpen ? 'Close stream' : 'Open as stream'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isOpen) {
+                        if (pinnedLeftColId === col.id) setPinnedLeftColId(null);
+                        removeColumn(col.id);
+                      } else {
+                        setPinnedLeftColId(col.id);
+                        setColumns(prev => prev.some(c => c.id === col.id) ? [col, ...prev.filter(c => c.id !== col.id)] : [col, ...prev]);
+                        setDismissedColumns(prev => {
+                          const next = new Set(prev); next.delete(col.id);
+                          localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                          return next;
+                        });
+                      }
+                    }}
+                    style={{
+                      width: 22, height: 22, borderRadius: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: isOpen ? 'rgba(38,120,255,0.1)' : 'rgba(0,0,0,0.04)',
+                      color: isOpen ? '#2678FF' : '#6b7280', fontSize: 14, fontWeight: 700,
+                      cursor: 'pointer', flexShrink: 0, lineHeight: 1,
+                    }}
+                  >{isOpen ? '×' : '+'}</span>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                     <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
                       {fmtStackTime(lastMsg?.timestamp || '')}
                     </span>
-                    {hasUnread && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#2678FF' }} />}
                     {hasAiDraft && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#F59E0B' }} />}
                   </div>
                 </button>
