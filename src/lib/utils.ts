@@ -18,6 +18,27 @@ export const fmtMsgTime = (ts: string): string => {
   return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 
+/** Stack-list timestamp:
+ *   same calendar day → "3:45 PM"
+ *   earlier day but <24h ago → "Nh ago"
+ *   within last 7 days → "Mon"
+ *   older → "Apr 8"
+ */
+export const fmtStackTime = (ts: string): string => {
+  if (!ts) return '';
+  const d = parseTimestamp(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const diffHrs = Math.floor(diffMs / 3600000);
+  if (diffHrs < 24) return `${Math.max(1, diffHrs)}h ago`;
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 /** Relative time: "Just now", "5m ago", "2h ago", "Apr 8" */
 export const formatTime = (dateStr: string): string => {
   if (!dateStr) return '';

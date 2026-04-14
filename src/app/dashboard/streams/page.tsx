@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
-import { fmtMsgTime, parseTimestamp, normalizePhone } from '@/lib/utils';
+import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone } from '@/lib/utils';
 import type { ConversationColumn, Contact } from '@/types/dashboard';
 
 export default function StreamsPage() {
@@ -474,7 +474,7 @@ export default function StreamsPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                     <span style={{ fontSize: 10, color: '#c4c4c6', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {fmtMsgTime(lastMsg?.timestamp || '')}
+                      {fmtStackTime(lastMsg?.timestamp || '')}
                     </span>
                     {hasUnread && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#2678FF' }} />}
                     {hasAiDraft && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#F59E0B' }} />}
