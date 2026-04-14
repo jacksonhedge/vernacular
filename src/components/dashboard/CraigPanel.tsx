@@ -264,6 +264,32 @@ export default function CraigPanel() {
 
       clearTimeout(breathTimer);
       const data = await res.json();
+
+      if (!res.ok) {
+        let friendly: string;
+        switch (data.errorCode) {
+          case 'vernacular_credits':
+            friendly = data.reason === 'subscription_canceled'
+              ? '⚠️ Your Vernacular subscription is canceled. Craig is paused until billing is restored.'
+              : '⚠️ Your Vernacular demo has expired. Upgrade your plan to keep using Craig.';
+            break;
+          case 'anthropic_credits':
+            friendly = "⚠️ Vernacular is temporarily out of Claude API credits — this is on our side, not yours. We've been notified.";
+            break;
+          case 'anthropic_rate_limit':
+            friendly = '⏳ Craig is being rate-limited. Try again in a moment.';
+            break;
+          case 'anthropic_not_configured':
+            friendly = '⚠️ Craig is not configured (missing API key). Contact support.';
+            break;
+          default:
+            friendly = `⚠️ ${data.error || 'Craig failed to respond.'}`;
+        }
+        setStreamingText('');
+        setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: friendly, ts: Date.now() }]);
+        return;
+      }
+
       const reply = data.content || data.response || data.message || 'No response';
 
       setLoadingStage('streaming');

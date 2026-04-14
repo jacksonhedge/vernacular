@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { deductCredits } from '@/lib/credits';
+import { deductCredits, checkBillingStatus } from '@/lib/credits';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -26,7 +26,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (!ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 });
+      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured', errorCode: 'anthropic_not_configured' }, { status: 503 });
+    }
+
+    // Pre-flight: block the call if the org is out of Vernacular credits / subscription is canceled
+    const supabasePre = createServiceClient();
+    const billing = await checkBillingStatus(supabasePre, orgId);
+    if (!billing.allowed) {
+      return NextResponse.json({
+        error: billing.reason === 'subscription_canceled' ? 'Your Vernacular subscription is canceled.' : 'Your Vernacular demo has expired. Upgrade to continue using Craig.',
+        errorCode: 'vernacular_credits',
+        reason: billing.reason,
+      }, { status: 402 });
     }
 
     const selectedModel = MODELS[model || 'sonnet'] || MODELS['sonnet'];
@@ -51,8 +62,31 @@ export async function POST(request: NextRequest) {
 
     if (!claudeRes.ok) {
       const err = await claudeRes.json();
+      const msg = err.error?.message || '';
+      const type = err.error?.type || '';
+      // Detect Anthropic billing / rate-limit failures so the client can show a clear message
+      const isAnthropicCreditIssue =
+        claudeRes.status === 402 ||
+        /credit balance is too low|insufficient_quota|billing/i.test(msg) ||
+        type === 'insufficient_quota';
+      const isRateLimited = claudeRes.status === 429 || type === 'rate_limit_error';
+      if (isAnthropicCreditIssue) {
+        return NextResponse.json({
+          error: 'Vernacular is temporarily out of Claude API credits. Please contact support.',
+          errorCode: 'anthropic_credits',
+          upstream: msg,
+        }, { status: 402 });
+      }
+      if (isRateLimited) {
+        return NextResponse.json({
+          error: 'Craig is being rate-limited by Claude. Try again in a moment.',
+          errorCode: 'anthropic_rate_limit',
+          upstream: msg,
+        }, { status: 429 });
+      }
       return NextResponse.json({
-        error: err.error?.message || 'AI request failed',
+        error: msg || 'AI request failed',
+        errorCode: 'anthropic_error',
       }, { status: 500 });
     }
 
