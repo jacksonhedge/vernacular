@@ -844,7 +844,6 @@ export default function StreamsPage() {
                 const colToOpen = previewCol;
                 setPreviewCol(null);
                 setPinnedLeftColId(colToOpen.id);
-                setRecentlySentCols(prev => new Set(prev).add(colToOpen.id));
                 setColumns(prev => {
                   if (prev.some(c => c.id === colToOpen.id)) {
                     const existing = prev.find(c => c.id === colToOpen.id)!;
@@ -920,8 +919,26 @@ export default function StreamsPage() {
               {chatContextMenu.name}
             </div>
             {[
-              { label: 'Remove from streams', action: () => { removeColumn(chatContextMenu.colId); } },
+              ...(pinnedLeftColId === chatContextMenu.colId
+                ? [{ label: 'Unpin from top', action: () => { setPinnedLeftColId(null); } }]
+                : [{ label: 'Move to top', action: () => {
+                    setPinnedLeftColId(chatContextMenu.colId);
+                    setRecentlySentCols(prev => new Set(prev).add(chatContextMenu.colId));
+                    // Ensure it's also open as a stream
+                    const col = allConversations.find(c => c.id === chatContextMenu.colId);
+                    if (col) {
+                      setColumns(prev => prev.some(c => c.id === col.id)
+                        ? [col, ...prev.filter(c => c.id !== col.id)]
+                        : [col, ...prev]);
+                    }
+                  }}]
+              ),
+              { label: 'Remove from streams', action: () => {
+                if (pinnedLeftColId === chatContextMenu.colId) setPinnedLeftColId(null);
+                removeColumn(chatContextMenu.colId);
+              }},
               { label: 'Remove from stack', action: () => {
+                if (pinnedLeftColId === chatContextMenu.colId) setPinnedLeftColId(null);
                 const next = new Set(stackHidden); next.add(chatContextMenu.colId);
                 persistStackHidden(next);
                 removeColumn(chatContextMenu.colId);
