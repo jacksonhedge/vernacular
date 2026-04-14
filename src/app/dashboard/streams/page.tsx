@@ -138,6 +138,56 @@ export default function StreamsPage() {
     return () => { window.removeEventListener('click', close); window.removeEventListener('scroll', close, true); };
   }, [chatContextMenu]);
 
+  // Persist a contact name change across Supabase + allConversations + columns so
+  // every view (sidebar stack, open streams, preview modal) reflects the new name.
+  const persistContactName = async (col: ConversationColumn, newName: string, extras?: { email?: string; notes?: string }) => {
+    const trimmed = newName.trim();
+    if (!trimmed || !col.contact) return;
+    const phoneDigits = (col.contact.phone || '').replace(/\D/g, '').slice(-10);
+    const initials = trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??';
+
+    // 1) Local state — streams + sidebar update instantly
+    setColumns(prev => prev.map(c => c.id === col.id && c.contact
+      ? { ...c, contact: { ...c.contact, name: trimmed, initials } }
+      : c));
+    setAllConversations(prev => prev.map(c => {
+      if (!c.contact) return c;
+      const cDigits = (c.contact.phone || '').replace(/\D/g, '').slice(-10);
+      if (c.id === col.id || (phoneDigits && phoneDigits === cDigits)) {
+        return { ...c, contact: { ...c.contact, name: trimmed, initials } };
+      }
+      return c;
+    }));
+
+    // 2) Supabase upsert on (organization_id, phone) so future fetches see the new name
+    if (!orgId || !phoneDigits) return;
+    const e164 = `+1${phoneDigits}`;
+    try {
+      const { data: existing } = await supabase.from('contacts')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('phone', e164)
+        .limit(1)
+        .maybeSingle();
+      const parts = trimmed.split(' ');
+      const first_name = parts[0] || '';
+      const last_name = parts.slice(1).join(' ') || '';
+      const patch: Record<string, unknown> = {
+        full_name: trimmed, first_name, last_name, updated_at: new Date().toISOString(),
+      };
+      if (extras?.email) patch.email = extras.email;
+      if (extras?.notes) patch.notes = extras.notes;
+      if (existing?.id) {
+        await supabase.from('contacts').update(patch).eq('id', existing.id);
+      } else {
+        await supabase.from('contacts').insert({
+          organization_id: orgId, phone: e164, full_name: trimmed, first_name, last_name,
+          email: extras?.email || null, notes: extras?.notes || null,
+        });
+      }
+    } catch {}
+  };
+
   // Drop sticky-left entries for columns that no longer exist (closed)
   useEffect(() => {
     setStickyLeftIds(prev => {
@@ -831,24 +881,14 @@ export default function StreamsPage() {
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              const trimmed = nameDraft.trim();
-                              if (trimmed) {
-                                setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
-                                  ...c, contact: { ...c.contact, name: trimmed, initials: trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??' },
-                                } : c));
-                              }
+                              persistContactName(col, nameDraft);
                               setEditingNameColId(null);
                             } else if (e.key === 'Escape') {
                               setEditingNameColId(null);
                             }
                           }}
                           onBlur={() => {
-                            const trimmed = nameDraft.trim();
-                            if (trimmed) {
-                              setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
-                                ...c, contact: { ...c.contact, name: trimmed, initials: trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??' },
-                              } : c));
-                            }
+                            persistContactName(col, nameDraft);
                             setEditingNameColId(null);
                           }}
                           style={{
@@ -1152,16 +1192,9 @@ export default function StreamsPage() {
         const close = () => setContactInfoColId(null);
         const save = async () => {
           const trimmed = contactInfoDraft.name.trim();
-          setColumns(prev => prev.map(c => c.id === col.id && c.contact ? {
-            ...c,
-            contact: {
-              ...c.contact,
-              name: trimmed || c.contact.name,
-              initials: (trimmed
-                ? trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase()
-                : c.contact.initials) || '??',
-            },
-          } : c));
+          if (trimmed) {
+            await persistContactName(col, trimmed, { email: contactInfoDraft.email, notes: contactInfoDraft.notes });
+          }
           const phone = col.contact?.phone || '';
           const combined = [
             contactInfoDraft.email ? `Email: ${contactInfoDraft.email}` : '',
