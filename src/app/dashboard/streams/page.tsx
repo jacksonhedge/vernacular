@@ -194,9 +194,9 @@ export default function StreamsPage() {
     .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
     .filter(col => !stackHidden.has(col.id))
     .sort((a, b) => {
+      // Exact mirror of sortedColumns so the stack order matches streams left-to-right
       if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
       if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
-      // Mirror sortedColumns priority: recentlySent > AI draft > unread > recent
       if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
       if (!recentlySentCols.has(a.id) && recentlySentCols.has(b.id)) return 1;
       const getPriority = (col: ConversationColumn) => {
@@ -205,8 +205,16 @@ export default function StreamsPage() {
         if (last?.direction === 'incoming') return 1;
         return 2;
       };
-      const pDiff = getPriority(a) - getPriority(b);
-      if (pDiff !== 0) return pDiff;
+      if (streamSortMode === 'unread') {
+        const pDiff = getPriority(a) - getPriority(b);
+        if (pDiff !== 0) return pDiff;
+      }
+      if (streamSortMode === 'name') {
+        return (a.contact?.name || '').localeCompare(b.contact?.name || '');
+      }
+      if (streamSortMode === 'most-messages') {
+        return b.messages.length - a.messages.length;
+      }
       const aTime = a.messages.length > 0 ? parseTimestamp(a.messages[a.messages.length - 1].timestamp || '0').getTime() : 0;
       const bTime = b.messages.length > 0 ? parseTimestamp(b.messages[b.messages.length - 1].timestamp || '0').getTime() : 0;
       return bTime - aTime;
