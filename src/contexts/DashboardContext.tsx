@@ -143,6 +143,32 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [aiCopilotMessages, setAiCopilotMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string; ts?: number }>>([]);
   const [aiChatSessionId, setAiChatSessionId] = useState<string | null>(null);
   const [aiCopilotModel, setAiCopilotModel] = useState<'haiku-3' | 'haiku-4.5' | 'sonnet-4.5' | 'sonnet-4.6' | 'opus-4.5' | 'opus-4.6'>('sonnet-4.6');
+  // When orgId becomes known, restore that org's saved model from org settings (fallback to localStorage)
+  useEffect(() => {
+    if (!orgId) return;
+    (async () => {
+      const { data } = await supabase.from('organizations').select('settings').eq('id', orgId).single();
+      const saved = (data?.settings as Record<string, unknown> | null)?.craig_model as string | undefined;
+      const fallback = typeof window !== 'undefined' ? localStorage.getItem(`vernacular-craig-model-${orgId}`) : null;
+      const pick = (saved || fallback) as typeof aiCopilotModel | undefined;
+      if (pick && ['haiku-3','haiku-4.5','sonnet-4.5','sonnet-4.6','opus-4.5','opus-4.6'].includes(pick)) {
+        setAiCopilotModel(pick);
+      }
+    })();
+  }, [orgId]);
+  // Persist model selection per-org (DB + localStorage)
+  useEffect(() => {
+    if (!orgId) return;
+    try { localStorage.setItem(`vernacular-craig-model-${orgId}`, aiCopilotModel); } catch {}
+    (async () => {
+      const { data } = await supabase.from('organizations').select('settings').eq('id', orgId).single();
+      const settings = (data?.settings as Record<string, unknown>) || {};
+      if (settings.craig_model === aiCopilotModel) return;
+      await supabase.from('organizations')
+        .update({ settings: { ...settings, craig_model: aiCopilotModel } })
+        .eq('id', orgId);
+    })();
+  }, [aiCopilotModel, orgId]);
   const [craigKnowledge, setCraigKnowledge] = useState('');
   const [orgKnowledge, setOrgKnowledge] = useState('');
 
