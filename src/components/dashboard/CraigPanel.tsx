@@ -462,7 +462,7 @@ export default function CraigPanel() {
     <div style={{
       width: 400, minWidth: 400, height: '100vh',
       display: 'flex', flexDirection: 'column',
-      background: '#0a0d18', borderLeft: '1px solid rgba(255,255,255,0.06)',
+      background: '#1a1f2e', borderLeft: '1px solid rgba(255,255,255,0.06)',
       position: 'relative',
     }}>
       {/* Header */}
@@ -474,7 +474,7 @@ export default function CraigPanel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
               width: 38, height: 38, borderRadius: 12, padding: 4,
-              background: '#0a0d18', border: '1.5px solid rgba(255,224,0,0.3)',
+              background: '#1a1f2e', border: '1.5px solid rgba(255,224,0,0.3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               position: 'relative',
               animation: loading && loadingStage === 'breathing' ? 'craigBreath 2s ease-in-out infinite' : 'none',
@@ -483,7 +483,7 @@ export default function CraigPanel() {
               <div style={{
                 position: 'absolute', bottom: -1, right: -1,
                 width: 10, height: 10, borderRadius: 5,
-                background: '#22C55E', border: '2px solid #0a0d18',
+                background: '#22C55E', border: '2px solid #1a1f2e',
               }} />
             </div>
             <div>
@@ -492,18 +492,14 @@ export default function CraigPanel() {
                 <div
                   title="Auto-text is OFF. Craig can draft replies but cannot send them — every message requires your approval."
                   style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5,
-                    padding: '2px 7px', borderRadius: 10,
+                    display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start',
+                    padding: '3px 8px', borderRadius: 8,
                     background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.04em',
-                    color: '#FCA5A5', fontFamily: "'Inter', sans-serif",
-                    cursor: 'default',
+                    fontFamily: "'Inter', sans-serif", cursor: 'default', lineHeight: 1.1,
                   }}
                 >
-                  <span style={{ width: 14, height: 8, borderRadius: 4, background: '#3a0e0e', border: '1px solid rgba(239,68,68,0.4)', position: 'relative', display: 'inline-block' }}>
-                    <span style={{ position: 'absolute', top: 0, left: 0, width: 6, height: 6, borderRadius: 3, background: '#EF4444' }} />
-                  </span>
-                  AUTO-TEXT OFF · DRAFTS ONLY
+                  <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.05em', color: '#FCA5A5' }}>AUTO-TEXT OFF</span>
+                  <span style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: '0.04em', color: 'rgba(252,165,165,0.7)', marginTop: 1 }}>DRAFTS ONLY</span>
                 </div>
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
