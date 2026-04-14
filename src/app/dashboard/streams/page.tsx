@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
-import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone } from '@/lib/utils';
+import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone, formatPhoneNumber } from '@/lib/utils';
 import type { ConversationColumn, Contact, Message } from '@/types/dashboard';
 
 export default function StreamsPage() {
@@ -633,7 +633,53 @@ export default function StreamsPage() {
                       />
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 12px' }}>
-                      {matches.length === 0 && <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>No matches</div>}
+                      {/* Start-with-raw-phone fallback when the user typed a number */}
+                      {qDigits.length >= 10 && (() => {
+                        const tenDigit = qDigits.slice(-10);
+                        const alreadyShown = matches.some(it => {
+                          const p = it.kind === 'conversation' ? it.col.contact?.phone : it.record.phone;
+                          return (p || '').replace(/\D/g, '').slice(-10) === tenDigit;
+                        });
+                        if (alreadyShown) return null;
+                        const formatted = formatPhoneNumber(tenDigit);
+                        return (
+                          <button onClick={() => {
+                            const newId = `new-phone-${tenDigit}-${Date.now()}`;
+                            const newCol = {
+                              id: newId,
+                              contact: {
+                                id: `phone-${tenDigit}`,
+                                name: formatted,
+                                initials: tenDigit.slice(-4),
+                                phone: `+1${tenDigit}`,
+                                tag: 'NEW',
+                                tagColor: '#2678FF',
+                                tagBg: 'rgba(38,120,255,0.1)',
+                              },
+                              messages: [],
+                            };
+                            setColumns(prev => [newCol, ...prev.filter(c => c.id !== col.id)]);
+                            setPinnedLeftColId(newId);
+                            setStickyLeftIds(prev => [newId, ...prev]);
+                            setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
+                          }} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                            padding: '10px 10px', border: 'none', cursor: 'pointer', textAlign: 'left', borderRadius: 8,
+                            background: 'rgba(38,120,255,0.06)',
+                          }}>
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 10, background: '#2678FF',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontSize: 16, flexShrink: 0,
+                            }}>+</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#0c0f1a' }}>Start new chat</div>
+                              <div style={{ fontSize: 11, color: '#2678FF', fontFamily: "'JetBrains Mono', monospace" }}>{formatted}</div>
+                            </div>
+                          </button>
+                        );
+                      })()}
+                      {matches.length === 0 && qDigits.length < 10 && <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>No matches</div>}
                       {matches.map(item => {
                         const isConv = item.kind === 'conversation';
                         const name = isConv ? (item.col.contact?.name || 'Unknown') : (item.record.full_name || `${item.record.first_name || ''} ${item.record.last_name || ''}`.trim() || 'Unknown');
