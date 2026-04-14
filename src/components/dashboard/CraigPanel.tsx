@@ -177,6 +177,14 @@ export default function CraigPanel() {
   } = useDashboard();
   const router = useRouter();
 
+  const [conversationalLearning, setConversationalLearning] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('vernacular-craig-learning');
+    return saved === null ? true : saved === '1';
+  });
+  useEffect(() => {
+    try { localStorage.setItem('vernacular-craig-learning', conversationalLearning ? '1' : '0'); } catch {}
+  }, [conversationalLearning]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -542,6 +550,44 @@ export default function CraigPanel() {
               fontFamily: "'Inter', sans-serif",
             }}>Close</button>
           </div>
+        </div>
+        {/* Conversational Learning toggle */}
+        <div style={{
+          marginTop: 10, padding: '8px 10px', borderRadius: 8,
+          background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.02em' }}>
+              Conversational Learning
+            </span>
+            <span
+              title="When on, Craig studies your approved messages on a regular basis to learn your texting style and tone, so future drafts match your voice more closely."
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 14, height: 14, borderRadius: 7,
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)',
+                fontSize: 9, fontWeight: 800, cursor: 'help',
+              }}
+            >i</span>
+          </div>
+          <button
+            onClick={() => setConversationalLearning(v => !v)}
+            role="switch"
+            aria-checked={conversationalLearning}
+            style={{
+              width: 34, height: 18, borderRadius: 9, border: 'none',
+              background: conversationalLearning ? '#22C55E' : 'rgba(255,255,255,0.12)',
+              position: 'relative', cursor: 'pointer', padding: 0,
+              transition: 'background 0.15s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 2, left: conversationalLearning ? 18 : 2,
+              width: 14, height: 14, borderRadius: 7, background: '#fff',
+              transition: 'left 0.15s',
+            }} />
+          </button>
         </div>
       </div>
 
