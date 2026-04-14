@@ -1,9 +1,15 @@
 'use client';
 
 import { useDashboard } from '@/contexts/DashboardContext';
+import { supabase } from '@/lib/supabase';
 
 export default function SettingsPage() {
   const { org, orgId, orgSettings, soundEnabled, setSoundEnabled, aiCopilotModel, setAiCopilotModel } = useDashboard();
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: '#f8f9fb', padding: 24 }}>
@@ -45,6 +51,15 @@ export default function SettingsPage() {
             </div>
             <input type="checkbox" checked={soundEnabled} onChange={e => setSoundEnabled(e.target.checked)} />
           </label>
+        </section>
+
+        <section style={{ padding: 20, borderRadius: 12, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Account</div>
+          <button onClick={signOut} style={{
+            width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)',
+            background: 'rgba(239,68,68,0.05)', color: '#DC2626',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}>Sign out</button>
         </section>
       </div>
     </div>
