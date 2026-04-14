@@ -580,14 +580,30 @@ export default function StreamsPage() {
           ) : (
             sortedColumns.map(col => {
               if (!col.contact) {
-                // Blank New Chat column — show a contact picker
-                const q = (inputValues[col.id] || '').toLowerCase();
-                const matches = q
-                  ? allConversations.filter(c => c.contact && (
-                      c.contact.name.toLowerCase().includes(q) ||
-                      (c.contact.phone || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))
-                    )).slice(0, 20)
-                  : allConversations.slice(0, 20);
+                // Blank New Chat column — show a contact picker that searches both
+                // existing conversations and the full contacts directory.
+                const q = (inputValues[col.id] || '').trim().toLowerCase();
+                const qDigits = q.replace(/\D/g, '');
+                const convMatches = allConversations.filter(c => c.contact && (
+                  !q ||
+                  c.contact.name.toLowerCase().includes(q) ||
+                  (qDigits && (c.contact.phone || '').replace(/\D/g, '').includes(qDigits))
+                ));
+                const convPhones = new Set(convMatches.map(c => (c.contact?.phone || '').replace(/\D/g, '').slice(-10)).filter(Boolean));
+                const contactMatches = contacts.filter(ct => {
+                  const phoneDigits = (ct.phone || '').replace(/\D/g, '').slice(-10);
+                  if (phoneDigits && convPhones.has(phoneDigits)) return false; // already shown via conversation
+                  if (!q) return true;
+                  const name = (ct.full_name || `${ct.first_name || ''} ${ct.last_name || ''}`).toLowerCase();
+                  return name.includes(q) || (qDigits && phoneDigits.includes(qDigits));
+                }).slice(0, 50);
+                type PickerItem =
+                  | { kind: 'conversation'; col: typeof col }
+                  | { kind: 'contact'; record: typeof contacts[number] };
+                const matches: PickerItem[] = [
+                  ...convMatches.slice(0, 20).map(c => ({ kind: 'conversation' as const, col: c })),
+                  ...contactMatches.slice(0, 30).map(r => ({ kind: 'contact' as const, record: r })),
+                ];
                 return (
                   <div key={col.id} id={`stream-col-${col.id}`} style={{
                     width: 340, minWidth: 340, display: 'flex', flexDirection: 'column',
@@ -618,37 +634,70 @@ export default function StreamsPage() {
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 12px' }}>
                       {matches.length === 0 && <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>No matches</div>}
-                      {matches.map(m => (
-                        <button key={m.id} onClick={() => {
-                          // Swap the blank col for the selected conversation — leftmost
-                          setColumns(prev => {
-                            const withoutBlank = prev.filter(c => c.id !== col.id);
-                            const alreadyOpen = withoutBlank.find(c => c.id === m.id);
-                            if (alreadyOpen) return [alreadyOpen, ...withoutBlank.filter(c => c.id !== m.id)];
-                            return [m, ...withoutBlank];
-                          });
-                          setPinnedLeftColId(m.id);
-                          setStickyLeftIds(prev => prev.includes(m.id) ? prev : [m.id, ...prev]);
-                          setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
-                        }} style={{
-                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                          padding: '8px 10px', border: 'none', background: 'transparent',
-                          cursor: 'pointer', textAlign: 'left', borderRadius: 8,
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <div style={{
-                            width: 32, height: 32, borderRadius: 10, background: 'rgba(38,120,255,0.08)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 11, fontWeight: 700, color: '#2678FF', flexShrink: 0,
-                          }}>{m.contact?.initials || '??'}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.contact?.name}</div>
-                            <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: "'JetBrains Mono', monospace" }}>{m.contact?.phone}</div>
-                          </div>
-                        </button>
-                      ))}
+                      {matches.map(item => {
+                        const isConv = item.kind === 'conversation';
+                        const name = isConv ? (item.col.contact?.name || 'Unknown') : (item.record.full_name || `${item.record.first_name || ''} ${item.record.last_name || ''}`.trim() || 'Unknown');
+                        const phone = isConv ? (item.col.contact?.phone || '') : (item.record.phone || '');
+                        const initials = isConv ? (item.col.contact?.initials || '??') : (name.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??');
+                        const key = isConv ? item.col.id : `contact-${item.record.id}`;
+                        return (
+                          <button key={key} onClick={() => {
+                            if (isConv) {
+                              const m = item.col;
+                              setColumns(prev => {
+                                const withoutBlank = prev.filter(c => c.id !== col.id);
+                                const alreadyOpen = withoutBlank.find(c => c.id === m.id);
+                                if (alreadyOpen) return [alreadyOpen, ...withoutBlank.filter(c => c.id !== m.id)];
+                                return [m, ...withoutBlank];
+                              });
+                              setPinnedLeftColId(m.id);
+                              setStickyLeftIds(prev => prev.includes(m.id) ? prev : [m.id, ...prev]);
+                            } else {
+                              // Contact with no existing conversation — synthesize a column
+                              const newId = `new-${item.record.id}-${Date.now()}`;
+                              const newCol = {
+                                id: newId,
+                                contact: {
+                                  id: item.record.id,
+                                  name,
+                                  initials,
+                                  phone,
+                                  tag: 'NEW',
+                                  tagColor: '#2678FF',
+                                  tagBg: 'rgba(38,120,255,0.1)',
+                                },
+                                messages: [],
+                              };
+                              setColumns(prev => {
+                                const withoutBlank = prev.filter(c => c.id !== col.id);
+                                return [newCol, ...withoutBlank];
+                              });
+                              setPinnedLeftColId(newId);
+                              setStickyLeftIds(prev => [newId, ...prev]);
+                            }
+                            setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
+                          }} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                            padding: '8px 10px', border: 'none', background: 'transparent',
+                            cursor: 'pointer', textAlign: 'left', borderRadius: 8,
+                          }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 10,
+                              background: isConv ? 'rgba(38,120,255,0.08)' : 'rgba(124,58,237,0.08)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 11, fontWeight: 700, color: isConv ? '#2678FF' : '#7C3AED', flexShrink: 0,
+                            }}>{initials}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                              <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: "'JetBrains Mono', monospace" }}>{phone}</div>
+                            </div>
+                            {!isConv && <span style={{ fontSize: 9, fontWeight: 700, color: '#7C3AED', background: 'rgba(124,58,237,0.1)', padding: '2px 6px', borderRadius: 4, letterSpacing: '0.04em' }}>NEW</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
