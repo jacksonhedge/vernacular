@@ -185,13 +185,23 @@ export default function StreamsPage() {
     return bTime - aTime;
   });
 
-  // Contact list for left panel — sorted by most-recent message to match streams' default order.
-  // Pinned / AI-drafted columns are NOT floated to top in the stack (only in streams).
+  // Contact list for left panel — sorted to mirror streams' left-to-right ordering.
   const activeChats = allConversations
     .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
     .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
     .filter(col => !stackHidden.has(col.id))
     .sort((a, b) => {
+      // Mirror sortedColumns priority: recentlySent > AI draft > unread > recent
+      if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
+      if (!recentlySentCols.has(a.id) && recentlySentCols.has(b.id)) return 1;
+      const getPriority = (col: ConversationColumn) => {
+        const last = col.messages[col.messages.length - 1];
+        if (last?.isAIDraft) return 0;
+        if (last?.direction === 'incoming') return 1;
+        return 2;
+      };
+      const pDiff = getPriority(a) - getPriority(b);
+      if (pDiff !== 0) return pDiff;
       const aTime = a.messages.length > 0 ? parseTimestamp(a.messages[a.messages.length - 1].timestamp || '0').getTime() : 0;
       const bTime = b.messages.length > 0 ? parseTimestamp(b.messages[b.messages.length - 1].timestamp || '0').getTime() : 0;
       return bTime - aTime;
