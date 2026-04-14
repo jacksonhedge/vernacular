@@ -1,8 +1,34 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { supabase } from '@/lib/supabase';
+
+const APP_MAP = `# App Layout (you can navigate here using [NAV:<route>])
+The Vernacular dashboard has these views. When a user asks you to take them somewhere, emit a [NAV:<route>] tag and a short confirmation.
+
+Main workspace:
+- [NAV:/dashboard/streams] Streams — iMessage-style conversation columns. The primary workspace. Left sidebar ("Stack") lists all conversations; right side shows opened ones as columns. Users can right-click a stack row for Move to top / Mark as unread / Remove / Hide.
+- [NAV:/dashboard/matrix] Matrix — 10x10 grid of contact tiles, color-coded by status. Used for bulk initiative staging.
+- [NAV:/dashboard/messages] Messages — flat timeline of every message across conversations.
+- [NAV:/dashboard/summary] Summary — table view: contact, last message, status, response rate.
+- [NAV:/dashboard/schedule] Schedule — events you or Craig scheduled (Overdue / Today / Upcoming / Unscheduled).
+
+Left nav:
+- [NAV:/dashboard] Dashboard home
+- [NAV:/dashboard/contacts] Contacts — full contact list.
+- [NAV:/dashboard/initiatives] Initiatives — grid of campaigns / groups. Each initiative has contacts, tone, examples.
+- [NAV:/dashboard/stations] Phone Lines — Mac stations that send/receive iMessages.
+- [NAV:/dashboard/team] Team — users in this org and their roles.
+- [NAV:/dashboard/integrations] Integrations — Intercom, Notion, Gmail, etc.
+- [NAV:/dashboard/settings] Settings — org info, default Craig model, sounds, sign out.
+- [NAV:/dashboard/profile] Profile — current user account.
+
+Rules:
+- You CAN navigate. Never tell the user "I can't control the UI" or "tap it yourself." Instead emit the [NAV:<route>] tag.
+- One nav per reply. Keep the rest of the reply short — just confirm where you took them.
+- If unsure which view, ask a single clarifying question.`;
 
 function PacMan({ size = 22 }: { size?: number; mouthFill?: string }) {
   return (
@@ -139,6 +165,7 @@ export default function CraigPanel() {
     dbInitiatives, setColumns, showAICopilot,
     aiChatSessionId, setAiChatSessionId,
   } = useDashboard();
+  const router = useRouter();
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -242,10 +269,11 @@ export default function CraigPanel() {
 
       const systemPrompt = [
         craigKnowledge || '',
+        `\n\n${APP_MAP}`,
         orgKnowledge ? `\n\n# Org Knowledge\n${orgKnowledge}` : '',
         initiativeList ? `\n\n# Initiatives\n${initiativeList}` : '',
         contactSummary ? `\n\n# Recent Contacts (top 30, last 3 msgs each)\n${contactSummary}` : '',
-      ].join('').trim() || 'You are Craig, an AI copilot for an iMessage CRM.';
+      ].join('').trim();
 
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/ai/chat', {
@@ -319,6 +347,18 @@ export default function CraigPanel() {
   // Any change that calls a real send from this function breaks the product promise.
   const CRAIG_AUTO_SEND_DISABLED = true;
   const handleCraigActions = (text: string) => {
+    // Navigation — Craig can move the user between dashboard views
+    const navMatch = text.match(/\[NAV:([^\]]+)\]/);
+    if (navMatch) {
+      const raw = navMatch[1].trim();
+      const allowed = [
+        '/dashboard', '/dashboard/streams', '/dashboard/matrix', '/dashboard/messages',
+        '/dashboard/summary', '/dashboard/schedule', '/dashboard/contacts',
+        '/dashboard/initiatives', '/dashboard/stations', '/dashboard/team',
+        '/dashboard/integrations', '/dashboard/settings', '/dashboard/profile',
+      ];
+      if (allowed.includes(raw)) router.push(raw);
+    }
     const sendMatch = text.match(/\[SEND:([^:]+):([^\]]+)\]/);
     if (sendMatch && CRAIG_AUTO_SEND_DISABLED) {
       const [, target, message] = sendMatch;
