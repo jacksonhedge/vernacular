@@ -1009,6 +1009,11 @@ export default function StreamsPage() {
                     }
                   }}]
               ),
+              { label: 'Mark as unread', action: () => {
+                setReadConversations(prev => {
+                  const next = new Set(prev); next.delete(chatContextMenu.colId); return next;
+                });
+              }},
               { label: 'Remove from streams', action: () => {
                 if (pinnedLeftColId === chatContextMenu.colId) setPinnedLeftColId(null);
                 removeColumn(chatContextMenu.colId);
