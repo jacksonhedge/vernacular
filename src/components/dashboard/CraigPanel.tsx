@@ -313,9 +313,14 @@ export default function CraigPanel() {
     }
   };
 
+  // AUTO-TEXT SAFETY GUARANTEE:
+  // Craig may only create pending AI drafts (isAIDraft: true). He must NEVER
+  // call sendMessage(), write to outbound_queue, or bypass human approval.
+  // Any change that calls a real send from this function breaks the product promise.
+  const CRAIG_AUTO_SEND_DISABLED = true;
   const handleCraigActions = (text: string) => {
     const sendMatch = text.match(/\[SEND:([^:]+):([^\]]+)\]/);
-    if (sendMatch) {
+    if (sendMatch && CRAIG_AUTO_SEND_DISABLED) {
       const [, target, message] = sendMatch;
       const targetDigits = target.replace(/\D/g, '').slice(-10);
       const col = columns.find(c => {
@@ -380,8 +385,26 @@ export default function CraigPanel() {
               }} />
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>Craig</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>Craig</div>
+                <div
+                  title="Auto-text is OFF. Craig can draft replies but cannot send them — every message requires your approval."
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '2px 7px', borderRadius: 10,
+                    background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)',
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.04em',
+                    color: '#FCA5A5', fontFamily: "'Inter', sans-serif",
+                    cursor: 'default',
+                  }}
+                >
+                  <span style={{ width: 14, height: 8, borderRadius: 4, background: '#3a0e0e', border: '1px solid rgba(239,68,68,0.4)', position: 'relative', display: 'inline-block' }}>
+                    <span style={{ position: 'absolute', top: 0, left: 0, width: 6, height: 6, borderRadius: 3, background: '#EF4444' }} />
+                  </span>
+                  AUTO-TEXT OFF
+                </div>
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
                 {loading ? (loadingStage === 'streaming' ? 'Writing...' : 'Thinking...') : 'AI Copilot'} · {aiCopilotModel}
               </div>
             </div>
