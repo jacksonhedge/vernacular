@@ -100,6 +100,7 @@ export default function StreamsPage() {
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
   const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string } | null>(null);
   const [previewCol, setPreviewCol] = useState<ConversationColumn | null>(null);
+  const [pinnedLeftColId, setPinnedLeftColId] = useState<string | null>(null);
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-phones') || '[]')); } catch { return new Set(); }
@@ -157,7 +158,9 @@ export default function StreamsPage() {
 
   // Sort columns
   const sortedColumns = [...filteredColumns].sort((a, b) => {
-    // Pinned first
+    // User-pinned leftmost always wins
+    if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
+    if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
     // Recently sent columns keep position
     if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
     if (!recentlySentCols.has(a.id) && recentlySentCols.has(b.id)) return 1;
@@ -191,6 +194,8 @@ export default function StreamsPage() {
     .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
     .filter(col => !stackHidden.has(col.id))
     .sort((a, b) => {
+      if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
+      if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
       // Mirror sortedColumns priority: recentlySent > AI draft > unread > recent
       if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
       if (!recentlySentCols.has(a.id) && recentlySentCols.has(b.id)) return 1;
@@ -830,6 +835,7 @@ export default function StreamsPage() {
               <button onClick={() => {
                 const colToOpen = previewCol;
                 setPreviewCol(null);
+                setPinnedLeftColId(colToOpen.id);
                 setRecentlySentCols(prev => new Set(prev).add(colToOpen.id));
                 setColumns(prev => {
                   if (prev.some(c => c.id === colToOpen.id)) {
