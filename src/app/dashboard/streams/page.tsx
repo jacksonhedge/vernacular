@@ -169,10 +169,12 @@ export default function StreamsPage() {
   }, [columns, scrolledTop]);
 
   // Filter columns by initiative + hidden phones. Blank New-Chat picker columns
-  // (no contact yet) always pass through both filters.
+  // and sticky-left columns always pass through the initiative filter so a
+  // user-chosen contact doesn't vanish because they're not in the active initiative.
   const filteredColumns = (activeInitiativeFilter
     ? columns.filter(col => {
       if (!col.contact) return true; // blank picker col
+      if (stickyLeftIds.includes(col.id)) return true; // user explicitly pinned
       if (!col.contact.phone) return false;
       return initiativePhones.has(normalizePhone(col.contact.phone));
     })
