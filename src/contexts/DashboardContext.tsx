@@ -657,7 +657,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   const addColumn = useCallback(() => {
     const newCol: ConversationColumn = { id: `col-${Date.now()}`, contact: null, messages: [] };
-    setColumns(prev => [...prev, newCol]);
+    setColumns(prev => [newCol, ...prev]);
   }, []);
 
   const removeColumn = useCallback((colId: string) => {

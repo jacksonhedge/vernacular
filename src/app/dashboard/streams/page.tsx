@@ -457,8 +457,8 @@ export default function StreamsPage() {
                   playSound('click');
                   setSelectedConversationId(col.id);
                   setReadConversations(prev => new Set(prev).add(col.id));
-                  // Make sure the col is in `columns` so sendMessage + live updates work while previewing
-                  setColumns(prev => prev.some(c => c.id === col.id) ? prev : [...prev, col]);
+                  // Make sure the col is in `columns` (prepended = leftmost) so it shows up first when the modal closes
+                  setColumns(prev => prev.some(c => c.id === col.id) ? prev : [col, ...prev]);
                   setPreviewColId(col.id);
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
