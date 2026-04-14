@@ -28,7 +28,17 @@ Left nav:
 Rules:
 - You CAN navigate. Never tell the user "I can't control the UI" or "tap it yourself." Instead emit the [NAV:<route>] tag.
 - One nav per reply. Keep the rest of the reply short — just confirm where you took them.
-- If unsure which view, ask a single clarifying question.`;
+- If unsure which view, ask a single clarifying question.
+
+# Drafting texts
+You CAN stage outbound texts as drafts that show up in the Streams view outlined in yellow, awaiting user approval. You NEVER send them directly (AUTO-TEXT is OFF).
+
+Use [SEND:<name_or_phone>:<message>] to stage a draft. You can emit multiple [SEND] tags in one reply to queue several messages at once. If the target phone number isn't already open as a stream, a new stream column is auto-created and the draft appears inside it. The user then reviews and taps Send to actually send.
+
+When a user asks you to "send" or "draft" a text:
+1. Emit one [SEND:target:message] tag per message (include all of them in the same reply).
+2. Navigate the user to streams with [NAV:/dashboard/streams] so they can see and approve.
+3. Keep your spoken reply under 2 sentences — just acknowledge.`;
 
 function PacMan({ size = 22 }: { size?: number; mouthFill?: string }) {
   return (
@@ -359,23 +369,67 @@ export default function CraigPanel() {
       ];
       if (allowed.includes(raw)) router.push(raw);
     }
-    const sendMatch = text.match(/\[SEND:([^:]+):([^\]]+)\]/);
-    if (sendMatch && CRAIG_AUTO_SEND_DISABLED) {
-      const [, target, message] = sendMatch;
-      const targetDigits = target.replace(/\D/g, '').slice(-10);
-      const col = columns.find(c => {
-        if (!c.contact) return false;
-        const nameMatch = c.contact.name.toLowerCase().includes(target.toLowerCase());
-        const phoneMatch = targetDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === targetDigits;
-        return nameMatch || phoneMatch;
+    // Support MULTIPLE [SEND:...] tags per reply + auto-create a synthetic column
+    // when Craig is texting a phone that isn't already open as a stream.
+    const sendMatches = [...text.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)];
+    if (sendMatches.length && CRAIG_AUTO_SEND_DISABLED) {
+      let createdColId: string | null = null;
+      sendMatches.forEach((m, idx) => {
+        const target = m[1];
+        const message = m[2].trim();
+        const targetDigits = target.replace(/\D/g, '').slice(-10);
+
+        // 1) Try to match an existing column (by name or phone last-10)
+        let matchedCol = columns.find(c => {
+          if (!c.contact) return false;
+          const nameMatch = c.contact.name.toLowerCase().includes(target.toLowerCase());
+          const phoneMatch = targetDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === targetDigits;
+          return nameMatch || phoneMatch;
+        });
+
+        // 2) If nothing matches AND the target is a phone number, synthesize a new column
+        if (!matchedCol && targetDigits.length >= 10) {
+          const newId = createdColId || `new-phone-${targetDigits}-${Date.now()}`;
+          if (!createdColId) {
+            createdColId = newId;
+            const nameLabel = target.replace(/\D/g, '').length >= 10
+              ? `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`
+              : target.trim();
+            const newCol = {
+              id: newId,
+              contact: {
+                id: `phone-${targetDigits}`,
+                name: nameLabel,
+                initials: targetDigits.slice(-4),
+                phone: `+1${targetDigits}`,
+                tag: 'NEW' as const,
+                tagColor: '#2678FF',
+                tagBg: 'rgba(38,120,255,0.1)',
+              },
+              messages: [],
+            };
+            setColumns(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
+          }
+          matchedCol = columns.find(c => c.id === newId) || {
+            id: newId, contact: null, messages: [],
+          };
+        }
+
+        if (matchedCol) {
+          const draftMsg = {
+            id: `ai-draft-${Date.now()}-${idx}`,
+            text: message,
+            direction: 'outgoing' as const,
+            timestamp: new Date().toISOString(),
+            isAIDraft: true,
+            status: 'Draft',
+          };
+          const targetId = matchedCol.id;
+          setColumns(prev => prev.map(c => c.id === targetId
+            ? { ...c, messages: [...c.messages, draftMsg] }
+            : c));
+        }
       });
-      if (col) {
-        const draftMsg = {
-          id: `ai-draft-${Date.now()}`, text: message.trim(), direction: 'outgoing' as const,
-          timestamp: new Date().toISOString(), isAIDraft: true, status: 'Draft',
-        };
-        setColumns(prev => prev.map(c => c.id === col.id ? { ...c, messages: [...c.messages, draftMsg] } : c));
-      }
     }
   };
 
