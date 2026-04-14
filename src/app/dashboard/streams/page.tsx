@@ -550,7 +550,81 @@ export default function StreamsPage() {
               </div>
             </div>
           ) : (
-            sortedColumns.filter(col => col.contact).map(col => {
+            sortedColumns.map(col => {
+              if (!col.contact) {
+                // Blank New Chat column — show a contact picker
+                const q = (inputValues[col.id] || '').toLowerCase();
+                const matches = q
+                  ? allConversations.filter(c => c.contact && (
+                      c.contact.name.toLowerCase().includes(q) ||
+                      (c.contact.phone || '').replace(/\D/g, '').includes(q.replace(/\D/g, ''))
+                    )).slice(0, 20)
+                  : allConversations.slice(0, 20);
+                return (
+                  <div key={col.id} id={`stream-col-${col.id}`} style={{
+                    width: 340, minWidth: 340, display: 'flex', flexDirection: 'column',
+                    background: '#fff', borderRight: '1px solid rgba(0,0,0,0.06)', borderTop: '3px solid #2678FF',
+                  }}>
+                    <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0c0f1a' }}>New conversation</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af' }}>Search a contact to start</div>
+                      </div>
+                      <button onClick={() => removeColumn(col.id)} style={{
+                        width: 24, height: 24, borderRadius: 6, border: 'none',
+                        background: 'rgba(0,0,0,0.04)', color: '#9ca3af', cursor: 'pointer', fontSize: 12,
+                      }}>×</button>
+                    </div>
+                    <div style={{ padding: 12 }}>
+                      <input
+                        autoFocus
+                        value={inputValues[col.id] || ''}
+                        onChange={e => setInputValues(prev => ({ ...prev, [col.id]: e.target.value }))}
+                        placeholder="Search by name or phone…"
+                        style={{
+                          width: '100%', padding: '9px 12px', borderRadius: 8,
+                          border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
+                          fontSize: 13, fontFamily: "'Inter', sans-serif",
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px 12px' }}>
+                      {matches.length === 0 && <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>No matches</div>}
+                      {matches.map(m => (
+                        <button key={m.id} onClick={() => {
+                          // Swap the blank col for the selected conversation — leftmost
+                          setColumns(prev => {
+                            const withoutBlank = prev.filter(c => c.id !== col.id);
+                            const alreadyOpen = withoutBlank.find(c => c.id === m.id);
+                            if (alreadyOpen) return [alreadyOpen, ...withoutBlank.filter(c => c.id !== m.id)];
+                            return [m, ...withoutBlank];
+                          });
+                          setPinnedLeftColId(m.id);
+                          setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
+                        }} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '8px 10px', border: 'none', background: 'transparent',
+                          cursor: 'pointer', textAlign: 'left', borderRadius: 8,
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 10, background: 'rgba(38,120,255,0.08)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 11, fontWeight: 700, color: '#2678FF', flexShrink: 0,
+                          }}>{m.contact?.initials || '??'}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#0c0f1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.contact?.name}</div>
+                            <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: "'JetBrains Mono', monospace" }}>{m.contact?.phone}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return (() => {
               const lastMsg = col.messages[col.messages.length - 1];
               const hasUnread = lastMsg?.direction === 'incoming';
               const isSelected = selectedConversationId === col.id;
@@ -805,6 +879,7 @@ export default function StreamsPage() {
                   </div>
                 </div>
               );
+            })();
             })
           )}
         </div>
