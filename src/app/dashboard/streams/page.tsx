@@ -104,6 +104,7 @@ export default function StreamsPage() {
     ? (columns.find(c => c.id === previewColId) || allConversations.find(c => c.id === previewColId) || null)
     : null;
   const [pinnedLeftColId, setPinnedLeftColId] = useState<string | null>(null);
+  const [stickyLeftIds, setStickyLeftIds] = useState<string[]>([]); // cols that stay leftmost until explicitly closed
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-phones') || '[]')); } catch { return new Set(); }
@@ -131,6 +132,15 @@ export default function StreamsPage() {
     window.addEventListener('scroll', close, true);
     return () => { window.removeEventListener('click', close); window.removeEventListener('scroll', close, true); };
   }, [chatContextMenu]);
+
+  // Drop sticky-left entries for columns that no longer exist (closed)
+  useEffect(() => {
+    setStickyLeftIds(prev => {
+      const openIds = new Set(columns.map(c => c.id));
+      const next = prev.filter(id => openIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [columns]);
 
   // Escape closes the preview modal
   useEffect(() => {
@@ -174,6 +184,12 @@ export default function StreamsPage() {
     // Blank New-Chat picker columns (no contact yet) win everything — always leftmost
     if (!a.contact && b.contact) return -1;
     if (a.contact && !b.contact) return 1;
+    // Sticky cols (from New Chat picker) stay leftmost until closed — in insertion order
+    const aStick = stickyLeftIds.indexOf(a.id);
+    const bStick = stickyLeftIds.indexOf(b.id);
+    if (aStick !== -1 && bStick === -1) return -1;
+    if (aStick === -1 && bStick !== -1) return 1;
+    if (aStick !== -1 && bStick !== -1) return aStick - bStick;
     // User-pinned leftmost always wins
     if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
     if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
@@ -211,6 +227,11 @@ export default function StreamsPage() {
     .filter(col => !stackHidden.has(col.id))
     .sort((a, b) => {
       // Exact mirror of sortedColumns so the stack order matches streams left-to-right
+      const aStick = stickyLeftIds.indexOf(a.id);
+      const bStick = stickyLeftIds.indexOf(b.id);
+      if (aStick !== -1 && bStick === -1) return -1;
+      if (aStick === -1 && bStick !== -1) return 1;
+      if (aStick !== -1 && bStick !== -1) return aStick - bStick;
       if (a.id === pinnedLeftColId && b.id !== pinnedLeftColId) return -1;
       if (b.id === pinnedLeftColId && a.id !== pinnedLeftColId) return 1;
       if (recentlySentCols.has(a.id) && !recentlySentCols.has(b.id)) return -1;
@@ -605,6 +626,7 @@ export default function StreamsPage() {
                             return [m, ...withoutBlank];
                           });
                           setPinnedLeftColId(m.id);
+                          setStickyLeftIds(prev => prev.includes(m.id) ? prev : [m.id, ...prev]);
                           setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
                         }} style={{
                           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
