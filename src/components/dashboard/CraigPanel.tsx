@@ -406,28 +406,20 @@ export default function CraigPanel() {
                 <option value="opus-4.5">Opus 4.5</option>
               </optgroup>
             </select>
-            {true && (
-              <button onClick={clearChat} title="New chat" style={{
-                width: 28, height: 28, borderRadius: 7,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </button>
-            )}
-            <button onClick={() => setShowAICopilot(false)} style={{
-              width: 28, height: 28, borderRadius: 7,
+            <button onClick={clearChat} title="New chat" style={{
+              height: 28, padding: '0 10px', borderRadius: 7,
               background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
+              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+              fontFamily: "'Inter', sans-serif",
+            }}>New</button>
+            <button onClick={() => setShowAICopilot(false)} title="Close Craig" style={{
+              height: 28, padding: '0 10px', borderRadius: 7,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+              fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+              fontFamily: "'Inter', sans-serif",
+            }}>Close</button>
           </div>
         </div>
       </div>
