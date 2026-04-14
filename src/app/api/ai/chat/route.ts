@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { deductCredits, checkBillingStatus } from '@/lib/credits';
-import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODELS: Record<string, string> = {
@@ -22,10 +22,9 @@ export async function POST(request: NextRequest) {
     const authUser = await getAuthUser(request);
     if (!authUser) return unauthorized();
 
-    const { messages, model, systemPrompt, organizationId } = await request.json();
+    const { messages, model, systemPrompt } = await request.json();
 
-    // Prevent cross-org usage: if client passed an org id, it must match the user's org
-    if (organizationId && organizationId !== authUser.org_id) return forbidden();
+    // Always use the authenticated user's org — ignore client-supplied org id
     const orgId = authUser.org_id;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
