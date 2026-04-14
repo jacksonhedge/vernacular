@@ -401,7 +401,7 @@ export default function CraigPanel() {
                   <span style={{ width: 14, height: 8, borderRadius: 4, background: '#3a0e0e', border: '1px solid rgba(239,68,68,0.4)', position: 'relative', display: 'inline-block' }}>
                     <span style={{ position: 'absolute', top: 0, left: 0, width: 6, height: 6, borderRadius: 3, background: '#EF4444' }} />
                   </span>
-                  AUTO-TEXT OFF
+                  AUTO-TEXT OFF · DRAFTS ONLY
                 </div>
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace", marginTop: 2 }}>
@@ -412,9 +412,13 @@ export default function CraigPanel() {
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <select value={aiCopilotModel} onChange={e => setAiCopilotModel(e.target.value as typeof aiCopilotModel)} style={{
               padding: '5px 8px', borderRadius: 6,
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600,
+              background: '#fff', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#0c0f1a', fontSize: 10, fontWeight: 700,
               cursor: 'pointer', outline: 'none', fontFamily: "'JetBrains Mono', monospace",
+              appearance: 'none', WebkitAppearance: 'none',
+              paddingRight: 22,
+              backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%230c0f1a\' stroke-width=\'3\' stroke-linecap=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>")',
+              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center',
             }}>
               <optgroup label="Haiku">
                 <option value="haiku-4.5">Haiku 4.5</option>

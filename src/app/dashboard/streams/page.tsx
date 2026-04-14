@@ -132,6 +132,14 @@ export default function StreamsPage() {
     return () => { window.removeEventListener('click', close); window.removeEventListener('scroll', close, true); };
   }, [chatContextMenu]);
 
+  // Escape closes the preview modal
+  useEffect(() => {
+    if (!previewColId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewColId(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [previewColId]);
+
   useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
 
   // Auto-scroll each column to bottom on load / new message — unless user toggled it to top
