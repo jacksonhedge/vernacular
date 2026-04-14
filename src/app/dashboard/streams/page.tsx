@@ -536,7 +536,10 @@ export default function StreamsPage() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {activeChats.map(col => {
               const lastMsg = col.messages[col.messages.length - 1];
-              const hasUnread = lastMsg?.direction === 'incoming' && !readConversations.has(col.id);
+              const readAt = readConversations[col.id];
+              const msgTs = lastMsg?.timestamp ? parseTimestamp(lastMsg.timestamp).getTime() : 0;
+              const readTs = readAt ? new Date(readAt).getTime() : 0;
+              const hasUnread = lastMsg?.direction === 'incoming' && (!readAt || msgTs > readTs);
               const hasAiDraft = col.messages.some(m => m.isAIDraft);
               const isSelected = selectedConversationId === col.id;
               const isOpen = columns.some(c => c.id === col.id);
@@ -555,7 +558,7 @@ export default function StreamsPage() {
                   onClick={() => {
                   playSound('click');
                   setSelectedConversationId(col.id);
-                  setReadConversations(prev => new Set(prev).add(col.id));
+                  setReadConversations(prev => ({ ...prev, [col.id]: new Date().toISOString() }));
                   // Make sure the col is in `columns` (prepended = leftmost) so it shows up first when the modal closes
                   setColumns(prev => prev.some(c => c.id === col.id) ? prev : [col, ...prev]);
                   setPreviewColId(col.id);
@@ -1540,7 +1543,7 @@ export default function StreamsPage() {
               ),
               { label: 'Mark as unread', action: () => {
                 setReadConversations(prev => {
-                  const next = new Set(prev); next.delete(chatContextMenu.colId); return next;
+                  const next = { ...prev }; delete next[chatContextMenu.colId]; return next;
                 });
               }},
               { label: 'Remove from streams', action: () => {

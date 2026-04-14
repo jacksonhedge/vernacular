@@ -80,8 +80,8 @@ interface DashboardContextValue {
   // Conversations
   selectedConversationId: string | null;
   setSelectedConversationId: (id: string | null) => void;
-  readConversations: Set<string>;
-  setReadConversations: React.Dispatch<React.SetStateAction<Set<string>>>;
+  readConversations: Record<string, string>;
+  setReadConversations: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   pinnedConversations: Set<string>;
   setPinnedConversations: React.Dispatch<React.SetStateAction<Set<string>>>;
   dismissedColumns: Set<string>;
@@ -157,16 +157,25 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Conversations
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [readConversations, setReadConversationsRaw] = useState<Set<string>>(() => {
+  const [readConversations, setReadConversationsRaw] = useState<Record<string, string>>(() => {
     if (typeof window !== 'undefined') {
-      try { return new Set(JSON.parse(localStorage.getItem('vernacular-read-conversations') || '[]')); } catch { return new Set(); }
+      try {
+        const raw = localStorage.getItem('vernacular-read-conversations') || '{}';
+        const parsed = JSON.parse(raw);
+        // Back-compat: old format was an array of colIds — convert to Record with epoch timestamp
+        if (Array.isArray(parsed)) {
+          const now = new Date().toISOString();
+          return Object.fromEntries(parsed.map((id: string) => [id, now]));
+        }
+        return parsed as Record<string, string>;
+      } catch { return {}; }
     }
-    return new Set();
+    return {};
   });
-  const setReadConversations: React.Dispatch<React.SetStateAction<Set<string>>> = (updater) => {
+  const setReadConversations: React.Dispatch<React.SetStateAction<Record<string, string>>> = (updater) => {
     setReadConversationsRaw(prev => {
-      const next = typeof updater === 'function' ? (updater as (p: Set<string>) => Set<string>)(prev) : updater;
-      try { localStorage.setItem('vernacular-read-conversations', JSON.stringify([...next])); } catch {}
+      const next = typeof updater === 'function' ? (updater as (p: Record<string, string>) => Record<string, string>)(prev) : updater;
+      try { localStorage.setItem('vernacular-read-conversations', JSON.stringify(next)); } catch {}
       return next;
     });
   };
