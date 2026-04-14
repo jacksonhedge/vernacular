@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone } from '@/lib/utils';
-import type { ConversationColumn, Contact } from '@/types/dashboard';
+import type { ConversationColumn, Contact, Message } from '@/types/dashboard';
 
 export default function StreamsPage() {
   const {
@@ -99,6 +99,7 @@ export default function StreamsPage() {
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
   const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string } | null>(null);
+  const [previewCol, setPreviewCol] = useState<ConversationColumn | null>(null);
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
     try { return new Set(JSON.parse(localStorage.getItem('vernacular-hidden-phones') || '[]')); } catch { return new Set(); }
@@ -422,24 +423,7 @@ export default function StreamsPage() {
                   playSound('click');
                   setSelectedConversationId(col.id);
                   setReadConversations(prev => new Set(prev).add(col.id));
-                  // Pin newly opened stream to leftmost position
-                  setRecentlySentCols(prev => new Set(prev).add(col.id));
-                  // Add to columns if not present
-                  setColumns(prev => {
-                    if (prev.some(c => c.id === col.id)) {
-                      const existing = prev.find(c => c.id === col.id)!;
-                      return [existing, ...prev.filter(c => c.id !== col.id)];
-                    }
-                    return [col, ...prev];
-                  });
-                  setDismissedColumns(prev => {
-                    const next = new Set(prev); next.delete(col.id);
-                    localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
-                    return next;
-                  });
-                  setTimeout(() => {
-                    document.getElementById(`stream-col-${col.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'start' });
-                  }, 50);
+                  setPreviewCol(col);
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
                   padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
@@ -795,6 +779,106 @@ export default function StreamsPage() {
                 {item.label}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Conversation preview modal (click on sidebar conversation) */}
+      {previewCol && (
+        <div onClick={() => setPreviewCol(null)} style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 40,
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: 560, maxWidth: '100%', maxHeight: '85vh',
+            background: '#fff', borderRadius: 16, display: 'flex', flexDirection: 'column',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: 'rgba(38,120,255,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, color: '#2678FF',
+              }}>
+                {previewCol.contact?.initials}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0c0f1a' }}>
+                  {previewCol.contact?.name}
+                </div>
+                <div style={{ fontSize: 12, color: '#2678FF', fontFamily: "'JetBrains Mono', monospace" }}>
+                  {previewCol.contact?.phone}
+                </div>
+              </div>
+              <button onClick={() => {
+                const colToOpen = previewCol;
+                setPreviewCol(null);
+                setRecentlySentCols(prev => new Set(prev).add(colToOpen.id));
+                setColumns(prev => {
+                  if (prev.some(c => c.id === colToOpen.id)) {
+                    const existing = prev.find(c => c.id === colToOpen.id)!;
+                    return [existing, ...prev.filter(c => c.id !== colToOpen.id)];
+                  }
+                  return [colToOpen, ...prev];
+                });
+                setDismissedColumns(prev => {
+                  const next = new Set(prev); next.delete(colToOpen.id);
+                  localStorage.setItem('vernacular-dismissed', JSON.stringify([...next]));
+                  return next;
+                });
+                setTimeout(() => {
+                  document.getElementById(`stream-col-${colToOpen.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'start' });
+                }, 50);
+              }} style={{
+                padding: '7px 12px', borderRadius: 8, border: 'none',
+                background: '#2678FF', color: '#fff', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer',
+              }}>Open as Stream</button>
+              <button onClick={() => setPreviewCol(null)} style={{
+                width: 30, height: 30, borderRadius: 8, border: 'none',
+                background: 'rgba(0,0,0,0.04)', color: '#9ca3af', cursor: 'pointer',
+                fontSize: 14,
+              }}>×</button>
+            </div>
+            {/* Messages */}
+            <div ref={el => {
+              if (el) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+            }} style={{
+              flex: 1, overflowY: 'auto', padding: '16px 20px',
+              display: 'flex', flexDirection: 'column', gap: 6,
+              background: '#f8f9fb',
+            }}>
+              {previewCol.messages.map((msg: Message) => {
+                const isOutgoing = msg.direction === 'outgoing';
+                const isDraft = msg.isAIDraft;
+                return (
+                  <div key={msg.id} style={{ display: 'flex', justifyContent: isOutgoing ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '78%', padding: '9px 14px',
+                      borderRadius: isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                      background: isDraft ? '#FEF3C7' : isOutgoing ? '#2678FF' : '#fff',
+                      color: isDraft ? '#92400E' : isOutgoing ? '#fff' : '#0c0f1a',
+                      fontSize: 13, lineHeight: 1.45,
+                      border: isDraft ? '1px solid rgba(245,158,11,0.3)' : isOutgoing ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                      wordBreak: 'break-word',
+                    }}>
+                      {msg.text}
+                      <div style={{ fontSize: 10, marginTop: 4, opacity: 0.6, textAlign: isOutgoing ? 'right' : 'left', fontFamily: "'JetBrains Mono', monospace" }}>
+                        {fmtMsgTime(msg.timestamp)}
+                        {isDraft && ' · AI Draft'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
