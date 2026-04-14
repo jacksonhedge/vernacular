@@ -1254,6 +1254,24 @@ export default function StreamsPage() {
                   {previewCol.contact?.phone}
                 </div>
               </div>
+              <button
+                onClick={() => {
+                  // Ensure col is in `columns` so Contact Info modal can find it, then open the modal
+                  setColumns(prev => prev.some(c => c.id === previewCol.id) ? prev : [previewCol, ...prev]);
+                  setContactInfoColId(previewCol.id);
+                  setContactInfoDraft({
+                    name: previewCol.contact?.name || '',
+                    email: '',
+                    notes: '',
+                    importText: '',
+                  });
+                }}
+                style={{
+                  padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                  background: '#fff', color: '#0c0f1a', fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >Edit Contact</button>
               <button onClick={() => {
                 const colToOpen = previewCol;
                 setPreviewColId(null);
