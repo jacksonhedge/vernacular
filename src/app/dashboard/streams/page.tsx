@@ -109,6 +109,8 @@ export default function StreamsPage() {
   const [nameDraft, setNameDraft] = useState('');
   const [contactInfoColId, setContactInfoColId] = useState<string | null>(null);
   const [contactInfoDraft, setContactInfoDraft] = useState<{ name: string; email: string; notes: string; importText: string }>({ name: '', email: '', notes: '', importText: '' });
+  const [contactInfoStatus, setContactInfoStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [contactInfoError, setContactInfoError] = useState<string>('');
   const [stickyLeftIds, setStickyLeftIds] = useState<string[]>([]); // cols that stay leftmost until explicitly closed
   const [hiddenPhones, setHiddenPhones] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -139,10 +141,15 @@ export default function StreamsPage() {
   }, [chatContextMenu]);
 
   // Persist a contact name change across Supabase + allConversations + columns so
-  // every view (sidebar stack, open streams, preview modal) reflects the new name.
-  const persistContactName = async (col: ConversationColumn, newName: string, extras?: { email?: string; notes?: string }) => {
+  // every view reflects the new name. Returns { ok, error } so callers can surface it.
+  const persistContactName = async (
+    col: ConversationColumn,
+    newName: string,
+    extras?: { email?: string; notes?: string },
+  ): Promise<{ ok: boolean; error?: string }> => {
     const trimmed = newName.trim();
-    if (!trimmed || !col.contact) return;
+    if (!trimmed) return { ok: false, error: 'Name cannot be empty.' };
+    if (!col.contact) return { ok: false, error: 'No contact attached to this column.' };
     const phoneDigits = (col.contact.phone || '').replace(/\D/g, '').slice(-10);
     const initials = trimmed.split(' ').filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '??';
 
@@ -159,33 +166,42 @@ export default function StreamsPage() {
       return c;
     }));
 
-    // 2) Supabase upsert on (organization_id, phone) so future fetches see the new name
-    if (!orgId || !phoneDigits) return;
+    if (!orgId) return { ok: false, error: 'No organization loaded. Reload and try again.' };
+    if (!phoneDigits) return { ok: true }; // synthetic contact with no phone — local only
+
     const e164 = `+1${phoneDigits}`;
     try {
-      const { data: existing } = await supabase.from('contacts')
+      const { data: existing, error: findErr } = await supabase.from('contacts')
         .select('id')
         .eq('organization_id', orgId)
         .eq('phone', e164)
         .limit(1)
         .maybeSingle();
+      if (findErr) return { ok: false, error: findErr.message };
+
       const parts = trimmed.split(' ');
       const first_name = parts[0] || '';
       const last_name = parts.slice(1).join(' ') || '';
       const patch: Record<string, unknown> = {
         full_name: trimmed, first_name, last_name, updated_at: new Date().toISOString(),
       };
-      if (extras?.email) patch.email = extras.email;
-      if (extras?.notes) patch.notes = extras.notes;
+      if (extras?.email !== undefined) patch.email = extras.email || null;
+      if (extras?.notes !== undefined) patch.notes = extras.notes || null;
+
       if (existing?.id) {
-        await supabase.from('contacts').update(patch).eq('id', existing.id);
+        const { error } = await supabase.from('contacts').update(patch).eq('id', existing.id);
+        if (error) return { ok: false, error: error.message };
       } else {
-        await supabase.from('contacts').insert({
+        const { error } = await supabase.from('contacts').insert({
           organization_id: orgId, phone: e164, full_name: trimmed, first_name, last_name,
           email: extras?.email || null, notes: extras?.notes || null,
         });
+        if (error) return { ok: false, error: error.message };
       }
-    } catch {}
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'Unknown error' };
+    }
   };
 
   // Drop sticky-left entries for columns that no longer exist (closed)
@@ -1189,30 +1205,54 @@ export default function StreamsPage() {
       {contactInfoColId && (() => {
         const col = columns.find(c => c.id === contactInfoColId);
         if (!col) return null;
-        const close = () => setContactInfoColId(null);
+        const close = () => {
+          setContactInfoColId(null);
+          setContactInfoStatus('idle');
+          setContactInfoError('');
+        };
         const save = async () => {
+          setContactInfoStatus('saving');
+          setContactInfoError('');
           const trimmed = contactInfoDraft.name.trim();
+
+          // 1) Persist contact record
           if (trimmed) {
-            await persistContactName(col, trimmed, { email: contactInfoDraft.email, notes: contactInfoDraft.notes });
+            const res = await persistContactName(col, trimmed, {
+              email: contactInfoDraft.email,
+              notes: contactInfoDraft.notes,
+            });
+            if (!res.ok) {
+              setContactInfoStatus('error');
+              setContactInfoError(res.error || 'Failed to save contact.');
+              return;
+            }
           }
-          const phone = col.contact?.phone || '';
-          const combined = [
-            contactInfoDraft.email ? `Email: ${contactInfoDraft.email}` : '',
-            contactInfoDraft.notes ? `Notes:\n${contactInfoDraft.notes}` : '',
-            contactInfoDraft.importText ? `Previous conversation history:\n${contactInfoDraft.importText}` : '',
-          ].filter(Boolean).join('\n\n');
-          if (combined && orgId) {
+
+          // 2) Optional: write imported chat history to org_knowledge for Craig
+          if (contactInfoDraft.importText.trim() && orgId) {
+            const phone = col.contact?.phone || '';
             try {
-              await supabase.from('org_knowledge').insert({
+              const { error } = await supabase.from('org_knowledge').insert({
                 organization_id: orgId,
                 category: 'contact_memory',
-                title: `Contact: ${trimmed || col.contact?.name} ${phone ? `(${phone})` : ''}`.trim(),
-                content: combined,
+                title: `Contact: ${trimmed || col.contact?.name || ''} ${phone ? `(${phone})` : ''}`.trim(),
+                content: `Previous conversation history:\n${contactInfoDraft.importText}`,
                 enabled: true,
               });
-            } catch {}
+              if (error) {
+                setContactInfoStatus('error');
+                setContactInfoError(`Contact saved, but chat import failed: ${error.message}`);
+                return;
+              }
+            } catch (e) {
+              setContactInfoStatus('error');
+              setContactInfoError(`Contact saved, but chat import failed: ${e instanceof Error ? e.message : 'unknown error'}`);
+              return;
+            }
           }
-          close();
+
+          setContactInfoStatus('success');
+          setTimeout(close, 900);
         };
         return (
           <div onClick={close} style={{
@@ -1250,9 +1290,57 @@ export default function StreamsPage() {
                     rows={6} placeholder={'Them: hey man how\u2019s it going\nYou: lmk when you want to hop on\n…'} style={{ ...ciInput, resize: 'vertical', minHeight: 120, fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }} />
                 </FieldRow>
               </div>
-              <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={close} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                <button onClick={save} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#2678FF', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+              <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {contactInfoStatus === 'error' && (
+                    <div style={{
+                      padding: '6px 10px', borderRadius: 6,
+                      background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                      fontSize: 11, fontWeight: 600, color: '#DC2626', lineHeight: 1.3,
+                    }}>{contactInfoError}</div>
+                  )}
+                  {contactInfoStatus === 'success' && (
+                    <div style={{
+                      padding: '6px 10px', borderRadius: 6,
+                      background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)',
+                      fontSize: 11, fontWeight: 700, color: '#16A34A',
+                    }}>Saved · visible across every view</div>
+                  )}
+                </div>
+                <button
+                  onClick={close}
+                  disabled={contactInfoStatus === 'saving'}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)',
+                    background: '#fff', color: '#6b7280', fontSize: 12, fontWeight: 700,
+                    cursor: contactInfoStatus === 'saving' ? 'default' : 'pointer',
+                    opacity: contactInfoStatus === 'saving' ? 0.5 : 1,
+                  }}
+                >Cancel</button>
+                <button
+                  onClick={save}
+                  disabled={contactInfoStatus === 'saving' || !contactInfoDraft.name.trim()}
+                  style={{
+                    padding: '8px 14px', borderRadius: 8, border: 'none',
+                    background: contactInfoStatus === 'success' ? '#22C55E'
+                      : contactInfoStatus === 'saving' ? '#93c5fd'
+                      : !contactInfoDraft.name.trim() ? 'rgba(0,0,0,0.08)' : '#2678FF',
+                    color: !contactInfoDraft.name.trim() && contactInfoStatus === 'idle' ? '#9ca3af' : '#fff',
+                    fontSize: 12, fontWeight: 700,
+                    cursor: contactInfoStatus === 'saving' || !contactInfoDraft.name.trim() ? 'default' : 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {contactInfoStatus === 'saving' && (
+                    <span style={{
+                      width: 10, height: 10, borderRadius: 5,
+                      border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff',
+                      animation: 'contactInfoSpin 0.8s linear infinite', display: 'inline-block',
+                    }} />
+                  )}
+                  {contactInfoStatus === 'saving' ? 'Saving…' : contactInfoStatus === 'success' ? 'Saved ✓' : 'Save'}
+                </button>
+                <style>{`@keyframes contactInfoSpin { to { transform: rotate(360deg); } }`}</style>
               </div>
             </div>
           </div>
