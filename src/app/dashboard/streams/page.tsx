@@ -158,10 +158,12 @@ export default function StreamsPage() {
     });
   }, [columns, scrolledTop]);
 
-  // Filter columns by initiative + hidden phones
+  // Filter columns by initiative + hidden phones. Blank New-Chat picker columns
+  // (no contact yet) always pass through both filters.
   const filteredColumns = (activeInitiativeFilter
     ? columns.filter(col => {
-      if (!col.contact?.phone) return false;
+      if (!col.contact) return true; // blank picker col
+      if (!col.contact.phone) return false;
       return initiativePhones.has(normalizePhone(col.contact.phone));
     })
     : columns
