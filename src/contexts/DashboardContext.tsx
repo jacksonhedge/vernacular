@@ -700,6 +700,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       status: 'Queued',
     };
     setColumns(prev => prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, msg] } : c));
+    // Mirror to allConversations so the sidebar stack shows the new message preview instantly
+    setAllConversations(prev => {
+      const existsIdx = prev.findIndex(c => c.id === colId);
+      if (existsIdx >= 0) {
+        return prev.map(c => c.id === colId ? { ...c, messages: [...c.messages, msg] } : c);
+      }
+      // If this is a synthetic col (new chat from picker/phone), add it to the stack too
+      const fromCols = (() => {
+        const found = columns.find(c => c.id === colId);
+        return found ? { ...found, messages: [...found.messages, msg] } : null;
+      })();
+      return fromCols ? [fromCols, ...prev] : prev;
+    });
     setInputValues(prev => ({ ...prev, [colId]: '' }));
 
     setRecentlySentCols(prev => new Set(prev).add(colId));

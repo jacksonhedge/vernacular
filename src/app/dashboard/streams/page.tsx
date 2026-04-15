@@ -733,6 +733,7 @@ export default function StreamsPage() {
                               messages: [],
                             };
                             setColumns(prev => [newCol, ...prev.filter(c => c.id !== col.id)]);
+                            setAllConversations(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
                             setPinnedLeftColId(newId);
                             setStickyLeftIds(prev => [newId, ...prev]);
                             setInputValues(prev => { const n = { ...prev }; delete n[col.id]; return n; });
@@ -792,6 +793,7 @@ export default function StreamsPage() {
                                 const withoutBlank = prev.filter(c => c.id !== col.id);
                                 return [newCol, ...withoutBlank];
                               });
+                              setAllConversations(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
                               setPinnedLeftColId(newId);
                               setStickyLeftIds(prev => [newId, ...prev]);
                             }

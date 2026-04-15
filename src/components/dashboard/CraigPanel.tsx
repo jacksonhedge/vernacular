@@ -172,7 +172,7 @@ export default function CraigPanel() {
     aiCopilotModel, setAiCopilotModel,
     orgId, columns, contacts,
     craigKnowledge, orgKnowledge,
-    dbInitiatives, setColumns, showAICopilot,
+    dbInitiatives, setColumns, setAllConversations, showAICopilot,
     aiChatSessionId, setAiChatSessionId,
   } = useDashboard();
   const router = useRouter();
@@ -436,6 +436,14 @@ export default function CraigPanel() {
           setColumns(prev => prev.map(c => c.id === targetId
             ? { ...c, messages: [...c.messages, draftMsg] }
             : c));
+          // Mirror into stack so the orange AI-draft dot shows on the sidebar row too
+          setAllConversations(prev => {
+            const idx2 = prev.findIndex(c => c.id === targetId);
+            if (idx2 >= 0) {
+              return prev.map(c => c.id === targetId ? { ...c, messages: [...c.messages, draftMsg] } : c);
+            }
+            return matchedCol ? [{ ...matchedCol, messages: [...matchedCol.messages, draftMsg] }, ...prev] : prev;
+          });
         }
       });
     }
