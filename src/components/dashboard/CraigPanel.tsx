@@ -264,6 +264,7 @@ export default function CraigPanel() {
     const userMsg = { role: 'user' as const, text, ts: Date.now() };
     setAiCopilotMessages(prev => [...prev, userMsg]);
     setInput('');
+    if (inputRef.current) { inputRef.current.style.height = 'auto'; }
     setLoading(true);
     setLoadingStage('dots');
     setStreamingText('');
@@ -884,14 +885,21 @@ export default function CraigPanel() {
           <textarea
             ref={inputRef}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => {
+              setInput(e.target.value);
+              const el = e.target;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToCraig(); } }}
             placeholder="Ask Craig anything..."
-            rows={1}
+            rows={3}
             style={{
               flex: 1, resize: 'none', border: 'none', outline: 'none',
               background: 'transparent', color: '#fff', fontSize: 13,
-              fontFamily: "'Inter', sans-serif", padding: '8px 0', maxHeight: 120,
+              fontFamily: "'Inter', sans-serif", padding: '8px 0',
+              minHeight: 60, maxHeight: 260, overflowY: 'auto',
+              lineHeight: 1.5,
             }}
           />
           <button onClick={sendToCraig} disabled={!input.trim() || loading} style={{
