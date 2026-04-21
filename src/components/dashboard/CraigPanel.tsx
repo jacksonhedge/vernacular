@@ -320,7 +320,7 @@ export default function CraigPanel() {
               : '⚠️ Your Vernacular demo has expired. Upgrade your plan to keep using Craig.';
             break;
           case 'anthropic_credits':
-            friendly = "⚠️ Vernacular is temporarily out of Claude API credits — this is on our side, not yours. We've been notified.";
+            friendly = "⚠️ Vernacular is temporarily out of Claude API credits — this is on our side, not yours. We've been notified. If you just purchased credits, start a new chat to retry.";
             break;
           case 'anthropic_rate_limit':
             friendly = '⏳ Craig is being rate-limited. Try again in a moment.';
@@ -332,7 +332,7 @@ export default function CraigPanel() {
             friendly = `⚠️ ${data.error || 'Craig failed to respond.'}`;
         }
         setStreamingText('');
-        setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: friendly, ts: Date.now() }]);
+        setAiCopilotMessages(prev => [...prev, { role: 'assistant', text: friendly, ts: Date.now(), errorCode: data.errorCode }]);
         return;
       }
 
@@ -757,6 +757,21 @@ export default function CraigPanel() {
                               </button>
                             )}
                           </div>
+                        )}
+                        {isLast && msg.errorCode === 'anthropic_credits' && (
+                          <button onClick={clearChat} style={{
+                            marginTop: 8, padding: '7px 14px', borderRadius: 8, border: 'none',
+                            background: 'rgba(255,224,0,0.12)', cursor: 'pointer',
+                            fontSize: 11, fontWeight: 700, color: '#FCD34D',
+                            fontFamily: "'Inter', sans-serif", letterSpacing: '0.02em',
+                            alignSelf: 'flex-start',
+                            transition: 'background 0.15s',
+                          }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,224,0,0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,224,0,0.12)'; }}
+                          >
+                            Start new chat →
+                          </button>
                         )}
                       </div>
                     </div>
