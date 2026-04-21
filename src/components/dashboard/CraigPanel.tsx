@@ -213,7 +213,7 @@ export default function CraigPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiCopilotMessages, streamingText]);
 
-  // Auto-reset chat when panel opens if last activity was >2 minutes ago
+  // Auto-reset chat when panel opens if last activity was >2 hours ago
   useEffect(() => {
     if (!showAICopilot) return;
     setTimeout(() => inputRef.current?.focus(), 100);
@@ -222,29 +222,12 @@ export default function CraigPanel() {
       const lastMsg = aiCopilotMessages[aiCopilotMessages.length - 1];
       const lastTs = lastMsg.ts || 0;
       const idleMs = Date.now() - lastTs;
-      if (idleMs > 2 * 60 * 1000) {
+      if (idleMs > 2 * 60 * 60 * 1000) {
         setAiCopilotMessages([]);
         setStreamingText('');
       }
     }
   }, [showAICopilot]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Also auto-reset while panel is OPEN if user goes idle for 2 minutes
-  useEffect(() => {
-    if (!showAICopilot || aiCopilotMessages.length === 0) return;
-    const lastMsg = aiCopilotMessages[aiCopilotMessages.length - 1];
-    const lastTs = lastMsg.ts || Date.now();
-    const msRemaining = 2 * 60 * 1000 - (Date.now() - lastTs);
-    if (msRemaining <= 0) {
-      setAiCopilotMessages([]);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setAiCopilotMessages([]);
-      setStreamingText('');
-    }, msRemaining);
-    return () => clearTimeout(timer);
-  }, [aiCopilotMessages, showAICopilot]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = messagesRef.current;
