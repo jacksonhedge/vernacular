@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: selectedModel,
-        max_tokens: 1024,
+        max_tokens: 8192,
         system: systemPrompt || 'You are a helpful AI assistant. Be concise and helpful.',
         messages: messages.map((m: { role: string; content: string }) => ({
           role: m.role === 'user' ? 'user' : 'assistant',

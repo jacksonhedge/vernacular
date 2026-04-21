@@ -552,6 +552,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                   freshMap.delete(existing.id);
                   const freshTexts = new Set(fresh.messages.map(m => `${m.direction}::${m.text}`));
                   const localOnly = existing.messages.filter(m =>
+                    m.id.startsWith('ai-draft-') ||
                     (m.id.startsWith('m-') && !freshTexts.has(`${m.direction}::${m.text}`))
                   );
                   return { ...existing, contact: fresh.contact, messages: [...fresh.messages, ...localOnly] };

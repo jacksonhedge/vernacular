@@ -382,7 +382,8 @@ export default function CraigPanel() {
     // when Craig is texting a phone that isn't already open as a stream.
     const sendMatches = [...text.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)];
     if (sendMatches.length && CRAIG_AUTO_SEND_DISABLED) {
-      let createdColId: string | null = null;
+      // Track synthetic columns created this run so we don't re-create for the same phone
+      const createdPhoneIds = new Map<string, string>();
       sendMatches.forEach((m, idx) => {
         const target = m[1];
         const message = m[2].trim();
@@ -396,14 +397,13 @@ export default function CraigPanel() {
           return nameMatch || phoneMatch;
         });
 
-        // 2) If nothing matches AND the target is a phone number, synthesize a new column
+        // 2) If nothing matches AND the target is a phone number, synthesize a new column per phone
         if (!matchedCol && targetDigits.length >= 10) {
-          const newId = createdColId || `new-phone-${targetDigits}-${Date.now()}`;
-          if (!createdColId) {
-            createdColId = newId;
-            const nameLabel = target.replace(/\D/g, '').length >= 10
-              ? `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`
-              : target.trim();
+          const existingId = createdPhoneIds.get(targetDigits);
+          const newId = existingId || `draft-col-${targetDigits}`;
+          if (!existingId) {
+            createdPhoneIds.set(targetDigits, newId);
+            const nameLabel = `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`;
             const newCol = {
               id: newId,
               contact: {
@@ -419,9 +419,7 @@ export default function CraigPanel() {
             };
             setColumns(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
           }
-          matchedCol = columns.find(c => c.id === newId) || {
-            id: newId, contact: null, messages: [],
-          };
+          matchedCol = { id: newId, contact: null, messages: [] };
         }
 
         if (matchedCol) {
