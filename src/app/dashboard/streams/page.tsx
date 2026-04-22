@@ -88,6 +88,8 @@ export default function StreamsPage() {
   };
 
   const [conversationSearch, setConversationSearch] = useState('');
+  type StackFilter = 'all' | 'unread' | 'draft';
+  const [stackFilter, setStackFilter] = useState<StackFilter>('all');
   type SortMode = 'unread' | 'recent' | 'name' | 'most-messages';
   const [streamSortMode, setStreamSortMode] = useState<SortMode>(() => {
     if (typeof window !== 'undefined') {
@@ -328,8 +330,20 @@ export default function StreamsPage() {
     .filter(col => {
       if (timeCutoff === 0) return true;
       const lastMsg = col.messages[col.messages.length - 1];
-      if (!lastMsg?.timestamp) return true; // keep empty cols
+      if (!lastMsg?.timestamp) return true;
       return parseTimestamp(lastMsg.timestamp).getTime() >= timeCutoff;
+    })
+    .filter(col => {
+      if (stackFilter === 'all') return true;
+      if (stackFilter === 'unread') {
+        const lastMsg = col.messages[col.messages.length - 1];
+        const readAt = readConversations[col.id];
+        const msgTs = lastMsg?.timestamp ? parseTimestamp(lastMsg.timestamp).getTime() : 0;
+        const readTs = readAt ? new Date(readAt).getTime() : 0;
+        return lastMsg?.direction === 'incoming' && (!readAt || msgTs > readTs);
+      }
+      if (stackFilter === 'draft') return col.messages.some(m => m.isAIDraft);
+      return true;
     })
     .sort((a, b) => {
       // Exact mirror of sortedColumns so the stack order matches streams left-to-right
@@ -567,12 +581,32 @@ export default function StreamsPage() {
             </div>
           </div>
 
+          {/* Stack filter toggles */}
+          <div style={{ padding: '4px 10px 8px', display: 'flex', gap: 4 }}>
+            {(['all', 'unread', 'draft'] as const).map(f => {
+              const labels = { all: 'All', unread: 'Unread', draft: 'Draft Made' };
+              const active = stackFilter === f;
+              return (
+                <button key={f} onClick={() => setStackFilter(f)} style={{
+                  flex: 1, padding: '5px 0', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                  border: active ? '1px solid rgba(38,120,255,0.35)' : '1px solid rgba(0,0,0,0.07)',
+                  background: active ? 'rgba(38,120,255,0.1)' : '#f8f9fb',
+                  color: active ? '#2678FF' : '#6b7280',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  fontFamily: "'Inter', sans-serif",
+                }}>
+                  {labels[f]}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Active label */}
           <div style={{
-            padding: '8px 16px', borderBottom: '1px solid rgba(0,0,0,0.04)',
+            padding: '4px 16px 8px', borderBottom: '1px solid rgba(0,0,0,0.04)',
           }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Active ({activeChats.length})
+              {stackFilter === 'all' ? 'All' : stackFilter === 'unread' ? 'Unread' : 'Draft Made'} ({activeChats.length})
             </span>
           </div>
 
