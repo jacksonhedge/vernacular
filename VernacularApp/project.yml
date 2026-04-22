@@ -31,7 +31,7 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: VernacularApp/Info.plist
         SWIFT_VERSION: "5.9"
-        DEVELOPMENT_TEAM: ""  # Set this in Xcode to your Hedge Inc. team ID
+        DEVELOPMENT_TEAM: "WM6N6DBJt9"  # Hedge Inc. Apple Developer team
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # iPhone only (TARGETED_DEVICE_FAMILY = 1). iPad would require

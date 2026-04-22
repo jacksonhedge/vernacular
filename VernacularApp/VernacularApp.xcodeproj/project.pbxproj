@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -31,13 +31,13 @@
 
 /* Begin PBXFileReference section */
 		1F6AC3A51994D48D1E7C8E9A /* AIMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIMessage.swift; sourceTree = "<group>"; };
-		246BAD76635B744CE23958E6 /* VernacularApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = VernacularApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		246BAD76635B744CE23958E6 /* VernacularApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VernacularApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30185A392D398230179D9D38 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		39660C29BBCCA2B6836CD024 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		39C2F844E4D35A6543D0D3C9 /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		5746A968B669E2113B7A76FB /* ChatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsView.swift; sourceTree = "<group>"; };
 		6A454C91533EB458ECB7BB5D /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		6F9188F5A35254F6C4A1878A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		6F9188F5A35254F6C4A1878A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		740FB5F4BAC157E9567E3448 /* ContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsView.swift; sourceTree = "<group>"; };
 		99C0199B50689127297362BA /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		AE63DE95E92928377F24C9CA /* AIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIView.swift; sourceTree = "<group>"; };
@@ -225,7 +225,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					A78B254EBEF224A58BFFD9AB = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -243,7 +242,6 @@
 			packageReferences = (
 				D9D9E51E9550BA5FE2E3B399 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -300,7 +298,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 68X53QY3DA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VernacularApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -379,7 +377,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 68X53QY3DA;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = VernacularApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

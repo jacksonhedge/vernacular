@@ -10,47 +10,31 @@ const NAV_SECTIONS = [
   {
     label: 'OVERVIEW',
     items: [
-      { label: 'Dashboard', path: '/dashboard', icon: 'grid' },
-      { label: 'Conversations', path: '/dashboard/streams', icon: 'chat' },
-      { label: 'Contacts', path: '/dashboard/contacts', icon: 'users' },
+      { label: 'Dashboard',      path: '/dashboard',             emoji: '🏠', color: '#2678FF' },
+      { label: 'Conversations',  path: '/dashboard/streams',     emoji: '💬', color: '#22C55E' },
+      { label: 'Contacts',       path: '/dashboard/contacts',    emoji: '👥', color: '#A78BFA' },
     ],
   },
   {
     label: 'WORKSPACE',
     items: [
-      { label: 'Initiatives', path: '/dashboard/initiatives', icon: 'star' },
-      { label: 'Matrix', path: '/dashboard/matrix', icon: 'matrix' },
-      { label: 'Schedule', path: '/dashboard/schedule', icon: 'calendar' },
+      { label: 'Initiatives',    path: '/dashboard/initiatives', emoji: '⚡', color: '#F59E0B' },
+      { label: 'Matrix',         path: '/dashboard/matrix',      emoji: '🎯', color: '#EC4899' },
+      { label: 'Schedule',       path: '/dashboard/schedule',    emoji: '📅', color: '#06B6D4' },
+      { label: 'Email',          path: '/dashboard/email',       emoji: '📧', color: '#EF4444' },
     ],
   },
   {
     label: 'MANAGE',
     items: [
-      { label: 'Phone Lines', path: '/dashboard/stations', icon: 'phone' },
-      { label: 'Team', path: '/dashboard/team', icon: 'team' },
-      { label: 'Integrations', path: '/dashboard/integrations', icon: 'plug' },
-      { label: 'Settings', path: '/dashboard/settings', icon: 'gear' },
+      { label: 'Phone Lines',    path: '/dashboard/stations',    emoji: '📱', color: '#10B981' },
+      { label: 'Team',           path: '/dashboard/team',        emoji: '🤝', color: '#6366F1' },
+      { label: 'Integrations',   path: '/dashboard/integrations',emoji: '🔌', color: '#8B5CF6' },
+      { label: 'Settings',       path: '/dashboard/settings',    emoji: '⚙️', color: '#64748B' },
     ],
   },
 ];
 
-function NavIcon({ name, size = 18 }: { name: string; size?: number }) {
-  const s = size;
-  const props = { width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-  switch (name) {
-    case 'grid': return <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>;
-    case 'chat': return <svg {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
-    case 'users': return <svg {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
-    case 'star': return <svg {...props}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>;
-    case 'matrix': return <svg {...props}><rect x="3" y="3" width="4" height="4" rx="0.5" /><rect x="10" y="3" width="4" height="4" rx="0.5" /><rect x="17" y="3" width="4" height="4" rx="0.5" /><rect x="3" y="10" width="4" height="4" rx="0.5" /><rect x="10" y="10" width="4" height="4" rx="0.5" /><rect x="17" y="10" width="4" height="4" rx="0.5" /><rect x="3" y="17" width="4" height="4" rx="0.5" /><rect x="10" y="17" width="4" height="4" rx="0.5" /><rect x="17" y="17" width="4" height="4" rx="0.5" /></svg>;
-    case 'calendar': return <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
-    case 'phone': return <svg {...props}><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18.01" /></svg>;
-    case 'team': return <svg {...props}><circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2" /></svg>;
-    case 'plug': return <svg {...props}><path d="M12 2v6m0 8v6M4.93 4.93l4.24 4.24m5.66 5.66l4.24 4.24M2 12h6m8 0h6M4.93 19.07l4.24-4.24m5.66-5.66l4.24-4.24" /></svg>;
-    case 'gear': return <svg {...props}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1.08 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1.08z" /></svg>;
-    default: return null;
-  }
-}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -192,47 +176,47 @@ export default function Sidebar() {
             {section.items.map(item => {
               const active = isActive(item.path);
               const isConversations = item.path === '/dashboard/streams';
+              const color = (item as { color?: string }).color || '#2678FF';
+              const emoji = (item as { emoji?: string }).emoji || '•';
               return (
                 <button
                   key={item.path}
                   onClick={() => { playSound('click'); router.push(item.path); }}
                   style={{
                     width: '100%',
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: sidebarCollapsed ? '10px 0' : '9px 20px',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: sidebarCollapsed ? '10px 0' : '8px 16px',
                     justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                    background: active ? 'rgba(38,120,255,0.12)' : 'transparent',
+                    background: active ? `${color}18` : 'transparent',
                     border: 'none', cursor: 'pointer',
-                    borderLeft: active ? '3px solid #2678FF' : '3px solid transparent',
+                    borderLeft: active ? `3px solid ${color}` : '3px solid transparent',
                     transition: 'all 0.15s ease',
                     position: 'relative',
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span style={{
-                    color: active ? '#2678FF' : 'rgba(255,255,255,0.45)',
-                    display: 'flex', alignItems: 'center',
-                    transition: 'color 0.15s',
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    background: active ? `${color}25` : 'rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, transition: 'background 0.15s',
                   }}>
-                    <NavIcon name={item.icon} />
+                    {emoji}
                   </span>
                   {!sidebarCollapsed && (
                     <span style={{
                       fontSize: 13, fontWeight: active ? 600 : 500,
                       color: active ? '#fff' : 'rgba(255,255,255,0.55)',
                       fontFamily: "'Inter', sans-serif",
-                      transition: 'color 0.15s',
+                      transition: 'color 0.15s', flex: 1,
                     }}>
                       {item.label}
                     </span>
                   )}
-                  {/* Unread badge on Conversations */}
                   {isConversations && unreadCount > 0 && (
                     <span style={{
-                      marginLeft: 'auto',
-                      background: '#EF4444',
-                      color: '#fff',
+                      background: '#EF4444', color: '#fff',
                       fontSize: 10, fontWeight: 700,
                       padding: '2px 7px', borderRadius: 10,
                       fontFamily: "'JetBrains Mono', monospace",
@@ -266,8 +250,12 @@ export default function Sidebar() {
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(38,120,255,0.1)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = showAICopilot ? 'rgba(38,120,255,0.15)' : 'rgba(255,255,255,0.04)'; }}
         >
-          <span style={{ color: showAICopilot ? '#2678FF' : 'rgba(255,255,255,0.5)', display: 'flex' }}>
-            <NavIcon name="craig" />
+          <span style={{
+            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+            background: showAICopilot ? 'rgba(38,120,255,0.25)' : 'rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+          }}>
+            🤖
           </span>
           {!sidebarCollapsed && (
             <>

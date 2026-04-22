@@ -139,6 +139,24 @@ struct LoginView: View {
                                 placeholder: "Password",
                                 text: $password
                             )
+
+                            Toggle(isOn: Binding(
+                                get: { biometric.isBiometricEnabled },
+                                set: { newValue in
+                                    // Only set the flag here; actual credential storage happens after successful sign-in
+                                    biometric.isBiometricEnabled = newValue
+                                    UserDefaults.standard.set(newValue, forKey: "biometric_auth_enabled")
+                                }
+                            )) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: biometric.biometricIcon)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.vnBlue.opacity(0.8))
+                                    Text("Sign in with Face scan")
+                                        .font(.system(size: 14))
+                                }
+                            }
+                            .tint(.vnBlue)
                         }
 
                         if let error = errorMessage {
@@ -324,11 +342,9 @@ struct LoginView: View {
                 )
             } else {
                 try await supabase.signIn(email: email, password: password)
-                // Offer to enable biometric if available and not already set up
-                if biometric.isBiometricAvailable && !biometric.isBiometricEnabled {
-                    biometric.enable(email: email, password: password)
-                } else if biometric.isBiometricEnabled {
-                    // Update stored credentials on successful login
+                // Offer to enable biometric if available and toggle is on
+                if biometric.isBiometricAvailable && biometric.isBiometricEnabled {
+                    // Store or update credentials for Face scan sign-in if user opted in
                     biometric.enable(email: email, password: password)
                 }
             }
@@ -502,7 +518,7 @@ struct PhoneOTPSection: View {
                 .padding(.horizontal, 12)
                 .frame(height: 44)
                 .background(Color.vnLightBlue)
-                .foregroundStyle(.vnBlue)
+                .foregroundColor(.vnBlue)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .disabled(phone.trimmingCharacters(in: .whitespaces).isEmpty)
             }
