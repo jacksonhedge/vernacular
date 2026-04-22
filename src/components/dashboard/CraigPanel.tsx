@@ -422,40 +422,57 @@ export default function CraigPanel() {
       // Track synthetic columns created this run so we don't re-create for the same phone
       const createdPhoneIds = new Map<string, string>();
       sendMatches.forEach((m, idx) => {
-        const target = m[1];
+        const target = m[1].trim();
         const message = m[2].trim();
-        const targetDigits = target.replace(/\D/g, '').slice(-10);
-        console.log(`[Craig] Processing SEND ${idx + 1}: target="${target}" digits="${targetDigits}"`);
+        const rawDigits = target.replace(/\D/g, '').slice(-10);
 
-        // 1) Try to match an open column first, then fall back to allConversations (closed streams)
+        // Resolve phone digits: if target is a name (no digits), look up in contacts
+        let resolvedDigits = rawDigits;
+        if (resolvedDigits.length < 10) {
+          const targetLower = target.toLowerCase();
+          const byName = (contacts as import('@/types/dashboard').ContactRecord[]).find(c => {
+            const fn = `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase();
+            const fn2 = (c.full_name || '').toLowerCase();
+            return fn === targetLower || fn2 === targetLower ||
+              fn.startsWith(targetLower) || fn2.startsWith(targetLower) ||
+              targetLower.startsWith(fn.split(' ')[0]) || fn.includes(targetLower);
+          });
+          if (byName?.phone) resolvedDigits = byName.phone.replace(/\D/g, '').slice(-10);
+        }
+        console.log(`[Craig] Processing SEND ${idx + 1}: target="${target}" resolved="${resolvedDigits}"`);
+
+        // 1) Try to match an open column first, then fall back to allConversations
         let matchedCol = columns.find(c => {
           if (!c.contact) return false;
           const nameMatch = c.contact.name.toLowerCase().includes(target.toLowerCase());
-          const phoneMatch = targetDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === targetDigits;
+          const phoneMatch = resolvedDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === resolvedDigits;
           return nameMatch || phoneMatch;
-        }) || (targetDigits.length >= 10 ? allConversations.find(c =>
-          c.contact?.phone?.replace(/\D/g, '').slice(-10) === targetDigits
+        }) || (resolvedDigits.length >= 10 ? allConversations.find(c =>
+          c.contact?.phone?.replace(/\D/g, '').slice(-10) === resolvedDigits
         ) : undefined);
 
-        // 2) If nothing matches AND the target is a phone number, synthesize a new column per phone
-        if (!matchedCol && targetDigits.length >= 10) {
-          const existingId = createdPhoneIds.get(targetDigits);
-          const newId = existingId || `draft-col-${targetDigits}`;
-          const phoneLabel = `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`;
-          // Look up real contact name if we have it
-          const knownContact = contacts.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === targetDigits);
-          const nameLabel = knownContact ? `${knownContact.first_name || ''} ${knownContact.last_name || ''}`.trim() || phoneLabel : phoneLabel;
+        // 2) If nothing matches and we have a phone, synthesize a new draft-col column
+        if (!matchedCol && resolvedDigits.length >= 10) {
+          const existingId = createdPhoneIds.get(resolvedDigits);
+          const newId = existingId || `draft-col-${resolvedDigits}`;
+          const phoneLabel = `(${resolvedDigits.slice(0, 3)}) ${resolvedDigits.slice(3, 6)}-${resolvedDigits.slice(6)}`;
+          const knownContact = (contacts as import('@/types/dashboard').ContactRecord[]).find(c =>
+            (c.phone || '').replace(/\D/g, '').slice(-10) === resolvedDigits
+          );
+          const nameLabel = knownContact
+            ? `${knownContact.first_name || ''} ${knownContact.last_name || ''}`.trim() || phoneLabel
+            : phoneLabel;
           const syntheticContact = {
-            id: knownContact?.id || `phone-${targetDigits}`,
+            id: knownContact?.id || `phone-${resolvedDigits}`,
             name: nameLabel,
-            initials: nameLabel.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || targetDigits.slice(-4),
-            phone: `+1${targetDigits}`,
+            initials: nameLabel.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || resolvedDigits.slice(-4),
+            phone: `+1${resolvedDigits}`,
             tag: 'NEW' as const,
             tagColor: '#2678FF',
             tagBg: 'rgba(38,120,255,0.1)',
           };
           if (!existingId) {
-            createdPhoneIds.set(targetDigits, newId);
+            createdPhoneIds.set(resolvedDigits, newId);
             const newCol = { id: newId, contact: syntheticContact, messages: [] };
             setColumns(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
             setAllConversations(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
@@ -463,10 +480,10 @@ export default function CraigPanel() {
           matchedCol = { id: newId, contact: syntheticContact, messages: [] };
         }
 
-        console.log(`[Craig] matchedCol for ${targetDigits}:`, matchedCol ? matchedCol.id : 'null — creating draft-col');
+        console.log(`[Craig] matchedCol for "${target}":`, matchedCol ? matchedCol.id : 'null — no match');
         if (matchedCol) {
           const dbId = crypto.randomUUID();
-          const contactLabel = matchedCol.contact?.name || `+1${targetDigits}`;
+          const contactLabel = matchedCol.contact?.name || `+1${resolvedDigits}`;
           const draftMsg = {
             id: `ai-draft-${dbId}`,
             text: message,
@@ -476,7 +493,7 @@ export default function CraigPanel() {
             status: 'Draft',
             draftDbId: dbId,
           };
-          savePendingDraft(dbId, `+1${targetDigits}`, contactLabel, message);
+          savePendingDraft(dbId, `+1${resolvedDigits}`, contactLabel, message);
           const targetId = matchedCol.id;
           setColumns(prev => {
             if (prev.some(c => c.id === targetId)) {
