@@ -213,18 +213,36 @@ export default function CraigPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiCopilotMessages, streamingText]);
 
-  // Auto-reset chat when panel opens if last activity was >2 hours ago
+  // On first open: restore last session from DB if local state is empty
   useEffect(() => {
-    if (!showAICopilot) return;
+    if (!showAICopilot || !orgId) return;
     setTimeout(() => inputRef.current?.focus(), 100);
 
+    if (aiCopilotMessages.length === 0 && !aiChatSessionId) {
+      supabase
+        .from('ai_chat_sessions')
+        .select('id, messages')
+        .eq('organization_id', orgId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single()
+        .then(({ data }) => {
+          if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+            setAiCopilotMessages(data.messages as typeof aiCopilotMessages);
+            setAiChatSessionId(data.id);
+          }
+        });
+      return;
+    }
+
+    // Auto-reset if idle >2 hours
     if (aiCopilotMessages.length > 0) {
       const lastMsg = aiCopilotMessages[aiCopilotMessages.length - 1];
-      const lastTs = lastMsg.ts || 0;
-      const idleMs = Date.now() - lastTs;
+      const idleMs = Date.now() - (lastMsg.ts || 0);
       if (idleMs > 2 * 60 * 60 * 1000) {
         setAiCopilotMessages([]);
         setStreamingText('');
+        setAiChatSessionId(null);
       }
     }
   }, [showAICopilot]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -441,14 +459,12 @@ export default function CraigPanel() {
   };
 
   const clearChat = () => {
-    const oldId = aiChatSessionId;
+    // Save the current session (auto-save already handles this, but flush now just in case)
+    // Do NOT delete — keep it in DB so user can reference history
     setAiCopilotMessages([]);
     setStreamingText('');
     setAiChatSessionId(null);
     try { localStorage.setItem('vernacular-craig-fresh-at', String(Date.now())); } catch {}
-    if (oldId) {
-      supabase.from('ai_chat_sessions').delete().eq('id', oldId).then(() => {});
-    }
   };
 
   return (
