@@ -332,7 +332,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         supabase.from('stations').select('*').eq('organization_id', orgId).order('status', { ascending: false }),
         supabase.from('users').select('id, full_name, email, role').eq('organization_id', orgId).order('role'),
         supabase.from('org_settings').select('*').eq('organization_id', orgId).single(),
-        supabase.from('contacts').select('*').order('full_name').limit(200),
+        supabase.from('contacts').select('*').order('full_name').limit(1000),
       ]);
 
       const inboundTotal = (totalConvData as unknown as number) || 0;
