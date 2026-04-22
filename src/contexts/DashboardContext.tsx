@@ -413,6 +413,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           supabase.from('pending_drafts').select('*').eq('organization_id', orgId).order('created_at', { ascending: true })
             .then(({ data: drafts }) => {
               if (!drafts || drafts.length === 0) return;
+              const freshContacts = (contactData as ContactRecord[]) || [];
               const byPhone = new Map<string, typeof drafts>();
               (drafts as Record<string, unknown>[]).forEach(d => {
                 const phone10 = (d.phone as string).replace(/\D/g, '').slice(-10);
@@ -422,11 +423,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               byPhone.forEach((phoneDrafts, phone10) => {
                 const colId = `draft-col-${phone10}`;
                 const phoneLabel = `(${phone10.slice(0,3)}) ${phone10.slice(3,6)}-${phone10.slice(6)}`;
-                const contactName = (phoneDrafts[0].contact_name as string) || phoneLabel;
+                // Always prefer a fresh lookup over whatever was stored in the DB
+                const knownContact = freshContacts.find(c =>
+                  (c.phone || '').replace(/\D/g, '').slice(-10) === phone10
+                );
+                const contactName = knownContact
+                  ? `${knownContact.first_name || ''} ${knownContact.last_name || ''}`.trim() || phoneLabel
+                  : ((phoneDrafts[0].contact_name as string)?.match(/^\+?1?\d{10,}/) ? null : (phoneDrafts[0].contact_name as string)) || phoneLabel;
+                const initials = /^\(?\d/.test(contactName)
+                  ? phone10.slice(-4)
+                  : contactName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || phone10.slice(-4);
                 const syntheticContact: Contact = {
-                  id: `phone-${phone10}`,
+                  id: knownContact?.id || `phone-${phone10}`,
                   name: contactName,
-                  initials: contactName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || phone10.slice(-4),
+                  initials,
                   phone: `+1${phone10}`,
                   tag: 'NEW',
                   tagColor: '#2678FF',
@@ -444,6 +454,14 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 const draftCol: ConversationColumn = { id: colId, contact: syntheticContact, messages: draftMessages };
                 setColumns(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
                 setAllConversations(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
+                // Backfill correct name into DB rows that were saved with a phone number
+                if (knownContact && contactName !== phoneLabel) {
+                  phoneDrafts.forEach(d => {
+                    if (!d.contact_name || (d.contact_name as string).match(/^\+?1?\d{10,}/)) {
+                      supabase.from('pending_drafts').update({ contact_name: contactName }).eq('id', d.id as string).then(() => {});
+                    }
+                  });
+                }
               });
             });
         }
