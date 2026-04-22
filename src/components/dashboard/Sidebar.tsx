@@ -62,8 +62,8 @@ export default function Sidebar() {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      background: '#0c0f1a',
-      borderRight: '1px solid rgba(255,255,255,0.06)',
+      background: '#ffffff',
+      borderRight: '1px solid rgba(0,0,0,0.08)',
       transition: 'width 0.2s ease, min-width 0.2s ease',
       overflow: 'hidden',
       flexShrink: 0,
@@ -71,7 +71,7 @@ export default function Sidebar() {
       {/* Logo + Org */}
       <div style={{
         padding: sidebarCollapsed ? '20px 12px 16px' : '20px 20px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
         display: 'flex', alignItems: 'center', gap: 12,
         justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
       }}>
@@ -82,7 +82,7 @@ export default function Sidebar() {
             background: 'linear-gradient(135deg, #2678FF, #1a5fd4)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(38,120,255,0.3)',
+            boxShadow: '0 2px 8px rgba(38,120,255,0.25)',
           }}
         >
           <img src="/logo.png" alt="V" style={{ width: 22, height: 22, borderRadius: 4 }} />
@@ -90,12 +90,12 @@ export default function Sidebar() {
         {!sidebarCollapsed && (
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em',
+              fontSize: 15, fontWeight: 700, color: '#0c0f1a', letterSpacing: '-0.02em',
               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             }}>
               {(org?.name as string) || 'Vernacular'}
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 500, marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500, marginTop: 2 }}>
               Enterprise Messaging
             </div>
           </div>
@@ -106,7 +106,7 @@ export default function Sidebar() {
       {primaryStation && (
         <div style={{
           padding: sidebarCollapsed ? '12px 0' : '12px 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
           display: 'flex', alignItems: 'center', gap: 10,
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
         }}>
@@ -119,12 +119,12 @@ export default function Sidebar() {
           {!sidebarCollapsed && (
             <div style={{ flex: 1 }}>
               <div style={{
-                fontSize: 12, fontWeight: 600, color: '#fff',
+                fontSize: 12, fontWeight: 600, color: '#111827',
                 fontFamily: "'JetBrains Mono', monospace",
               }}>
                 {primaryStation.phone_number}
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
+              <div style={{ fontSize: 10, color: '#9ca3af' }}>
                 {getStationLabel(stationStatus)} · {formatHeartbeat(primaryStation.last_heartbeat)}
               </div>
             </div>
@@ -134,14 +134,14 @@ export default function Sidebar() {
 
       {/* Credit Usage */}
       {!sidebarCollapsed && creditUsage && (
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Usage</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Usage</span>
+            <span style={{ fontSize: 10, color: '#d1d5db', fontFamily: "'JetBrains Mono', monospace" }}>
               {new Date().toLocaleDateString('en-US', { month: 'short' })}
             </span>
           </div>
-          <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginBottom: 6, overflow: 'hidden' }}>
+          <div style={{ height: 4, borderRadius: 2, background: '#f3f4f6', marginBottom: 6, overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 2,
               width: creditUsage.minimum > 0 ? `${Math.min(100, (creditUsage.used / creditUsage.minimum) * 100)}%` : '0%',
@@ -150,11 +150,11 @@ export default function Sidebar() {
             }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#374151' }}>
               ${(creditUsage.used / 100).toFixed(2)}
             </span>
             {creditUsage.minimum > 0 && (
-              <span style={{ color: 'rgba(255,255,255,0.25)' }}>/ ${(creditUsage.minimum / 100).toFixed(0)} min</span>
+              <span style={{ color: '#9ca3af' }}>/ ${(creditUsage.minimum / 100).toFixed(0)} min</span>
             )}
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function Sidebar() {
             {!sidebarCollapsed && (
               <div style={{
                 padding: '12px 20px 6px',
-                fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)',
+                fontSize: 10, fontWeight: 700, color: '#c0c8d8',
                 letterSpacing: '0.08em', textTransform: 'uppercase',
               }}>
                 {section.label}
@@ -187,18 +187,18 @@ export default function Sidebar() {
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: sidebarCollapsed ? '10px 0' : '8px 16px',
                     justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                    background: active ? `${color}18` : 'transparent',
+                    background: active ? `${color}12` : 'transparent',
                     border: 'none', cursor: 'pointer',
                     borderLeft: active ? `3px solid ${color}` : '3px solid transparent',
                     transition: 'all 0.15s ease',
                     position: 'relative',
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <span style={{
                     width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                    background: active ? `${color}25` : 'rgba(255,255,255,0.06)',
+                    background: active ? `${color}20` : '#f3f4f6',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 15, transition: 'background 0.15s',
                   }}>
@@ -207,7 +207,7 @@ export default function Sidebar() {
                   {!sidebarCollapsed && (
                     <span style={{
                       fontSize: 13, fontWeight: active ? 600 : 500,
-                      color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+                      color: active ? color : '#374151',
                       fontFamily: "'Inter', sans-serif",
                       transition: 'color 0.15s', flex: 1,
                     }}>
@@ -233,7 +233,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom: Craig AI + controls */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: sidebarCollapsed ? '12px 0' : '12px 20px' }}>
+      <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: sidebarCollapsed ? '12px 0' : '12px 20px' }}>
         {/* Craig AI button */}
         <button
           onClick={() => setShowAICopilot(!showAICopilot)}
@@ -242,30 +242,30 @@ export default function Sidebar() {
             display: 'flex', alignItems: 'center', gap: 10,
             padding: sidebarCollapsed ? '10px 0' : '10px 14px',
             justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-            background: showAICopilot ? 'rgba(38,120,255,0.15)' : 'rgba(255,255,255,0.04)',
-            border: showAICopilot ? '1px solid rgba(38,120,255,0.3)' : '1px solid rgba(255,255,255,0.06)',
+            background: showAICopilot ? 'rgba(38,120,255,0.08)' : '#f8f9fb',
+            border: showAICopilot ? '1px solid rgba(38,120,255,0.25)' : '1px solid rgba(0,0,0,0.07)',
             borderRadius: 10, cursor: 'pointer',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(38,120,255,0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = showAICopilot ? 'rgba(38,120,255,0.15)' : 'rgba(255,255,255,0.04)'; }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(38,120,255,0.07)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = showAICopilot ? 'rgba(38,120,255,0.08)' : '#f8f9fb'; }}
         >
           <span style={{
             width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-            background: showAICopilot ? 'rgba(38,120,255,0.25)' : 'rgba(255,255,255,0.06)',
+            background: showAICopilot ? 'rgba(38,120,255,0.15)' : '#e9ecf0',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
           }}>
             🤖
           </span>
           {!sidebarCollapsed && (
             <>
-              <span style={{ fontSize: 13, fontWeight: 600, color: showAICopilot ? '#fff' : 'rgba(255,255,255,0.6)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: showAICopilot ? '#2678FF' : '#374151' }}>
                 Craig AI
               </span>
               <span style={{
                 marginLeft: 'auto', fontSize: 9, fontWeight: 600,
                 padding: '2px 6px', borderRadius: 4,
-                background: 'rgba(34,197,94,0.15)', color: '#22C55E',
+                background: 'rgba(34,197,94,0.12)', color: '#16a34a',
               }}>
                 ON
               </span>
@@ -280,8 +280,8 @@ export default function Sidebar() {
               onClick={() => { setSoundEnabled(!soundEnabled); playSound('click'); }}
               style={{
                 flex: 1, padding: '6px 0', borderRadius: 6,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-                color: soundEnabled ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                background: '#f8f9fb', border: '1px solid rgba(0,0,0,0.07)',
+                color: soundEnabled ? '#6b7280' : '#d1d5db',
                 fontSize: 11, fontWeight: 500, cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
               }}
