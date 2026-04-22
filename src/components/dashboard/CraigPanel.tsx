@@ -38,7 +38,16 @@ Use [SEND:<name_or_phone>:<message>] to stage a draft. You can emit multiple [SE
 When a user asks you to "send" or "draft" a text:
 1. Emit one [SEND:target:message] tag per message (include all of them in the same reply).
 2. Navigate the user to streams with [NAV:/dashboard/streams] so they can see and approve.
-3. Keep your spoken reply under 2 sentences — just acknowledge.`;
+3. Keep your spoken reply under 2 sentences — just acknowledge.
+
+# Updating contacts
+You CAN save contact details the user shares. Use [UPDATE:<phone>:<field>:<value>] to update a contact.
+
+Supported fields: full_name, first_name, last_name, email, school, greek_org, notes, company, job_title, instagram, venmo
+
+When the user mentions someone's name (e.g. "that's John Smith" or "his name is Mike Torres"), emit [UPDATE:<phone>:full_name:<First Last>] — the system splits it into first and last automatically.
+
+Always confirm what you saved in one short sentence.`;
 
 function PacMan({ size = 22 }: { size?: number; mouthFill?: string }) {
   return (
@@ -368,6 +377,31 @@ export default function CraigPanel() {
   // Any change that calls a real send from this function breaks the product promise.
   const CRAIG_AUTO_SEND_DISABLED = true;
   const handleCraigActions = (text: string) => {
+    // Contact updates — [UPDATE:phone:field:value]
+    const updateMatches = [...text.matchAll(/\[UPDATE:([^:]+):([^:]+):([^\]]+)\]/g)];
+    updateMatches.forEach(m => {
+      const phone = m[1].trim();
+      const field = m[2].trim();
+      const value = m[3].trim();
+      const payload: Record<string, string> = { phone };
+      if (field === 'full_name') payload.fullName = value;
+      else if (field === 'first_name') payload.firstName = value;
+      else if (field === 'last_name') payload.lastName = value;
+      else if (field === 'email') payload.email = value;
+      else if (field === 'school') payload.school = value;
+      else if (field === 'greek_org') payload.greekOrg = value;
+      else if (field === 'notes') payload.notes = value;
+      else if (field === 'company') payload.company = value;
+      else if (field === 'job_title') payload.jobTitle = value;
+      else if (field === 'instagram') payload.instagram = value;
+      else if (field === 'venmo') payload.venmo = value;
+      fetch('/api/contacts/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    });
+
     // Navigation — Craig can move the user between dashboard views
     const navMatch = text.match(/\[NAV:([^\]]+)\]/);
     if (navMatch) {
