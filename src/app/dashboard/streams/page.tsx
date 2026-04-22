@@ -96,6 +96,22 @@ export default function StreamsPage() {
     }
     return 'unread';
   });
+  type TimeFilter = '24h' | '48h' | '4d' | '7d' | 'forever';
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vernacular-time-filter');
+      if (saved && ['24h', '48h', '4d', '7d', 'forever'].includes(saved)) return saved as TimeFilter;
+    }
+    return 'forever';
+  });
+  const getTimeCutoff = (filter: TimeFilter): number => {
+    const now = Date.now();
+    if (filter === '24h') return now - 24 * 60 * 60 * 1000;
+    if (filter === '48h') return now - 48 * 60 * 60 * 1000;
+    if (filter === '4d') return now - 4 * 24 * 60 * 60 * 1000;
+    if (filter === '7d') return now - 7 * 24 * 60 * 60 * 1000;
+    return 0;
+  };
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
@@ -222,6 +238,7 @@ export default function StreamsPage() {
   }, [previewColId]);
 
   useEffect(() => { localStorage.setItem('vernacular-sort-mode', streamSortMode); }, [streamSortMode]);
+  useEffect(() => { localStorage.setItem('vernacular-time-filter', timeFilter); }, [timeFilter]);
 
   // Auto-scroll each column to bottom on load / new message — unless user toggled it to top
   useEffect(() => {
@@ -239,9 +256,9 @@ export default function StreamsPage() {
     });
   }, [columns, scrolledTop]);
 
-  // Filter columns by initiative + hidden phones. Blank New-Chat picker columns
-  // and sticky-left columns always pass through the initiative filter so a
-  // user-chosen contact doesn't vanish because they're not in the active initiative.
+  // Filter columns by initiative + hidden phones + time window. Blank New-Chat picker
+  // columns and sticky-left columns always pass through so they're never hidden.
+  const timeCutoff = getTimeCutoff(timeFilter);
   const filteredColumns = (activeInitiativeFilter
     ? columns.filter(col => {
       if (!col.contact) return true; // blank picker col
@@ -250,7 +267,15 @@ export default function StreamsPage() {
       return initiativePhones.has(normalizePhone(col.contact.phone));
     })
     : columns
-  ).filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)));
+  ).filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
+   .filter(col => {
+     if (!col.contact) return true; // blank picker col
+     if (stickyLeftIds.includes(col.id)) return true; // user explicitly pinned
+     if (timeCutoff === 0) return true; // "forever"
+     const lastMsg = col.messages[col.messages.length - 1];
+     if (!lastMsg?.timestamp) return false;
+     return parseTimestamp(lastMsg.timestamp).getTime() >= timeCutoff;
+   });
 
   // Sort columns
   const sortedColumns = [...filteredColumns].sort((a, b) => {
@@ -298,6 +323,12 @@ export default function StreamsPage() {
     .filter(col => col.contact && col.messages.length > 0 && col.contact.name.toLowerCase().includes(conversationSearch.toLowerCase()))
     .filter(col => !col.contact?.phone || !hiddenPhones.has(normalizePhone(col.contact.phone)))
     .filter(col => !stackHidden.has(col.id))
+    .filter(col => {
+      if (timeCutoff === 0) return true;
+      const lastMsg = col.messages[col.messages.length - 1];
+      if (!lastMsg?.timestamp) return false;
+      return parseTimestamp(lastMsg.timestamp).getTime() >= timeCutoff;
+    })
     .sort((a, b) => {
       // Exact mirror of sortedColumns so the stack order matches streams left-to-right
       const aStick = stickyLeftIds.indexOf(a.id);
@@ -408,6 +439,17 @@ export default function StreamsPage() {
             <option value="recent">Most Recent</option>
             <option value="name">By Name</option>
             <option value="most-messages">Most Messages</option>
+          </select>
+          <select value={timeFilter} onChange={e => setTimeFilter(e.target.value as TimeFilter)} style={{
+            padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)',
+            background: '#fff', color: '#0c0f1a', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', outline: 'none', fontFamily: "'Inter', sans-serif",
+          }}>
+            <option value="24h">Last 24h</option>
+            <option value="48h">Last 48h</option>
+            <option value="4d">Last 4 days</option>
+            <option value="7d">Last week</option>
+            <option value="forever">All time</option>
           </select>
           <div style={{ width: 1, height: 24, background: 'rgba(0,0,0,0.06)' }} />
           <button onClick={addColumn} style={{
