@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createServiceClient } from '@/lib/supabase';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: Request) {
   try {
     const { to, subject, body, fromName, contactName, organizationId } = await req.json();
@@ -11,6 +9,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'to, subject, body are required' }, { status: 400 });
     }
 
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 });
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const fromLabel = fromName ? `${fromName} via Vernacular` : 'Vernacular';
     const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
