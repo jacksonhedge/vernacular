@@ -607,7 +607,7 @@ export default function StreamsPage() {
                   setColumns(prev => prev.some(c => c.id === col.id) ? prev : [col, ...prev]);
                   setPreviewColId(col.id);
                 }} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, width: '100%',
                   padding: '12px 16px', border: 'none', cursor: 'pointer', textAlign: 'left',
                   background: isSelected ? 'rgba(38,120,255,0.06)' : hasAiDraft ? 'rgba(245,158,11,0.04)' : hasUnread ? 'rgba(34,197,94,0.04)' : 'transparent',
                   borderBottom: '1px solid rgba(0,0,0,0.03)',
@@ -680,7 +680,7 @@ export default function StreamsPage() {
                     const draft = [...col.messages].reverse().find(m => m.isAIDraft);
                     if (!draft) return null;
                     return (
-                      <div style={{ display: 'flex', gap: 4, paddingLeft: 52, paddingBottom: 6 }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 4, paddingLeft: 52, paddingBottom: 2, width: '100%', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
                         <button onClick={e => {
                           e.stopPropagation();
                           deletePendingDraft(draft.draftDbId);

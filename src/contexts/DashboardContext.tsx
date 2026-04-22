@@ -421,7 +421,6 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 byPhone.get(phone10)!.push(d);
               });
               byPhone.forEach((phoneDrafts, phone10) => {
-                const colId = `draft-col-${phone10}`;
                 const phoneLabel = `(${phone10.slice(0,3)}) ${phone10.slice(3,6)}-${phone10.slice(6)}`;
                 // Always prefer a fresh lookup over whatever was stored in the DB
                 const knownContact = freshContacts.find(c =>
@@ -433,15 +432,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 const initials = /^\(?\d/.test(contactName)
                   ? phone10.slice(-4)
                   : contactName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || phone10.slice(-4);
-                const syntheticContact: Contact = {
-                  id: knownContact?.id || `phone-${phone10}`,
-                  name: contactName,
-                  initials,
-                  phone: `+1${phone10}`,
-                  tag: 'NEW',
-                  tagColor: '#2678FF',
-                  tagBg: 'rgba(38,120,255,0.1)',
-                };
+
                 const draftMessages: Message[] = phoneDrafts.map(d => ({
                   id: `ai-draft-${d.id as string}`,
                   text: d.text as string,
@@ -451,9 +442,36 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                   status: 'Draft',
                   draftDbId: d.id as string,
                 }));
+
+                // If a real conversation already exists for this phone, inject drafts into it
+                const existingReal = realColumns.find(c =>
+                  c.contact?.phone && c.contact.phone.replace(/\D/g, '').slice(-10) === phone10
+                );
+                if (existingReal) {
+                  const alreadyHasDraft = existingReal.messages.some(m => m.isAIDraft);
+                  if (!alreadyHasDraft) {
+                    const merged = { ...existingReal, messages: [...existingReal.messages, ...draftMessages] };
+                    setColumns(prev => prev.map(c => c.id === existingReal.id ? merged : c));
+                    setAllConversations(prev => prev.map(c => c.id === existingReal.id ? merged : c));
+                  }
+                  return;
+                }
+
+                // No real conversation — create a synthetic draft-col column
+                const colId = `draft-col-${phone10}`;
+                const syntheticContact: Contact = {
+                  id: knownContact?.id || `phone-${phone10}`,
+                  name: contactName,
+                  initials,
+                  phone: `+1${phone10}`,
+                  tag: 'NEW',
+                  tagColor: '#2678FF',
+                  tagBg: 'rgba(38,120,255,0.1)',
+                };
                 const draftCol: ConversationColumn = { id: colId, contact: syntheticContact, messages: draftMessages };
                 setColumns(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
                 setAllConversations(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
+
                 // Backfill correct name into DB rows that were saved with a phone number
                 if (knownContact && contactName !== phoneLabel) {
                   phoneDrafts.forEach(d => {
