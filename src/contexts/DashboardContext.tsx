@@ -565,11 +565,24 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               try { currentStackHidden = new Set(JSON.parse(localStorage.getItem('vernacular-stack-hidden') || '[]')); } catch { currentStackHidden = new Set(); }
               const brandNew = Array.from(freshMap.values()).filter(c => !currentDismissed.has(c.id) && !currentStackHidden.has(c.id));
               const brandNewPhones = new Set(brandNew.map(c => normalizePhone(c.contact?.phone || '')).filter(Boolean));
+              // Migrate ai-draft messages from draft-col-* to their real column before removing
+              const brandNewWithDrafts = brandNew.map(newCol => {
+                const newPhone = normalizePhone(newCol.contact?.phone || '');
+                if (!newPhone) return newCol;
+                const draftCol = merged.find(c =>
+                  c.id.startsWith('draft-col-') &&
+                  normalizePhone(c.contact?.phone || '') === newPhone
+                );
+                if (!draftCol) return newCol;
+                const pendingDrafts = draftCol.messages.filter(m => m.id.startsWith('ai-draft-'));
+                if (pendingDrafts.length === 0) return newCol;
+                return { ...newCol, messages: [...newCol.messages, ...pendingDrafts] };
+              });
               const cleaned = merged.filter(c => {
                 if (!c.id.startsWith('draft-col-')) return true;
                 return !brandNewPhones.has(normalizePhone(c.contact?.phone || ''));
               });
-              return [...brandNew, ...cleaned];
+              return [...brandNewWithDrafts, ...cleaned];
             });
             setAllConversations(freshColumns);
           }
