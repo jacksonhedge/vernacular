@@ -191,6 +191,7 @@ export default function CraigPanel() {
   const [loadingStage, setLoadingStage] = useState<'dots' | 'breathing' | 'streaming'>('dots');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -459,8 +460,10 @@ export default function CraigPanel() {
   };
 
   const clearChat = () => {
-    // Save the current session (auto-save already handles this, but flush now just in case)
-    // Do NOT delete — keep it in DB so user can reference history
+    if (aiCopilotMessages.length > 0) {
+      setShowSavedToast(true);
+      setTimeout(() => setShowSavedToast(false), 2500);
+    }
     setAiCopilotMessages([]);
     setStreamingText('');
     setAiChatSessionId(null);
@@ -474,6 +477,29 @@ export default function CraigPanel() {
       background: '#1a1f2e', borderLeft: '1px solid rgba(255,255,255,0.06)',
       position: 'relative',
     }}>
+      {/* Saved toast */}
+      {showSavedToast && (
+        <div style={{
+          position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100,
+          background: 'linear-gradient(135deg, #1a2e1a, #0f1f0f)',
+          border: '1px solid rgba(34,197,94,0.4)',
+          borderRadius: 10, padding: '9px 18px',
+          display: 'flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,197,94,0.15)',
+          animation: 'savedFadeIn 0.2s ease-out',
+          whiteSpace: 'nowrap',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#22C55E', letterSpacing: '0.01em' }}>
+            Message thread saved
+          </span>
+        </div>
+      )}
+      <style>{`@keyframes savedFadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-6px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }`}</style>
+
       {/* Header */}
       <div style={{
         padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
