@@ -364,6 +364,7 @@ export default function CraigPanel() {
     // Support MULTIPLE [SEND:...] tags per reply + auto-create a synthetic column
     // when Craig is texting a phone that isn't already open as a stream.
     const sendMatches = [...text.matchAll(/\[SEND:([^:]+):([^\]]+)\]/g)];
+    console.log('[Craig] SEND tags found:', sendMatches.length, 'autoSendDisabled:', CRAIG_AUTO_SEND_DISABLED);
     if (sendMatches.length && CRAIG_AUTO_SEND_DISABLED) {
       // Track synthetic columns created this run so we don't re-create for the same phone
       const createdPhoneIds = new Map<string, string>();
@@ -371,6 +372,7 @@ export default function CraigPanel() {
         const target = m[1];
         const message = m[2].trim();
         const targetDigits = target.replace(/\D/g, '').slice(-10);
+        console.log(`[Craig] Processing SEND ${idx + 1}: target="${target}" digits="${targetDigits}"`);
 
         // 1) Try to match an existing column (by name or phone last-10)
         let matchedCol = columns.find(c => {
@@ -405,6 +407,7 @@ export default function CraigPanel() {
           matchedCol = { id: newId, contact: syntheticContact, messages: [] };
         }
 
+        console.log(`[Craig] matchedCol for ${targetDigits}:`, matchedCol ? matchedCol.id : 'null — creating draft-col');
         if (matchedCol) {
           const draftMsg = {
             id: `ai-draft-${Date.now()}-${idx}`,
