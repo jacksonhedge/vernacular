@@ -179,7 +179,7 @@ export default function CraigPanel() {
   const {
     setShowAICopilot, aiCopilotMessages, setAiCopilotMessages,
     aiCopilotModel, setAiCopilotModel,
-    orgId, columns, contacts,
+    orgId, columns, allConversations, contacts,
     craigKnowledge, orgKnowledge,
     dbInitiatives, setColumns, setAllConversations, showAICopilot,
     aiChatSessionId, setAiChatSessionId, savePendingDraft,
@@ -427,13 +427,15 @@ export default function CraigPanel() {
         const targetDigits = target.replace(/\D/g, '').slice(-10);
         console.log(`[Craig] Processing SEND ${idx + 1}: target="${target}" digits="${targetDigits}"`);
 
-        // 1) Try to match an existing column (by name or phone last-10)
+        // 1) Try to match an open column first, then fall back to allConversations (closed streams)
         let matchedCol = columns.find(c => {
           if (!c.contact) return false;
           const nameMatch = c.contact.name.toLowerCase().includes(target.toLowerCase());
           const phoneMatch = targetDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === targetDigits;
           return nameMatch || phoneMatch;
-        });
+        }) || (targetDigits.length >= 10 ? allConversations.find(c =>
+          c.contact?.phone?.replace(/\D/g, '').slice(-10) === targetDigits
+        ) : undefined);
 
         // 2) If nothing matches AND the target is a phone number, synthesize a new column per phone
         if (!matchedCol && targetDigits.length >= 10) {
@@ -475,9 +477,13 @@ export default function CraigPanel() {
           };
           savePendingDraft(dbId, `+1${targetDigits}`, contactLabel, message);
           const targetId = matchedCol.id;
-          setColumns(prev => prev.map(c => c.id === targetId
-            ? { ...c, messages: [...c.messages, draftMsg] }
-            : c));
+          setColumns(prev => {
+            if (prev.some(c => c.id === targetId)) {
+              return prev.map(c => c.id === targetId ? { ...c, messages: [...c.messages, draftMsg] } : c);
+            }
+            // Column exists in allConversations but wasn't open — auto-open it leftmost
+            return [{ ...matchedCol!, messages: [...(matchedCol!.messages || []), draftMsg] }, ...prev];
+          });
           // Mirror into stack so the orange AI-draft dot shows on the sidebar row too
           setAllConversations(prev => {
             const idx2 = prev.findIndex(c => c.id === targetId);

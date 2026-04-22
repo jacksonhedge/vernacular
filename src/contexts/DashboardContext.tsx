@@ -95,7 +95,7 @@ interface DashboardContextValue {
   calendarEvents: CalendarEvent[];
 
   // Actions
-  sendMessage: (colId: string, textOverride?: string) => Promise<void>;
+  sendMessage: (colId: string, textOverride?: string, contactPhoneOverride?: string) => Promise<void>;
   savePendingDraft: (id: string, phone: string, contactName: string, text: string) => Promise<void>;
   deletePendingDraft: (draftDbId: string | undefined) => Promise<void>;
   addColumn: () => void;
@@ -756,7 +756,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     await supabase.from('pending_drafts').delete().eq('id', draftDbId);
   }, []);
 
-  const sendMessage = useCallback(async (colId: string, textOverride?: string) => {
+  const sendMessage = useCallback(async (colId: string, textOverride?: string, contactPhoneOverride?: string) => {
     const text = (textOverride ?? inputValues[colId])?.trim();
     if (!text) return;
     const msg: Message = {
@@ -784,7 +784,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setTimeout(() => { setRecentlySentCols(prev => { const next = new Set(prev); next.delete(colId); return next; }); }, 30000);
 
     const col = columns.find(c => c.id === colId);
-    const contactPhone = col?.contact?.phone;
+    const contactPhone = contactPhoneOverride ?? col?.contact?.phone;
     const contactName = col?.contact?.name;
 
     playSound('send');

@@ -676,6 +676,37 @@ export default function StreamsPage() {
                     >{isOpen ? 'Close' : 'Show'}</span>
                     {hasAiDraft && <div style={{ width: 7, height: 7, borderRadius: 4, background: '#F59E0B' }} />}
                   </div>
+                  {hasAiDraft && (() => {
+                    const draft = [...col.messages].reverse().find(m => m.isAIDraft);
+                    if (!draft) return null;
+                    return (
+                      <div style={{ display: 'flex', gap: 4, paddingLeft: 52, paddingBottom: 6 }} onClick={e => e.stopPropagation()}>
+                        <button onClick={e => {
+                          e.stopPropagation();
+                          deletePendingDraft(draft.draftDbId);
+                          const cleaned = col.messages.filter(m => m.id !== draft.id);
+                          setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, messages: cleaned } : c));
+                          setColumns(prev => prev.some(c => c.id === col.id)
+                            ? prev.map(c => c.id === col.id ? { ...c, messages: cleaned } : c)
+                            : [{ ...col, messages: cleaned }, ...prev]);
+                          sendMessage(col.id, draft.text, col.contact?.phone);
+                        }} style={{
+                          padding: '2px 10px', borderRadius: 5, border: 'none',
+                          background: '#22C55E', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                        }}>Send</button>
+                        <button onClick={e => {
+                          e.stopPropagation();
+                          deletePendingDraft(draft.draftDbId);
+                          const cleaned = col.messages.filter(m => m.id !== draft.id);
+                          setAllConversations(prev => prev.map(c => c.id === col.id ? { ...c, messages: cleaned } : c));
+                          setColumns(prev => prev.map(c => c.id === col.id ? { ...c, messages: cleaned } : c));
+                        }} style={{
+                          padding: '2px 10px', borderRadius: 5, border: '1px solid rgba(0,0,0,0.1)',
+                          background: '#fff', color: '#9ca3af', fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                        }}>Dismiss</button>
+                      </div>
+                    );
+                  })()}
                 </button>
               );
             })}
@@ -1511,6 +1542,38 @@ export default function StreamsPage() {
                 );
               })}
             </div>
+            {/* AI Draft approval — shown above input when a draft is pending */}
+            {previewCol.messages.some(m => m.isAIDraft) && (() => {
+              const draft = [...previewCol.messages].reverse().find(m => m.isAIDraft);
+              if (!draft) return null;
+              return (
+                <div style={{
+                  padding: '8px 16px', borderTop: '1px solid rgba(245,158,11,0.2)',
+                  background: 'rgba(254,243,199,0.6)',
+                  display: 'flex', gap: 6, alignItems: 'center',
+                }}>
+                  <span style={{ fontSize: 11, color: '#92400E', fontWeight: 600, flex: 1 }}>AI Draft ready</span>
+                  <button onClick={() => {
+                    deletePendingDraft(draft.draftDbId);
+                    setColumns(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                    setAllConversations(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                    sendMessage(previewCol.id, draft.text, previewCol.contact?.phone);
+                    setPreviewColId(null);
+                  }} style={{ padding: '4px 12px', borderRadius: 6, border: 'none', background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Send</button>
+                  <button onClick={() => {
+                    deletePendingDraft(draft.draftDbId);
+                    setInputValues(prev => ({ ...prev, [previewCol.id]: draft.text }));
+                    setColumns(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                    setAllConversations(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                  }} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#6b7280', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                  <button onClick={() => {
+                    deletePendingDraft(draft.draftDbId);
+                    setColumns(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                    setAllConversations(prev => prev.map(c => c.id === previewCol.id ? { ...c, messages: c.messages.filter(m => m.id !== draft.id) } : c));
+                  }} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
+                </div>
+              );
+            })()}
             {/* Reply input */}
             <div style={{
               padding: '12px 16px', borderTop: '1px solid rgba(0,0,0,0.06)',
