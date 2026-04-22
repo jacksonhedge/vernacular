@@ -10,6 +10,7 @@ export interface Message {
   direction: 'outgoing' | 'incoming';
   timestamp: string;
   isAIDraft?: boolean;
+  draftDbId?: string; // UUID of matching pending_drafts row — present only on AI drafts
   attachmentUrl?: string;
   attachmentType?: string;
   status?: string; // Queued, Sending, Sent, Delivered, Draft, failed

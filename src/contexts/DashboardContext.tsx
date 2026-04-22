@@ -96,6 +96,8 @@ interface DashboardContextValue {
 
   // Actions
   sendMessage: (colId: string, textOverride?: string) => Promise<void>;
+  savePendingDraft: (id: string, phone: string, contactName: string, text: string) => Promise<void>;
+  deletePendingDraft: (draftDbId: string | undefined) => Promise<void>;
   addColumn: () => void;
   removeColumn: (colId: string) => void;
   playSound: (type: 'send' | 'receive' | 'click') => void;
@@ -403,8 +405,47 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
           try { dismissed = new Set(JSON.parse(localStorage.getItem('vernacular-dismissed') || '[]')); } catch { dismissed = new Set(); }
           let stackHidden: Set<string>;
           try { stackHidden = new Set(JSON.parse(localStorage.getItem('vernacular-stack-hidden') || '[]')); } catch { stackHidden = new Set(); }
-          setColumns(realColumns.filter(c => !dismissed.has(c.id) && !stackHidden.has(c.id)));
+          const baseColumns = realColumns.filter(c => !dismissed.has(c.id) && !stackHidden.has(c.id));
+          setColumns(baseColumns);
           setLastReloadTime(new Date());
+
+          // Restore pending drafts — reconstruct draft-col-* columns that survived a refresh
+          supabase.from('pending_drafts').select('*').eq('organization_id', orgId).order('created_at', { ascending: true })
+            .then(({ data: drafts }) => {
+              if (!drafts || drafts.length === 0) return;
+              const byPhone = new Map<string, typeof drafts>();
+              (drafts as Record<string, unknown>[]).forEach(d => {
+                const phone10 = (d.phone as string).replace(/\D/g, '').slice(-10);
+                if (!byPhone.has(phone10)) byPhone.set(phone10, []);
+                byPhone.get(phone10)!.push(d);
+              });
+              byPhone.forEach((phoneDrafts, phone10) => {
+                const colId = `draft-col-${phone10}`;
+                const phoneLabel = `(${phone10.slice(0,3)}) ${phone10.slice(3,6)}-${phone10.slice(6)}`;
+                const contactName = (phoneDrafts[0].contact_name as string) || phoneLabel;
+                const syntheticContact: Contact = {
+                  id: `phone-${phone10}`,
+                  name: contactName,
+                  initials: contactName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || phone10.slice(-4),
+                  phone: `+1${phone10}`,
+                  tag: 'NEW',
+                  tagColor: '#2678FF',
+                  tagBg: 'rgba(38,120,255,0.1)',
+                };
+                const draftMessages: Message[] = phoneDrafts.map(d => ({
+                  id: `ai-draft-${d.id as string}`,
+                  text: d.text as string,
+                  direction: 'outgoing' as const,
+                  timestamp: d.created_at as string,
+                  isAIDraft: true,
+                  status: 'Draft',
+                  draftDbId: d.id as string,
+                }));
+                const draftCol: ConversationColumn = { id: colId, contact: syntheticContact, messages: draftMessages };
+                setColumns(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
+                setAllConversations(prev => prev.some(c => c.id === colId) ? prev : [draftCol, ...prev]);
+              });
+            });
         }
       }).catch(() => {});
 
@@ -705,6 +746,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const savePendingDraft = useCallback(async (id: string, phone: string, contactName: string, text: string) => {
+    if (!orgId) return;
+    await supabase.from('pending_drafts').insert({ id, organization_id: orgId, phone, contact_name: contactName, text, source: 'craig' });
+  }, [orgId]);
+
+  const deletePendingDraft = useCallback(async (draftDbId: string | undefined) => {
+    if (!draftDbId) return;
+    await supabase.from('pending_drafts').delete().eq('id', draftDbId);
+  }, []);
+
   const sendMessage = useCallback(async (colId: string, textOverride?: string) => {
     const text = (textOverride ?? inputValues[colId])?.trim();
     if (!text) return;
@@ -795,7 +846,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     inputValues, setInputValues,
     recentlySentCols, setRecentlySentCols,
     calendarEvents,
-    sendMessage, addColumn, removeColumn, playSound,
+    sendMessage, savePendingDraft, deletePendingDraft, addColumn, removeColumn, playSound,
   };
 
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;

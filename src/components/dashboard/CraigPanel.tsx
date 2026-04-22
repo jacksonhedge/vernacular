@@ -182,7 +182,7 @@ export default function CraigPanel() {
     orgId, columns, contacts,
     craigKnowledge, orgKnowledge,
     dbInitiatives, setColumns, setAllConversations, showAICopilot,
-    aiChatSessionId, setAiChatSessionId,
+    aiChatSessionId, setAiChatSessionId, savePendingDraft,
   } = useDashboard();
   const router = useRouter();
 
@@ -462,14 +462,18 @@ export default function CraigPanel() {
 
         console.log(`[Craig] matchedCol for ${targetDigits}:`, matchedCol ? matchedCol.id : 'null — creating draft-col');
         if (matchedCol) {
+          const dbId = crypto.randomUUID();
+          const contactLabel = matchedCol.contact?.name || `+1${targetDigits}`;
           const draftMsg = {
-            id: `ai-draft-${Date.now()}-${idx}`,
+            id: `ai-draft-${dbId}`,
             text: message,
             direction: 'outgoing' as const,
             timestamp: new Date().toISOString(),
             isAIDraft: true,
             status: 'Draft',
+            draftDbId: dbId,
           };
+          savePendingDraft(dbId, `+1${targetDigits}`, contactLabel, message);
           const targetId = matchedCol.id;
           setColumns(prev => prev.map(c => c.id === targetId
             ? { ...c, messages: [...c.messages, draftMsg] }

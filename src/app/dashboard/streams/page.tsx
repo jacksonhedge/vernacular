@@ -13,7 +13,7 @@ export default function StreamsPage() {
     readConversations, setReadConversations,
     dismissedColumns, setDismissedColumns,
     inputValues, setInputValues,
-    sendMessage, addColumn, removeColumn, playSound,
+    sendMessage, deletePendingDraft, addColumn, removeColumn, playSound,
     lastReloadTime, dbInitiatives,
     activeInitiativeFilter, setActiveInitiativeFilter, initiativePhones,
     ghostConfig, recentlySentCols,
@@ -1090,7 +1090,7 @@ export default function StreamsPage() {
                           padding: '4px 0',
                         }}>
                           <button onClick={() => {
-                            // Approve: remove draft and send text directly (no stale-closure race)
+                            deletePendingDraft(draft.draftDbId);
                             setColumns(prev => prev.map(c => c.id === col.id ? {
                               ...c, messages: c.messages.filter(m => m.id !== draft.id),
                             } : c));
@@ -1103,6 +1103,7 @@ export default function StreamsPage() {
                             Send
                           </button>
                           <button onClick={() => {
+                            deletePendingDraft(draft.draftDbId);
                             setInputValues(prev => ({ ...prev, [col.id]: draft.text }));
                             setColumns(prev => prev.map(c => c.id === col.id ? {
                               ...c, messages: c.messages.filter(m => m.id !== draft.id),
@@ -1115,6 +1116,7 @@ export default function StreamsPage() {
                             Edit
                           </button>
                           <button onClick={() => {
+                            deletePendingDraft(draft.draftDbId);
                             setColumns(prev => prev.map(c => c.id === col.id ? {
                               ...c, messages: c.messages.filter(m => m.id !== draft.id),
                             } : c));
