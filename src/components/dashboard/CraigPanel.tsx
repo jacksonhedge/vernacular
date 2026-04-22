@@ -384,25 +384,25 @@ export default function CraigPanel() {
         if (!matchedCol && targetDigits.length >= 10) {
           const existingId = createdPhoneIds.get(targetDigits);
           const newId = existingId || `draft-col-${targetDigits}`;
+          const phoneLabel = `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`;
+          // Look up real contact name if we have it
+          const knownContact = contacts.find(c => (c.phone || '').replace(/\D/g, '').slice(-10) === targetDigits);
+          const nameLabel = knownContact ? `${knownContact.first_name || ''} ${knownContact.last_name || ''}`.trim() || phoneLabel : phoneLabel;
+          const syntheticContact = {
+            id: knownContact?.id || `phone-${targetDigits}`,
+            name: nameLabel,
+            initials: nameLabel.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || targetDigits.slice(-4),
+            phone: `+1${targetDigits}`,
+            tag: 'NEW' as const,
+            tagColor: '#2678FF',
+            tagBg: 'rgba(38,120,255,0.1)',
+          };
           if (!existingId) {
             createdPhoneIds.set(targetDigits, newId);
-            const nameLabel = `(${targetDigits.slice(0, 3)}) ${targetDigits.slice(3, 6)}-${targetDigits.slice(6)}`;
-            const newCol = {
-              id: newId,
-              contact: {
-                id: `phone-${targetDigits}`,
-                name: nameLabel,
-                initials: targetDigits.slice(-4),
-                phone: `+1${targetDigits}`,
-                tag: 'NEW' as const,
-                tagColor: '#2678FF',
-                tagBg: 'rgba(38,120,255,0.1)',
-              },
-              messages: [],
-            };
+            const newCol = { id: newId, contact: syntheticContact, messages: [] };
             setColumns(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
           }
-          matchedCol = { id: newId, contact: null, messages: [] };
+          matchedCol = { id: newId, contact: syntheticContact, messages: [] };
         }
 
         if (matchedCol) {

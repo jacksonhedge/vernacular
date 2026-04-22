@@ -263,6 +263,7 @@ export default function StreamsPage() {
     ? columns.filter(col => {
       if (!col.contact) return true; // blank picker col
       if (stickyLeftIds.includes(col.id)) return true; // user explicitly pinned
+      if (col.id.startsWith('draft-col-')) return true; // Craig-staged drafts always show
       if (!col.contact.phone) return false;
       return initiativePhones.has(normalizePhone(col.contact.phone));
     })
