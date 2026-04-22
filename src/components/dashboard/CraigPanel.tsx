@@ -433,20 +433,21 @@ export default function CraigPanel() {
           const byName = (contacts as import('@/types/dashboard').ContactRecord[]).find(c => {
             const fn = `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase();
             const fn2 = (c.full_name || '').toLowerCase();
-            return fn === targetLower || fn2 === targetLower ||
-              fn.startsWith(targetLower) || fn2.startsWith(targetLower) ||
-              targetLower.startsWith(fn.split(' ')[0]) || fn.includes(targetLower);
+            return fn === targetLower || fn2 === targetLower;
           });
           if (byName?.phone) resolvedDigits = byName.phone.replace(/\D/g, '').slice(-10);
         }
         console.log(`[Craig] Processing SEND ${idx + 1}: target="${target}" resolved="${resolvedDigits}"`);
 
         // 1) Try to match an open column first, then fall back to allConversations
+        // For name-based targets use phone match only (resolvedDigits already resolved via exact name lookup)
+        const isPhoneTarget = rawDigits.length >= 10;
         let matchedCol = columns.find(c => {
           if (!c.contact) return false;
-          const nameMatch = c.contact.name.toLowerCase().includes(target.toLowerCase());
-          const phoneMatch = resolvedDigits.length >= 10 && c.contact.phone?.replace(/\D/g, '').slice(-10) === resolvedDigits;
-          return nameMatch || phoneMatch;
+          if (resolvedDigits.length >= 10) return c.contact.phone?.replace(/\D/g, '').slice(-10) === resolvedDigits;
+          // Only fall back to name includes if target was a raw phone number that couldn't be resolved
+          if (isPhoneTarget) return false;
+          return c.contact.name.toLowerCase() === target.toLowerCase();
         }) || (resolvedDigits.length >= 10 ? allConversations.find(c =>
           c.contact?.phone?.replace(/\D/g, '').slice(-10) === resolvedDigits
         ) : undefined);
