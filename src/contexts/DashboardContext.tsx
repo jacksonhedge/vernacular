@@ -95,7 +95,7 @@ interface DashboardContextValue {
   calendarEvents: CalendarEvent[];
 
   // Actions
-  sendMessage: (colId: string) => Promise<void>;
+  sendMessage: (colId: string, textOverride?: string) => Promise<void>;
   addColumn: () => void;
   removeColumn: (colId: string) => void;
   playSound: (type: 'send' | 'receive' | 'click') => void;
@@ -705,8 +705,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const sendMessage = useCallback(async (colId: string) => {
-    const text = inputValues[colId]?.trim();
+  const sendMessage = useCallback(async (colId: string, textOverride?: string) => {
+    const text = (textOverride ?? inputValues[colId])?.trim();
     if (!text) return;
     const msg: Message = {
       id: `m-${Date.now()}`, text, direction: 'outgoing',

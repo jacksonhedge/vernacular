@@ -272,9 +272,10 @@ export default function StreamsPage() {
    .filter(col => {
      if (!col.contact) return true; // blank picker col
      if (stickyLeftIds.includes(col.id)) return true; // user explicitly pinned
+     if (col.id.startsWith('draft-col-')) return true; // Craig-staged cols always show
      if (timeCutoff === 0) return true; // "forever"
      const lastMsg = col.messages[col.messages.length - 1];
-     if (!lastMsg?.timestamp) return false;
+     if (!lastMsg?.timestamp) return true; // keep empty cols (e.g. after Edit clears draft)
      return parseTimestamp(lastMsg.timestamp).getTime() >= timeCutoff;
    });
 
@@ -327,7 +328,7 @@ export default function StreamsPage() {
     .filter(col => {
       if (timeCutoff === 0) return true;
       const lastMsg = col.messages[col.messages.length - 1];
-      if (!lastMsg?.timestamp) return false;
+      if (!lastMsg?.timestamp) return true; // keep empty cols
       return parseTimestamp(lastMsg.timestamp).getTime() >= timeCutoff;
     })
     .sort((a, b) => {
@@ -1089,12 +1090,11 @@ export default function StreamsPage() {
                           padding: '4px 0',
                         }}>
                           <button onClick={() => {
-                            // Approve: send the draft as a real message
-                            setInputValues(prev => ({ ...prev, [col.id]: draft.text }));
+                            // Approve: remove draft and send text directly (no stale-closure race)
                             setColumns(prev => prev.map(c => c.id === col.id ? {
                               ...c, messages: c.messages.filter(m => m.id !== draft.id),
                             } : c));
-                            setTimeout(() => sendMessage(col.id), 50);
+                            sendMessage(col.id, draft.text);
                           }} style={{
                             padding: '5px 12px', borderRadius: 6, border: 'none',
                             background: '#22C55E', color: '#fff', fontSize: 11, fontWeight: 700,
