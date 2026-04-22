@@ -661,7 +661,22 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
               });
               return [...brandNewWithDrafts, ...cleaned];
             });
-            setAllConversations(freshColumns);
+            setAllConversations(prev => {
+              // Preserve draft-col-* entries that don't have a matching real conversation yet
+              const freshPhones = new Set(freshColumns.map(c => normalizePhone(c.contact?.phone || '')).filter(Boolean));
+              const draftColsToKeep = prev.filter(c =>
+                c.id.startsWith('draft-col-') &&
+                !freshPhones.has(normalizePhone(c.contact?.phone || ''))
+              );
+              // Update messages on real columns to match fresh data, keep ai-draft messages
+              const merged = freshColumns.map(fresh => {
+                const existing = prev.find(p => p.id === fresh.id);
+                if (!existing) return fresh;
+                const localOnly = existing.messages.filter(m => m.id.startsWith('ai-draft-'));
+                return { ...fresh, messages: [...fresh.messages, ...localOnly] };
+              });
+              return [...merged, ...draftColsToKeep];
+            });
           }
         }
 

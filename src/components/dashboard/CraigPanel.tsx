@@ -458,6 +458,7 @@ export default function CraigPanel() {
             createdPhoneIds.set(targetDigits, newId);
             const newCol = { id: newId, contact: syntheticContact, messages: [] };
             setColumns(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
+            setAllConversations(prev => prev.some(c => c.id === newId) ? prev : [newCol, ...prev]);
           }
           matchedCol = { id: newId, contact: syntheticContact, messages: [] };
         }
