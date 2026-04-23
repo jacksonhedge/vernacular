@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { supabase } from '@/lib/supabase';
 import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone, formatPhoneNumber } from '@/lib/utils';
 import type { ConversationColumn, Contact, Message } from '@/types/dashboard';
 
 export default function StreamsPage() {
+  const router = useRouter();
   const {
     columns, setColumns, allConversations, contacts,
     selectedConversationId, setSelectedConversationId,
@@ -1759,11 +1761,14 @@ export default function StreamsPage() {
                 persistHiddenPhones(next);
                 removeColumn(chatContextMenu.colId);
               }},
-              { label: '📝 Add / edit note', action: () => {
+              { label: '📝 Quick note', action: () => {
                 const contact = (contacts as { id: string; notes?: string }[]).find(c => c.id === chatContextMenu.contactId);
                 const existing = contact?.notes || '';
                 setNoteText(existing);
                 setNoteModal({ colId: chatContextMenu.colId, name: chatContextMenu.name, contactId: chatContextMenu.contactId, existingNote: existing });
+              }},
+              { label: '👤 Go to Contact', action: () => {
+                router.push(`/dashboard/contacts?open=${chatContextMenu.contactId}`);
               }},
             ].map(item => (
               <button key={item.label} onClick={() => { item.action(); setChatContextMenu(null); }} style={{

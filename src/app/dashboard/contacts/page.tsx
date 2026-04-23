@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { supabase } from '@/lib/supabase';
 import { formatTime, getInitials } from '@/lib/utils';
@@ -55,11 +56,20 @@ function downloadFile(content: string, filename: string, mime: string) {
 
 export default function ContactsPage() {
   const { contacts, setContacts, orgId } = useDashboard();
+  const searchParams = useSearchParams();
 
   // UI state
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
   const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
+
+  // Auto-open contact from ?open= query param (e.g. from Streams "Go to Contact")
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || !contacts.length) return;
+    const match = (contacts as ContactRecord[]).find(c => c.id === openId);
+    if (match) setSelectedContact(match);
+  }, [searchParams, contacts]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showImportModal, setShowImportModal] = useState<'vcf' | 'csv' | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
