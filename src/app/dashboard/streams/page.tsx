@@ -117,7 +117,10 @@ export default function StreamsPage() {
   const [showContactPicker, setShowContactPicker] = useState<string | null>(null);
   const [contactPickerSearch, setContactPickerSearch] = useState('');
   const [msgContextMenu, setMsgContextMenu] = useState<{ x: number; y: number; msgId: string; colId: string } | null>(null);
-  const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string } | null>(null);
+  const [chatContextMenu, setChatContextMenu] = useState<{ x: number; y: number; colId: string; phone: string; name: string; contactId: string } | null>(null);
+  const [noteModal, setNoteModal] = useState<{ colId: string; name: string; contactId: string; existingNote: string } | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
   const [previewColId, setPreviewColId] = useState<string | null>(null);
   const previewCol = previewColId
     ? (columns.find(c => c.id === previewColId) || allConversations.find(c => c.id === previewColId) || null)
@@ -631,6 +634,7 @@ export default function StreamsPage() {
                       colId: col.id,
                       phone: col.contact?.phone || '',
                       name: col.contact?.name || 'Unknown',
+                      contactId: col.contact?.id || '',
                     });
                   }}
                   onClick={() => {
@@ -1658,6 +1662,54 @@ export default function StreamsPage() {
         </div>
       )}
 
+      {/* Note modal */}
+      {noteModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setNoteModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 24, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0c0f1a', marginBottom: 4 }}>Note — {noteModal.name}</div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 14 }}>Saved to contact record. Only visible to your team.</div>
+            <textarea
+              autoFocus
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              placeholder="Add a note about this conversation or contact..."
+              style={{
+                width: '100%', minHeight: 120, padding: '10px 12px', borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.1)', fontSize: 13, fontFamily: "'Inter', sans-serif",
+                resize: 'vertical', outline: 'none', color: '#111827', boxSizing: 'border-box',
+                background: '#f8f9fb', lineHeight: 1.5,
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button onClick={() => setNoteModal(null)} style={{
+                padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)',
+                background: '#f8f9fb', fontSize: 13, fontWeight: 500, color: '#6b7280', cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}>Cancel</button>
+              <button disabled={noteSaving} onClick={async () => {
+                if (!noteModal.contactId) return;
+                setNoteSaving(true);
+                try {
+                  await supabase.from('contacts').update({ notes: noteText }).eq('id', noteModal.contactId);
+                } finally {
+                  setNoteSaving(false);
+                  setNoteModal(null);
+                }
+              }} style={{
+                padding: '8px 18px', borderRadius: 8, border: 'none',
+                background: noteSaving ? '#93c5fd' : '#2678FF', fontSize: 13, fontWeight: 600,
+                color: '#fff', cursor: noteSaving ? 'default' : 'pointer',
+                fontFamily: "'Inter', sans-serif",
+              }}>
+                {noteSaving ? 'Saving…' : 'Save note'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chat row context menu (right-click on sidebar conversation) */}
       {chatContextMenu && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setChatContextMenu(null)}>
@@ -1706,6 +1758,12 @@ export default function StreamsPage() {
                 const next = new Set(hiddenPhones); next.add(key);
                 persistHiddenPhones(next);
                 removeColumn(chatContextMenu.colId);
+              }},
+              { label: '📝 Add / edit note', action: () => {
+                const contact = (contacts as { id: string; notes?: string }[]).find(c => c.id === chatContextMenu.contactId);
+                const existing = contact?.notes || '';
+                setNoteText(existing);
+                setNoteModal({ colId: chatContextMenu.colId, name: chatContextMenu.name, contactId: chatContextMenu.contactId, existingNote: existing });
               }},
             ].map(item => (
               <button key={item.label} onClick={() => { item.action(); setChatContextMenu(null); }} style={{
