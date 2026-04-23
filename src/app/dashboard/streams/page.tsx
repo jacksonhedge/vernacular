@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDashboard } from '@/contexts/DashboardContext';
 import { supabase } from '@/lib/supabase';
-import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone, formatPhoneNumber } from '@/lib/utils';
+import { fmtMsgTime, fmtStackTime, parseTimestamp, normalizePhone, formatPhoneNumber, detectDateTime } from '@/lib/utils';
 import type { ConversationColumn, Contact, Message } from '@/types/dashboard';
 
 export default function StreamsPage() {
@@ -154,6 +154,21 @@ export default function StreamsPage() {
   const streamsScrollRef = useRef<HTMLDivElement>(null);
   const [scrolledTop, setScrolledTop] = useState<Record<string, boolean>>({});
   const lastMsgCounts = useRef<Record<string, number>>({});
+
+  // Schedule chip state
+  type SchedulePrompt = {
+    colId: string;
+    msgId: string;
+    contactName: string;
+    contactPhone: string;
+    contactId: string;
+    detectedLabel: string;
+    title: string;
+    dateTimeText: string;
+    saving: boolean;
+    saved: boolean;
+  };
+  const [schedulePrompt, setSchedulePrompt] = useState<SchedulePrompt | null>(null);
 
   useEffect(() => {
     if (!chatContextMenu) return;
@@ -1114,39 +1129,175 @@ export default function StreamsPage() {
                       const isOutgoing = msg.direction === 'outgoing';
                       const isDraft = msg.isAIDraft;
                       const isFailed = msg.status === 'failed' || msg.id.startsWith('failed-');
+                      const detectedLabel = (!isOutgoing && !isDraft && msg.text)
+                        ? detectDateTime(msg.text)
+                        : null;
+                      const isScheduleOpen = schedulePrompt?.colId === col.id && schedulePrompt?.msgId === msg.id;
 
                       return (
-                        <div key={msg.id} style={{
-                          display: 'flex', justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
-                        }}
-                          onContextMenu={e => {
-                            e.preventDefault();
-                            setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
-                          }}
-                        >
+                        <div key={msg.id}>
                           <div style={{
-                            maxWidth: '80%',
-                            padding: '9px 14px',
-                            borderRadius: isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                            background: isDraft ? '#FEF3C7' : isFailed ? '#FEE2E2' : isOutgoing ? '#2678FF' : '#fff',
-                            color: isDraft ? '#92400E' : isFailed ? '#DC2626' : isOutgoing ? '#fff' : '#0c0f1a',
-                            fontSize: 13, lineHeight: 1.45,
-                            border: isDraft ? '1px solid rgba(245,158,11,0.3)' : isFailed ? '1px solid rgba(220,38,38,0.2)' : isOutgoing ? 'none' : '1px solid rgba(0,0,0,0.06)',
-                            boxShadow: isOutgoing && !isDraft && !isFailed ? '0 1px 3px rgba(38,120,255,0.2)' : 'none',
-                            wordBreak: 'break-word',
-                          }}>
-                            {msg.text}
+                            display: 'flex', justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
+                          }}
+                            onContextMenu={e => {
+                              e.preventDefault();
+                              setMsgContextMenu({ x: e.clientX, y: e.clientY, msgId: msg.id, colId: col.id });
+                            }}
+                          >
                             <div style={{
-                              fontSize: 10, marginTop: 4, opacity: 0.6,
-                              textAlign: isOutgoing ? 'right' : 'left',
-                              fontFamily: "'JetBrains Mono', monospace",
+                              maxWidth: '80%',
+                              padding: '9px 14px',
+                              borderRadius: isOutgoing ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                              background: isDraft ? '#FEF3C7' : isFailed ? '#FEE2E2' : isOutgoing ? '#2678FF' : '#fff',
+                              color: isDraft ? '#92400E' : isFailed ? '#DC2626' : isOutgoing ? '#fff' : '#0c0f1a',
+                              fontSize: 13, lineHeight: 1.45,
+                              border: isDraft ? '1px solid rgba(245,158,11,0.3)' : isFailed ? '1px solid rgba(220,38,38,0.2)' : isOutgoing ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                              boxShadow: isOutgoing && !isDraft && !isFailed ? '0 1px 3px rgba(38,120,255,0.2)' : 'none',
+                              wordBreak: 'break-word',
                             }}>
-                              {fmtMsgTime(msg.timestamp)}
-                              {isDraft && ' · AI Draft'}
-                              {isFailed && ' · Failed'}
-                              {msg.status === 'Queued' && ' · Queued'}
+                              {msg.text}
+                              <div style={{
+                                fontSize: 10, marginTop: 4, opacity: 0.6,
+                                textAlign: isOutgoing ? 'right' : 'left',
+                                fontFamily: "'JetBrains Mono', monospace",
+                              }}>
+                                {fmtMsgTime(msg.timestamp)}
+                                {isDraft && ' · AI Draft'}
+                                {isFailed && ' · Failed'}
+                                {msg.status === 'Queued' && ' · Queued'}
+                              </div>
                             </div>
                           </div>
+
+                          {/* Schedule chip — only on incoming messages with a detected date */}
+                          {detectedLabel && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 3, marginBottom: 2 }}>
+                              <button
+                                onClick={() => {
+                                  if (isScheduleOpen) {
+                                    setSchedulePrompt(null);
+                                  } else {
+                                    const contactName = col.contact?.name || 'Contact';
+                                    setSchedulePrompt({
+                                      colId: col.id,
+                                      msgId: msg.id,
+                                      contactName,
+                                      contactPhone: col.contact?.phone || '',
+                                      contactId: col.contact?.id || '',
+                                      detectedLabel,
+                                      title: `${contactName} — ${detectedLabel}`,
+                                      dateTimeText: detectedLabel,
+                                      saving: false,
+                                      saved: false,
+                                    });
+                                  }
+                                }}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                                  padding: '3px 9px', borderRadius: 20,
+                                  background: isScheduleOpen ? 'rgba(38,120,255,0.12)' : 'rgba(0,0,0,0.05)',
+                                  border: isScheduleOpen ? '1px solid rgba(38,120,255,0.3)' : '1px solid rgba(0,0,0,0.07)',
+                                  color: isScheduleOpen ? '#2678FF' : '#6b7280',
+                                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                  fontFamily: "'Inter', sans-serif",
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                <span>📅</span>
+                                <span>Schedule · {detectedLabel}</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Inline schedule card */}
+                          {isScheduleOpen && schedulePrompt && (
+                            <div style={{
+                              marginTop: 4, marginBottom: 6,
+                              background: '#fff',
+                              border: '1px solid rgba(38,120,255,0.2)',
+                              borderRadius: 10, padding: '12px 14px',
+                              boxShadow: '0 2px 8px rgba(38,120,255,0.08)',
+                              maxWidth: '85%',
+                            }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#2678FF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                New Event
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div>
+                                  <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Title</div>
+                                  <input
+                                    value={schedulePrompt.title}
+                                    onChange={e => setSchedulePrompt(prev => prev ? { ...prev, title: e.target.value } : null)}
+                                    style={{
+                                      width: '100%', padding: '6px 10px', borderRadius: 6,
+                                      border: '1px solid rgba(0,0,0,0.1)', fontSize: 12,
+                                      fontFamily: "'Inter', sans-serif", outline: 'none',
+                                      color: '#0c0f1a', boxSizing: 'border-box',
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date / Time</div>
+                                  <input
+                                    value={schedulePrompt.dateTimeText}
+                                    onChange={e => setSchedulePrompt(prev => prev ? { ...prev, dateTimeText: e.target.value } : null)}
+                                    style={{
+                                      width: '100%', padding: '6px 10px', borderRadius: 6,
+                                      border: '1px solid rgba(0,0,0,0.1)', fontSize: 12,
+                                      fontFamily: "'Inter', sans-serif", outline: 'none',
+                                      color: '#0c0f1a', boxSizing: 'border-box',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                                <button
+                                  disabled={schedulePrompt.saving || schedulePrompt.saved}
+                                  onClick={async () => {
+                                    if (!orgId) return;
+                                    setSchedulePrompt(prev => prev ? { ...prev, saving: true } : null);
+                                    const { error } = await supabase.from('scheduled_events').insert({
+                                      organization_id: orgId,
+                                      contact_id: schedulePrompt.contactId || null,
+                                      contact_name: schedulePrompt.contactName,
+                                      contact_phone: schedulePrompt.contactPhone || null,
+                                      title: schedulePrompt.title,
+                                      scheduled_at: null,
+                                      status: 'scheduled',
+                                      source: 'stream_chip',
+                                      detected_from_message: schedulePrompt.dateTimeText,
+                                    });
+                                    if (!error) {
+                                      setSchedulePrompt(prev => prev ? { ...prev, saving: false, saved: true } : null);
+                                      setTimeout(() => setSchedulePrompt(null), 1200);
+                                    } else {
+                                      setSchedulePrompt(prev => prev ? { ...prev, saving: false } : null);
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '5px 14px', borderRadius: 6, border: 'none',
+                                    background: schedulePrompt.saved ? '#22C55E' : '#2678FF',
+                                    color: '#fff', fontSize: 12, fontWeight: 700,
+                                    cursor: schedulePrompt.saving || schedulePrompt.saved ? 'default' : 'pointer',
+                                    transition: 'background 0.2s',
+                                  }}
+                                >
+                                  {schedulePrompt.saved ? 'Saved!' : schedulePrompt.saving ? 'Saving…' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => setSchedulePrompt(null)}
+                                  style={{
+                                    padding: '5px 12px', borderRadius: 6,
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    background: '#fff', color: '#9ca3af',
+                                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

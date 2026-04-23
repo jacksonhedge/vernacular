@@ -118,6 +118,116 @@ export const getInitials = (name: string): string => {
   return name.split(' ').filter(w => w.length > 0).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '??';
 };
 
+/**
+ * Detect a date/time reference in a message.
+ * Returns a human-readable label like "Tomorrow at 3:00 PM" or null if nothing found.
+ * Regex-only — no external library.
+ */
+export const detectDateTime = (text: string): string | null => {
+  if (!text) return null;
+  const t = text.toLowerCase();
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+  const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december'];
+  const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
+    'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+  // Format an hour + optional minute + optional meridiem into "3:00 PM"
+  const fmtTime = (h: string, m: string | undefined, mer: string | undefined): string => {
+    let hour = parseInt(h, 10);
+    const min = m ? parseInt(m, 10) : 0;
+    if (!mer) {
+      // guess AM/PM: 1-6 → PM (afternoon), 7-11 → AM, 12 → PM
+      mer = (hour >= 1 && hour <= 6) ? 'PM' : (hour === 12 ? 'PM' : 'AM');
+    } else {
+      mer = mer.toLowerCase().replace('.', '') === 'pm' ? 'PM' : 'AM';
+    }
+    if (mer === 'PM' && hour !== 12) hour += 12;
+    if (mer === 'AM' && hour === 12) hour = 0;
+    const d = new Date(2000, 0, 1, hour, min);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  // Patterns for a time: "3pm", "3:30pm", "3 pm", "noon", "midnight"
+  const TIME_PAT = '(\\d{1,2})(?::(\\d{2}))?\\s*([ap]\\.?m\\.?)?';
+  const NOON_PAT = 'noon|midnight';
+
+  const resolveTime = (h: string | undefined, m: string | undefined, mer: string | undefined,
+    word: string | undefined): string => {
+    if (word === 'noon') return '12:00 PM';
+    if (word === 'midnight') return '12:00 AM';
+    if (h) return fmtTime(h, m, mer);
+    return '';
+  };
+
+  // ── pattern 1: "tomorrow at <time>" ───────────────────────────────────────
+  const p1 = new RegExp(`\\btomorrow\\s+(?:at\\s+)?(?:(${NOON_PAT})|(${TIME_PAT}))`, 'i');
+  const m1 = t.match(p1);
+  if (m1) {
+    const timeStr = resolveTime(m1[3], m1[4], m1[5], m1[2]);
+    return timeStr ? `Tomorrow at ${timeStr}` : 'Tomorrow';
+  }
+
+  // ── pattern 2: "today at <time>" ──────────────────────────────────────────
+  const p2 = new RegExp(`\\btoday\\s+(?:at\\s+)?(?:(${NOON_PAT})|(${TIME_PAT}))`, 'i');
+  const m2 = t.match(p2);
+  if (m2) {
+    const timeStr = resolveTime(m2[3], m2[4], m2[5], m2[2]);
+    return timeStr ? `Today at ${timeStr}` : 'Today';
+  }
+
+  // ── pattern 3: "(next) <day> at <time>" ───────────────────────────────────
+  const dayAlt = DAYS.join('|');
+  const p3 = new RegExp(`\\b(next\\s+)?(${dayAlt})\\s+(?:at\\s+)?(?:(${NOON_PAT})|(${TIME_PAT}))`, 'i');
+  const m3 = t.match(p3);
+  if (m3) {
+    const day = m3[2].charAt(0).toUpperCase() + m3[2].slice(1);
+    const prefix = m3[1] ? 'Next ' : '';
+    const timeStr = resolveTime(m3[5], m3[6], m3[7], m3[4]);
+    return timeStr ? `${prefix}${day} at ${timeStr}` : `${prefix}${day}`;
+  }
+
+  // ── pattern 4: "<time> on (next) <day>" ───────────────────────────────────
+  const p4 = new RegExp(`\\b(?:(${NOON_PAT})|(${TIME_PAT}))\\s+on\\s+(next\\s+)?(${dayAlt})`, 'i');
+  const m4 = t.match(p4);
+  if (m4) {
+    const day = m4[6].charAt(0).toUpperCase() + m4[6].slice(1);
+    const prefix = m4[5] ? 'Next ' : '';
+    const timeStr = resolveTime(m4[3], m4[4], m4[4 + 1], m4[2]);
+    return timeStr ? `${prefix}${day} at ${timeStr}` : `${prefix}${day}`;
+  }
+
+  // ── pattern 5: "<month> <day>(st/nd/rd/th) at <time>" ─────────────────────
+  const monthAlt = [...MONTHS, ...MONTHS_SHORT].join('|');
+  const p5 = new RegExp(`\\b(${monthAlt})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:at\\s+)?(?:(${NOON_PAT})|(${TIME_PAT}))`, 'i');
+  const m5 = t.match(p5);
+  if (m5) {
+    const rawMonth = m5[1];
+    const day = m5[2];
+    let idx = MONTHS.findIndex(mo => mo.startsWith(rawMonth.toLowerCase().slice(0, 3)));
+    if (idx === -1) idx = MONTHS_SHORT.indexOf(rawMonth.toLowerCase());
+    const monthLabel = idx >= 0 ? MONTHS[idx].charAt(0).toUpperCase() + MONTHS[idx].slice(1) : rawMonth;
+    const timeStr = resolveTime(m5[6], m5[7], m5[8], m5[5]);
+    return timeStr ? `${monthLabel} ${day} at ${timeStr}` : `${monthLabel} ${day}`;
+  }
+
+  // ── pattern 6: day-of-week alone ──────────────────────────────────────────
+  const p6 = new RegExp(`\\b(next\\s+)?(${dayAlt})\\b`, 'i');
+  const m6 = t.match(p6);
+  if (m6) {
+    const day = m6[2].charAt(0).toUpperCase() + m6[2].slice(1);
+    const prefix = m6[1] ? 'Next ' : '';
+    return `${prefix}${day}`;
+  }
+
+  // ── pattern 7: "tomorrow" alone ───────────────────────────────────────────
+  if (/\btomorrow\b/i.test(t)) return 'Tomorrow';
+
+  return null;
+};
+
 /** Map Greek org name to Greek letters */
 export const greekLetters = (org: string): string => {
   const lower = org.toLowerCase();
