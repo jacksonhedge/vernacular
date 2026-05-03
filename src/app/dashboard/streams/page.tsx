@@ -22,7 +22,7 @@ export default function StreamsPage() {
     showAICopilot, setShowAICopilot,
     setAiCopilotMessages, aiCopilotMessages,
     setAllConversations, orgId,
-    setRecentlySentCols,
+    setRecentlySentCols, stations,
   } = useDashboard();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -478,6 +478,34 @@ export default function StreamsPage() {
               {lastRefreshCount === -1 ? 'Sync failed' : lastRefreshCount === 0 ? 'Up to date' : `+${lastRefreshCount} new`}
             </span>
           )}
+          {/* Wade station status */}
+          {(() => {
+            const wade = stations.find(s => s.name === 'Wade');
+            if (!wade) return null;
+            const hb = wade.last_heartbeat ? new Date(wade.last_heartbeat as string) : null;
+            const secAgo = hb ? Math.floor((Date.now() - hb.getTime()) / 1000) : null;
+            const online = secAgo !== null && secAgo < 90;
+            const label = secAgo === null ? 'no heartbeat'
+              : secAgo < 60 ? `${secAgo}s ago`
+              : secAgo < 3600 ? `${Math.floor(secAgo / 60)}m ago`
+              : 'stale';
+            return (
+              <span title={`Wade last heartbeat: ${label}`} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: 11, fontWeight: 600, color: online ? '#16a34a' : '#9ca3af',
+                background: online ? 'rgba(22,163,74,0.08)' : 'rgba(0,0,0,0.04)',
+                padding: '3px 8px', borderRadius: 6,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                  background: online ? '#22c55e' : '#d1d5db',
+                  boxShadow: online ? '0 0 0 2px rgba(34,197,94,0.25)' : 'none',
+                }} />
+                Wade · {label}
+              </span>
+            );
+          })()}
           <style>{`
             @keyframes refreshSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
             @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
