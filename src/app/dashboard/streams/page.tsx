@@ -39,6 +39,7 @@ export default function StreamsPage() {
 
       // Step 2: re-fetch the conversation list
       const convRes = await fetch(`/api/conversations/list?orgId=${orgId}`);
+      let newConvCount = 0;
       if (convRes.ok) {
         const data = await convRes.json();
         if (data.conversations?.length > 0) {
@@ -70,17 +71,32 @@ export default function StreamsPage() {
             };
           });
           setAllConversations(fresh);
+
+          // Find conversations that are new since last render (off-app iMessage/phone)
+          const currentIds = new Set(columns.map(c => c.id));
+          const newCols = fresh.filter((c: ConversationColumn) =>
+            !currentIds.has(c.id) &&
+            !dismissedColumns.has(c.id) &&
+            !stackHidden.has(c.id) &&
+            c.messages.length > 0
+          );
+          newConvCount = newCols.length;
+
           setColumns(prev => {
             const freshMap = new Map(fresh.map((c: ConversationColumn) => [c.id, c]));
-            return prev.map(existing => {
+            // Update messages + contact on existing columns
+            const updated = prev.map(existing => {
               const f = freshMap.get(existing.id) as ConversationColumn | undefined;
               if (f) return { ...existing, messages: f.messages, contact: f.contact };
               return existing;
             });
+            // Prepend truly new off-app conversations
+            return [...newCols, ...updated];
           });
         }
       }
-      setLastRefreshCount(pollData.synced || 0);
+      const totalNew = (pollData.synced || 0) + newConvCount;
+      setLastRefreshCount(totalNew);
       setTimeout(() => setLastRefreshCount(null), 4000);
     } catch {
       setLastRefreshCount(-1);
@@ -407,29 +423,32 @@ export default function StreamsPage() {
         padding: '0 24px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Refresh button — pulls outbound messages sent from Mac device (FAR LEFT) */}
+          {/* Sync button — pulls in messages sent from iMessage or phone (off-app) */}
           <button
             onClick={refreshOutbound}
             disabled={refreshing}
-            title="Refresh — sync messages sent from your Mac (last 24h)"
+            title="Sync messages sent from iMessage or your phone"
             style={{
-              width: 30, height: 30, borderRadius: 8,
+              height: 30, padding: '0 10px', borderRadius: 8, gap: 5,
               background: refreshing ? 'rgba(38,120,255,0.1)' : 'rgba(0,0,0,0.04)',
               border: '1px solid rgba(0,0,0,0.06)',
               cursor: refreshing ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: refreshing ? '#2678FF' : '#6b7280',
               transition: 'all 0.15s',
+              fontSize: 12, fontWeight: 600, fontFamily: "'Inter', sans-serif",
+              whiteSpace: 'nowrap',
             }}
             onMouseEnter={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(38,120,255,0.08)'; e.currentTarget.style.color = '#2678FF'; } }}
             onMouseLeave={e => { if (!refreshing) { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = '#6b7280'; } }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ animation: refreshing ? 'refreshSpin 0.8s linear infinite' : 'none' }}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ animation: refreshing ? 'refreshSpin 0.8s linear infinite' : 'none', flexShrink: 0 }}
             >
               <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
+            {refreshing ? 'Syncing…' : 'Sync'}
           </button>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0c0f1a', margin: 0, letterSpacing: '-0.02em' }}>
             Streams
@@ -456,7 +475,7 @@ export default function StreamsPage() {
               fontFamily: "'JetBrains Mono', monospace",
               animation: 'fadeSlideIn 0.3s ease-out',
             }}>
-              {lastRefreshCount === -1 ? 'Refresh failed' : lastRefreshCount === 0 ? 'Up to date' : `+${lastRefreshCount} synced`}
+              {lastRefreshCount === -1 ? 'Sync failed' : lastRefreshCount === 0 ? 'Up to date' : `+${lastRefreshCount} new`}
             </span>
           )}
           <style>{`
